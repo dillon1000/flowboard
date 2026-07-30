@@ -52,6 +52,7 @@ public func configure(_ app: Application) async throws {
     }
     app.middleware.use(app.sessions.middleware)
     app.middleware.use(User.sessionAuthenticator())
+    app.middleware.use(CSRFMiddleware())
 
     app.migrations.add(CreateUser())
     app.migrations.add(CreateBoard())
