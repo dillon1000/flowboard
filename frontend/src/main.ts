@@ -7,6 +7,7 @@ import { Application } from '@hotwired/stimulus';
 import {
   Archive,
   ArrowDownUp,
+  Bell,
   CalendarDays,
   Check,
   CheckSquare,
@@ -63,6 +64,7 @@ function renderIcons(): void {
     icons: {
       Archive,
       ArrowDownUp,
+      Bell,
       CalendarDays,
       Check,
       CheckSquare,

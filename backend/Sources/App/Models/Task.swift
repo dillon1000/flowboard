@@ -79,6 +79,9 @@ final class Task: Model, @unchecked Sendable {
     @Children(for: \.$task)
     var attachments: [TaskAttachment]
 
+    @Children(for: \.$task)
+    var followers: [TaskFollower]
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 

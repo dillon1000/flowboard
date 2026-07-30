@@ -318,6 +318,8 @@ struct TaskDetailPageContext: Encodable {
     let boardHref: String
     let canEdit: Bool
     let canComment: Bool
+    let isFollowing: Bool
+    let followerCount: Int
     let comments: [CommentContext]
     let checklist: [ChecklistContext]
     let attachments: [AttachmentContext]
@@ -331,7 +333,9 @@ struct TaskDetailPageContext: Encodable {
         comments: [TaskComment],
         checklist: [ChecklistItem],
         attachments: [TaskAttachment],
-        members: [User]
+        members: [User],
+        followers: [TaskFollower],
+        currentUserID: UUID
     ) throws {
         self.task = try TaskCardContext(
             task: task,
@@ -341,6 +345,8 @@ struct TaskDetailPageContext: Encodable {
         self.boardHref = "/app/boards/\(try board.requireID())"
         self.canEdit = access.isOwner || access.role.canEdit
         self.canComment = access.isOwner || access.role.canComment
+        self.isFollowing = followers.contains { $0.$user.id == currentUserID }
+        self.followerCount = followers.count
         self.comments = try comments.map(CommentContext.init)
         self.checklist = try checklist.map(ChecklistContext.init)
         self.attachments = try attachments.map(AttachmentContext.init)

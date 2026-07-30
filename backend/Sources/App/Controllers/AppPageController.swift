@@ -186,6 +186,9 @@ struct AppPageController: RouteCollection {
             .filter(\.$task.$id == task.requireID())
             .sort(\.$createdAt, .ascending)
             .all()
+        let followers = try await TaskFollower.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .all()
         let members = try await boardUsers(board: access.board, on: req.db)
         let context = try TaskDetailPageContext(
             task: task,
@@ -194,7 +197,9 @@ struct AppPageController: RouteCollection {
             comments: comments,
             checklist: checklist,
             attachments: attachments,
-            members: members
+            members: members,
+            followers: followers,
+            currentUserID: req.auth.require(User.self).requireID()
         )
         return try await render(
             common: common,

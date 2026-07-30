@@ -25,6 +25,7 @@ struct WorkspaceActionController: RouteCollection {
         routes.post("app", "tasks", ":taskID", "update", use: updateTask)
         routes.post("app", "tasks", ":taskID", "delete", use: deleteTask)
         routes.post("app", "tasks", ":taskID", "comments", use: createComment)
+        routes.post("app", "tasks", ":taskID", "follow", use: toggleFollow)
         routes.post("app", "tasks", ":taskID", "checklist", use: createChecklistItem)
         routes.post("app", "checklist", ":itemID", "toggle", use: toggleChecklistItem)
         routes.post("app", "tasks", ":taskID", "attachments", use: createAttachment)
@@ -397,6 +398,22 @@ struct WorkspaceActionController: RouteCollection {
             body: body
         ).create(on: req.db)
         return req.redirect(to: "/app/tasks/\(try task.requireID())")
+    }
+
+    func toggleFollow(req: Request) async throws -> Response {
+        let task = try await requiredTask(for: req, permission: .view)
+        let taskID = try task.requireID()
+        let userID = try req.auth.require(User.self).requireID()
+        if let follower = try await TaskFollower.query(on: req.db)
+            .filter(\.$task.$id == taskID)
+            .filter(\.$user.$id == userID)
+            .first()
+        {
+            try await follower.delete(on: req.db)
+        } else {
+            try await TaskFollower(taskID: taskID, userID: userID).create(on: req.db)
+        }
+        return req.redirect(to: "/app/tasks/\(taskID)")
     }
 
     func createChecklistItem(req: Request) async throws -> Response {
