@@ -45,6 +45,7 @@ import {
   DatePickerController,
   DialogController,
   MenuController,
+  SearchController,
   SidebarController,
   ThemeController,
   ToastController,
@@ -55,6 +56,7 @@ application.register('board', BoardController);
 application.register('date-picker', DatePickerController);
 application.register('dialog', DialogController);
 application.register('menu', MenuController);
+application.register('search', SearchController);
 application.register('sidebar', SidebarController);
 application.register('theme', ThemeController);
 application.register('toast', ToastController);

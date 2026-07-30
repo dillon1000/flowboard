@@ -197,6 +197,18 @@ button {
   stroke-width: 1.7;
 }
 
+.theme-icon-light {
+  display: none;
+}
+
+:root[data-theme='dark'] .theme-icon-dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .theme-icon-light {
+  display: block;
+}
+
 .sidebar-close {
   display: none;
   margin-left: auto;

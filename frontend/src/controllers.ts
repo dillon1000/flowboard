@@ -66,6 +66,14 @@ export class MenuController extends Controller {
   declare readonly valueTarget: HTMLElement;
   declare readonly optionTargets: HTMLElement[];
 
+  connect(): void {
+    this.element.addEventListener('keydown', this.handleKeydown);
+  }
+
+  disconnect(): void {
+    this.element.removeEventListener('keydown', this.handleKeydown);
+  }
+
   toggle(event: Event): void {
     event.stopPropagation();
     this.panelTarget.hidden ? this.open() : this.close();
@@ -100,6 +108,22 @@ export class MenuController extends Controller {
     this.triggerTarget.setAttribute('aria-expanded', 'true');
     this.optionTargets.find((option) => option.getAttribute('aria-selected') === 'true')?.focus();
   }
+
+  private handleKeydown = (event: Event): void => {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key !== 'ArrowDown' && keyboardEvent.key !== 'ArrowUp') {
+      return;
+    }
+    keyboardEvent.preventDefault();
+    if (this.panelTarget.hidden) {
+      this.open();
+      return;
+    }
+    const currentIndex = this.optionTargets.indexOf(document.activeElement as HTMLElement);
+    const delta = keyboardEvent.key === 'ArrowDown' ? 1 : -1;
+    const nextIndex = (currentIndex + delta + this.optionTargets.length) % this.optionTargets.length;
+    this.optionTargets[nextIndex]?.focus();
+  };
 }
 
 export class DialogController extends Controller {
@@ -234,5 +258,23 @@ export class ToastController extends Controller {
       delete (this.element as HTMLElement).dataset.visible;
       this.element.setAttribute('hidden', '');
     }, 2200);
+  }
+}
+
+export class SearchController extends Controller {
+  static targets = ['input'];
+
+  declare readonly inputTarget: HTMLInputElement;
+
+  shortcut(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key.toLowerCase() === 'k' && (keyboardEvent.metaKey || keyboardEvent.ctrlKey)) {
+      keyboardEvent.preventDefault();
+      this.inputTarget.focus();
+      this.inputTarget.select();
+    }
+    if (keyboardEvent.key === 'Escape' && document.activeElement === this.inputTarget) {
+      this.inputTarget.blur();
+    }
   }
 }

@@ -24,7 +24,8 @@
         aria-label="Change color theme"
         title="Change color theme"
       >
-        <i data-lucide="moon"></i>
+        <i class="theme-icon-dark" data-lucide="moon"></i>
+        <i class="theme-icon-light" data-lucide="sun"></i>
         <span class="sr-only" data-theme-target="label">Use dark theme</span>
       </button>
     </header>
