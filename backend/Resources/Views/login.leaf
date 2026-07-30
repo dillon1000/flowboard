@@ -40,6 +40,14 @@
           <p class="error-message" role="alert">#(error)</p>
         #endif
 
+        #if(oauthEnabled):
+          <a class="button large block oauth-button" href="/oauth/start">
+            <i data-lucide="log-in"></i>
+            Continue with #(oauthProviderName)
+          </a>
+          <div class="auth-divider" aria-hidden="true"><span>or</span></div>
+        #endif
+
         <form method="post" action="/login">
           <input type="hidden" name="_csrf" value="#(csrfToken)" />
           <div class="field">

@@ -12,6 +12,7 @@ public func configure(_ app: Application) async throws {
     // Browser forms can carry an attachment or board export. Route handlers apply
     // their own smaller file limits after Vapor rejects bodies above 10 MB.
     app.routes.defaultMaxBodySize = "10mb"
+    app.oauthConfiguration = try OAuthConfiguration.fromEnvironment()
 
     if app.environment == .testing {
         app.databases.use(.sqlite(.memory), as: .sqlite)
@@ -41,7 +42,8 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
     // Sessions use Fluent so login survives server restarts and works across
-    // multiple application processes that share the same database.
+    // multiple application processes that share the same database. SameSite=Lax
+    // sends the session on the provider's top-level OAuth callback.
     app.sessions.use(.fluent)
     app.sessions.configuration.cookieName = "flowboard-session"
     app.sessions.configuration.cookieFactory = { sessionID in
@@ -51,7 +53,7 @@ public func configure(_ app: Application) async throws {
             path: "/",
             isSecure: app.environment == .production,
             isHTTPOnly: true,
-            sameSite: .strict
+            sameSite: .lax
         )
     }
     app.middleware.use(app.sessions.middleware)
@@ -59,6 +61,7 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(CSRFMiddleware())
 
     app.migrations.add(CreateUser())
+    app.migrations.add(CreateOAuthAccount())
     app.migrations.add(CreateBoard())
     app.migrations.add(AddBoardOwner())
     app.migrations.add(CreateTask())

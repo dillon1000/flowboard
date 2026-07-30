@@ -8,6 +8,7 @@ func routes(_ app: Application) throws {
     }
 
     try app.register(collection: WebController())
+    try app.register(collection: OAuthController())
 
     let api = app.grouped("api", "v1")
     try api.register(collection: AuthController())

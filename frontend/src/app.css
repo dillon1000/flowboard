@@ -2905,6 +2905,27 @@ progress.progress::-moz-progress-bar {
   margin-top: 20px;
 }
 
+.oauth-button {
+  margin-top: -8px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: '';
+}
+
 .auth-switch {
   margin: 24px 0 0;
   color: var(--text-secondary);

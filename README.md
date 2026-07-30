@@ -66,7 +66,9 @@ TLS reverse proxy.
 - Leaf-rendered registration, login, overview, task search, board, task detail,
   board settings, and account settings pages
 - Bcrypt password hashes, CSRF protection, and persistent `HttpOnly`,
-  `SameSite=Strict` Fluent sessions
+  `SameSite=Lax` Fluent sessions
+- Generic OAuth 2.0 authorization-code login with PKCE, verified-email linking,
+  and persisted provider identities
 - Board, Table, Calendar, and Gallery views with saved grouping, filtering, and
   sorting rules
 - Month navigation in Calendar views and custom Flatpickr date controls in forms
@@ -101,9 +103,17 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
 
 ## Configuration
 
-`backend/.env.example` defines the SQLite path and optional development CORS
-origins for external API clients. Leaf pages and browser forms remain
-same-origin and do not need a frontend environment file.
+`backend/.env.example` defines the SQLite path, optional development CORS
+origins, and the generic OAuth settings. OAuth stays disabled until all six
+required endpoint and client values are present. Register
+`OAUTH_REDIRECT_URL` exactly with the provider; local development normally uses
+`http://localhost:8080/oauth/callback`.
+
+The default profile mapping reads `sub`, `email`, `name`, and `email_verified`.
+The optional field settings accept dot-separated paths for providers with
+nested profile data. Verified email is required before a new provider identity
+can create or link an account; disable that check only when the provider
+guarantees verified emails through another contract.
 
 Production does not migrate automatically. Build the frontend, run migrations,
 and then start the server:
@@ -117,8 +127,10 @@ swift run App --env production migrate --yes
 swift run App --env production serve
 ```
 
-Production session cookies use the `Secure`, `HttpOnly`, and `SameSite=Strict`
-attributes. Put Vapor behind HTTPS before you use production mode.
+Production session cookies use the `Secure`, `HttpOnly`, and `SameSite=Lax`
+attributes. Lax mode lets the provider return to the OAuth callback while the
+per-session state and PKCE verifier protect the transaction. Put Vapor behind
+HTTPS before you use production mode.
 
 ## Routes
 
@@ -126,6 +138,7 @@ Web pages:
 
 - `GET /login` and `POST /login`
 - `GET /register` and `POST /register`
+- `GET /oauth/start` and `GET /oauth/callback`
 - `POST /logout`
 - `GET /app/**` for protected application pages
 
