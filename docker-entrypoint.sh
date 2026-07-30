@@ -2,7 +2,7 @@
 set -eu
 
 # Railway mounts a persistent volume as root. Grant the application user access
-# to its database and upload directory before all application commands run.
+# to SQLite and the legacy/local upload directory before commands run.
 mkdir -p /data/uploads
 chown vapor:vapor /data /data/uploads
 for database_file in \

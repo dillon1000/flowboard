@@ -71,8 +71,8 @@ WORKDIR /app
 COPY --from=build --chown=vapor:vapor /staging /app
 COPY --chown=vapor:vapor docker-entrypoint.sh /app/docker-entrypoint.sh
 
-# SQLite and attachments share one mount so a container replacement keeps all
-# user data. The symlink matches the upload path used by the Vapor application.
+# SQLite and legacy attachments share one mount. New production attachments use
+# Railway object storage, while the symlink preserves old files and local use.
 RUN mkdir -p /data/uploads \
     && chown -R vapor:vapor /data \
     && ln -s /data/uploads /app/Uploads \

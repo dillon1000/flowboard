@@ -163,12 +163,17 @@ struct WorkspaceActionController: RouteCollection {
             throw Abort(.forbidden, reason: "Only the board owner can delete this board.")
         }
         let boardID = try access.board.requireID()
+        let tasks = try await Task.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .with(\.$attachments)
+            .all()
+        try await deleteStoredAttachments(
+            tasks.flatMap { $0.attachments },
+            for: req
+        )
         try await access.board.delete(on: req.db)
 
-        // Attachment files are outside SQL, so board deletion removes only the
-        // exact board directory after Fluent finishes its cascading deletes.
-        let directory = attachmentRoot(req: req) + boardID.uuidString + "/"
-        try? FileManager.default.removeItem(atPath: directory)
+        removeLocalAttachmentDirectories(boardID: boardID, req: req)
         return req.redirect(to: "/app")
     }
 
@@ -511,9 +516,15 @@ struct WorkspaceActionController: RouteCollection {
         let task = try await requiredTask(for: req, permission: .edit)
         let boardID = task.$board.id
         let taskID = try task.requireID()
+        let attachments = try await TaskAttachment.query(on: req.db)
+            .filter(\.$task.$id == taskID)
+            .all()
+        try await deleteStoredAttachments(attachments, for: req)
         try await task.delete(on: req.db)
-        try? FileManager.default.removeItem(
-            atPath: attachmentRoot(req: req) + boardID.uuidString + "/" + taskID.uuidString
+        removeLocalAttachmentDirectories(
+            boardID: boardID,
+            taskID: taskID,
+            req: req
         )
         return req.redirect(to: "/app/boards/\(boardID)")
     }
@@ -610,27 +621,32 @@ struct WorkspaceActionController: RouteCollection {
         let fileExtension = input.file.extension?
             .lowercased()
             .filter { $0.isLetter || $0.isNumber }
-        let storageName = UUID().uuidString + (fileExtension.map { ".\($0)" } ?? "")
-        let directory = attachmentRoot(req: req)
-            + boardID.uuidString + "/" + taskID.uuidString + "/"
-        try FileManager.default.createDirectory(
-            atPath: directory,
-            withIntermediateDirectories: true
+        let generatedName = UUID().uuidString + (fileExtension.map { ".\($0)" } ?? "")
+        let storageName = AttachmentStorage.objectKey(
+            boardID: boardID,
+            taskID: taskID,
+            storageName: generatedName
         )
-        try await req.fileio.writeFile(input.file.data, at: directory + storageName)
+        let contentType = input.file.contentType?.serialize() ?? "application/octet-stream"
+        try await storeAttachment(
+            input.file.data,
+            key: storageName,
+            contentType: contentType,
+            for: req
+        )
 
         let attachment = TaskAttachment(
             taskID: taskID,
             uploadedByID: try req.auth.require(User.self).requireID(),
             fileName: safeFileName(input.file.filename),
             storageName: storageName,
-            contentType: input.file.contentType?.serialize() ?? "application/octet-stream",
+            contentType: contentType,
             byteCount: input.file.data.readableBytes
         )
         do {
             try await attachment.create(on: req.db)
         } catch {
-            try? FileManager.default.removeItem(atPath: directory + storageName)
+            try? await deleteStoredAttachment(key: storageName, for: req)
             throw error
         }
         return req.redirect(to: "/app/tasks/\(taskID)")
@@ -645,11 +661,18 @@ struct WorkspaceActionController: RouteCollection {
             throw Abort(.notFound, reason: "The attachment does not exist.")
         }
         _ = try await requireAccess(boardID: task.$board.id, permission: .view, for: req)
-        let path = attachmentRoot(req: req)
-            + task.$board.id.uuidString + "/"
-            + (try task.requireID()).uuidString + "/"
-            + attachment.storageName
-        let response = try await req.fileio.asyncStreamFile(at: path)
+        let response: Response
+        if AttachmentStorage.isObjectKey(attachment.storageName) {
+            response = try await objectResponse(key: attachment.storageName, for: req)
+        } else {
+            // Legacy rows contain only the generated name and still live under
+            // the old board/task directory on the persistent volume.
+            let path = attachmentRoot(req: req)
+                + task.$board.id.uuidString + "/"
+                + (try task.requireID()).uuidString + "/"
+                + attachment.storageName
+            response = try await req.fileio.asyncStreamFile(at: path)
+        }
         response.headers.contentDisposition = .init(.attachment, filename: attachment.fileName)
         if let mediaType = attachment.fileName
             .split(separator: ".")
@@ -833,6 +856,107 @@ struct WorkspaceActionController: RouteCollection {
             .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
             .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
         return String((normalized.isEmpty ? "board" : normalized).prefix(48))
+    }
+
+    /// Stores a new object in Railway in production. Development and tests retain
+    /// local storage so they work without access to shared bucket credentials.
+    private func storeAttachment(
+        _ buffer: ByteBuffer,
+        key: String,
+        contentType: String,
+        for req: Request
+    ) async throws {
+        if req.application.attachmentStorage.usesRemoteStore {
+            guard let data = buffer.getData(
+                at: buffer.readerIndex,
+                length: buffer.readableBytes
+            ) else {
+                throw Abort(.badRequest, reason: "The attachment could not be read.")
+            }
+            do {
+                try await req.application.attachmentStorage.put(
+                    data: data,
+                    key: key,
+                    contentType: contentType,
+                    using: req.client
+                )
+            } catch {
+                req.logger.error("Attachment upload failed: \(error)")
+                throw Abort(.badGateway, reason: "Attachment storage is unavailable.")
+            }
+            return
+        }
+
+        let path = attachmentRoot(req: req) + key
+        let directory = URL(fileURLWithPath: path).deletingLastPathComponent().path
+        try FileManager.default.createDirectory(
+            atPath: directory,
+            withIntermediateDirectories: true
+        )
+        try await req.fileio.writeFile(buffer, at: path)
+    }
+
+    /// Returns a private object through the authenticated application route.
+    /// Railway buckets remain private and never expose credentials to the browser.
+    private func objectResponse(key: String, for req: Request) async throws -> Response {
+        guard req.application.attachmentStorage.usesRemoteStore else {
+            return try await req.fileio.asyncStreamFile(at: attachmentRoot(req: req) + key)
+        }
+        do {
+            let data = try await req.application.attachmentStorage.get(
+                key: key,
+                using: req.client
+            )
+            return Response(status: .ok, body: .init(data: data))
+        } catch {
+            req.logger.error("Attachment download failed: \(error)")
+            throw Abort(.badGateway, reason: "Attachment storage is unavailable.")
+        }
+    }
+
+    /// Deletes bucket objects before Fluent cascades their metadata. A failed S3
+    /// operation stops the database delete so the user can retry without orphans.
+    private func deleteStoredAttachments(
+        _ attachments: [TaskAttachment],
+        for req: Request
+    ) async throws {
+        for attachment in attachments
+        where AttachmentStorage.isObjectKey(attachment.storageName) {
+            try await deleteStoredAttachment(key: attachment.storageName, for: req)
+        }
+    }
+
+    private func deleteStoredAttachment(key: String, for req: Request) async throws {
+        guard req.application.attachmentStorage.usesRemoteStore else {
+            try? FileManager.default.removeItem(atPath: attachmentRoot(req: req) + key)
+            return
+        }
+        do {
+            try await req.application.attachmentStorage.delete(
+                key: key,
+                using: req.client
+            )
+        } catch {
+            req.logger.error("Attachment deletion failed: \(error)")
+            throw Abort(.badGateway, reason: "Attachment storage is unavailable.")
+        }
+    }
+
+    /// Removes both the legacy directory and the new local development directory.
+    /// Production normally has only the legacy path because new files use Railway.
+    private func removeLocalAttachmentDirectories(
+        boardID: UUID,
+        taskID: UUID? = nil,
+        req: Request
+    ) {
+        let suffix = taskID.map { "/\($0.uuidString)" } ?? ""
+        let root = attachmentRoot(req: req)
+        try? FileManager.default.removeItem(
+            atPath: root + boardID.uuidString + suffix
+        )
+        try? FileManager.default.removeItem(
+            atPath: root + "attachments/" + boardID.uuidString + suffix
+        )
     }
 
     private func clean(_ value: String?) -> String? {

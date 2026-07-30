@@ -2,8 +2,10 @@
 
 Flowboard is a server-rendered project workspace built with Swift Vapor, Leaf,
 Fluent, Turbo, and Stimulus. Fluent stores accounts, sessions, boards, saved
-views, tasks, comments, checklists, attachments, templates, and sharing roles in
-SQLite. The browser uses the same Vapor origin, so normal use does not need CORS.
+views, tasks, comments, checklists, attachment metadata, templates, and sharing
+roles in SQLite. Attachment objects use Railway's private S3-compatible storage
+in production. The browser uses the same Vapor origin, so normal use does not
+need CORS.
 
 ## Run locally
 
@@ -49,7 +51,8 @@ docker run --rm -p 8080:8080 \
 ```
 
 Open [http://localhost:8080/register](http://localhost:8080/register). The named
-volume keeps the SQLite database and uploaded files when the container stops.
+volume keeps the SQLite database and local development uploads when the
+container stops.
 
 In production, start the image without an extra command:
 
@@ -68,10 +71,11 @@ builds the root `Dockerfile`, checks `/health`, and passes its assigned `PORT`
 to the container.
 
 Attach one persistent volume to the service at `/data`. The volume stores the
-SQLite database and uploaded files, and the startup entrypoint applies pending
-migrations after Railway mounts it. Keep this service at one replica because
-SQLite does not support multiple application containers writing to the same
-database.
+SQLite database and legacy uploads, and the startup entrypoint applies pending
+migrations after Railway mounts it. Connect a Railway bucket by setting its six
+`AWS_*` configuration values from `backend/.env.example`; all new attachments use
+that private bucket. Keep this service at one replica because SQLite does not
+support multiple application containers writing to the same database.
 
 Generate a public Railway domain, then add the OAuth values from
 `backend/.env.example` as Railway service variables. Set `OAUTH_REDIRECT_URL`
@@ -131,8 +135,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
 ## Configuration
 
 `backend/.env.example` defines the SQLite path, optional development CORS
-origins, and the generic OAuth settings. OAuth stays disabled until all six
-required endpoint and client values are present. Register
+origins, Railway bucket values, and the generic OAuth settings. Production
+requires the full bucket configuration, while development and tests use local
+files when those values are absent. OAuth stays disabled until all six required
+endpoint and client values are present. Register
 `OAUTH_REDIRECT_URL` exactly with the provider; local development normally uses
 `http://localhost:8080/oauth/callback`.
 
