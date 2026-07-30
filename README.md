@@ -31,6 +31,36 @@ bundle to `backend/Public`, and Vapor renders all application pages with Leaf.
 Turbo replaces full page reloads, while small Stimulus controllers handle
 menus, dialogs, dates, drag and drop, theme state, search, and mobile navigation.
 
+## Run with Docker
+
+Build the production image from the repository root:
+
+```sh
+docker build -t flowboard .
+```
+
+For local HTTP use, start the container in development mode so the browser can
+use a non-secure session cookie:
+
+```sh
+docker run --rm -p 8080:8080 \
+  -v flowboard-data:/data \
+  flowboard serve --env development --hostname 0.0.0.0 --port 8080
+```
+
+Open [http://localhost:8080/register](http://localhost:8080/register). The named
+volume keeps the SQLite database and uploaded files when the container stops.
+
+In production, start the image without an extra command:
+
+```sh
+docker run --rm -p 8080:8080 -v flowboard-data:/data flowboard
+```
+
+The production entrypoint applies pending Fluent migrations and then starts
+Vapor. Production session cookies require HTTPS, so put this container behind a
+TLS reverse proxy.
+
 ## Features
 
 - Leaf-rendered registration, login, overview, task search, board, task detail,
