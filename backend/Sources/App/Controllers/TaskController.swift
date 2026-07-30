@@ -1,0 +1,160 @@
+import Fluent
+import Vapor
+
+struct TaskController: RouteCollection {
+    func boot(routes: any RoutesBuilder) throws {
+        let tasks = routes.grouped("tasks")
+        tasks.get(use: index)
+        tasks.post(use: create)
+        tasks.patch(":taskID", use: update)
+        tasks.post(":taskID", "move", use: move)
+        tasks.delete(":taskID", use: delete)
+    }
+
+    func index(req: Request) async throws -> [TaskResponse] {
+        guard let boardID: UUID = req.query["boardID"] else {
+            throw Abort(.badRequest, reason: "The boardID query value is required.")
+        }
+
+        var query = Task.query(on: req.db).filter(\.$board.$id == boardID)
+        if let status: TaskStatus = req.query["status"] {
+            query = query.filter(\.$status == status)
+        }
+
+        let tasks = try await query.sort(\.$position, .ascending).all()
+        return try tasks.map(TaskResponse.init)
+    }
+
+    /// Creates a task at the end of its requested column. The server owns position
+    /// assignment so two clients do not need to coordinate index values.
+    func create(req: Request) async throws -> Response {
+        try CreateTaskRequest.validate(content: req)
+        let input = try req.content.decode(CreateTaskRequest.self)
+
+        guard try await Board.find(input.boardID, on: req.db) != nil else {
+            throw Abort(.notFound, reason: "The board does not exist.")
+        }
+
+        let status = input.status ?? .backlog
+        let count = try await Task.query(on: req.db)
+            .filter(\.$board.$id == input.boardID)
+            .filter(\.$status == status)
+            .count()
+        let task = Task(
+            boardID: input.boardID,
+            title: input.title.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: input.description,
+            status: status,
+            priority: input.priority ?? .medium,
+            position: (count + 1) * 1_000,
+            labels: sanitize(labels: input.labels ?? []),
+            dueAt: input.dueAt
+        )
+        try await task.create(on: req.db)
+
+        let response = try TaskResponse(task: task)
+        return try await response.encodeResponse(status: .created, for: req)
+    }
+
+    /// Applies partial task changes. Moving between columns also assigns the task to
+    /// the end of the destination column, which keeps ordering valid for API clients.
+    func update(req: Request) async throws -> TaskResponse {
+        try UpdateTaskRequest.validate(content: req)
+        let input = try req.content.decode(UpdateTaskRequest.self)
+        let task = try await findTask(req)
+
+        if let title = input.title {
+            task.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let description = input.description {
+            task.description = description
+        }
+        if let priority = input.priority {
+            task.priority = priority
+        }
+        if let labels = input.labels {
+            task.labels = sanitize(labels: labels)
+        }
+        if let dueAt = input.dueAt {
+            task.dueAt = dueAt
+        }
+        if let status = input.status, status != task.status {
+            let count = try await Task.query(on: req.db)
+                .filter(\.$board.$id == task.$board.id)
+                .filter(\.$status == status)
+                .count()
+            task.status = status
+            task.position = (count + 1) * 1_000
+        }
+
+        try await task.update(on: req.db)
+        return try TaskResponse(task: task)
+    }
+
+    /// Moves one task and renumbers both affected columns in a transaction. If any
+    /// save fails, Fluent rolls back the full move so clients never see split state.
+    func move(req: Request) async throws -> TaskResponse {
+        try MoveTaskRequest.validate(content: req)
+        let input = try req.content.decode(MoveTaskRequest.self)
+        let task = try await findTask(req)
+        let taskID = try task.requireID()
+        let oldStatus = task.status
+
+        return try await req.db.transaction { database in
+            var destination = try await Task.query(on: database)
+                .filter(\.$board.$id == task.$board.id)
+                .filter(\.$status == input.status)
+                .filter(\.$id != taskID)
+                .sort(\.$position, .ascending)
+                .all()
+
+            task.status = input.status
+            let safeIndex = min(input.targetIndex, destination.count)
+            destination.insert(task, at: safeIndex)
+            try await normalize(destination, on: database)
+
+            if oldStatus != input.status {
+                let source = try await Task.query(on: database)
+                    .filter(\.$board.$id == task.$board.id)
+                    .filter(\.$status == oldStatus)
+                    .sort(\.$position, .ascending)
+                    .all()
+                try await normalize(source, on: database)
+            }
+
+            return try TaskResponse(task: task)
+        }
+    }
+
+    func delete(req: Request) async throws -> HTTPStatus {
+        let task = try await findTask(req)
+        try await task.delete(on: req.db)
+        return .noContent
+    }
+
+    private func findTask(_ req: Request) async throws -> Task {
+        guard
+            let taskID = req.parameters.get("taskID", as: UUID.self),
+            let task = try await Task.find(taskID, on: req.db)
+        else {
+            throw Abort(.notFound, reason: "The task does not exist.")
+        }
+        return task
+    }
+
+    private func normalize(_ tasks: [Task], on database: any Database) async throws {
+        for (index, task) in tasks.enumerated() {
+            task.position = (index + 1) * 1_000
+            try await task.save(on: database)
+        }
+    }
+
+    private func sanitize(labels: [String]) -> [String] {
+        Array(
+            labels
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .prefix(6)
+        )
+    }
+}

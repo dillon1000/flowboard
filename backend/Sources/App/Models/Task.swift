@@ -1,0 +1,156 @@
+import Fluent
+import Vapor
+
+enum TaskStatus: String, Codable, CaseIterable, Content, Sendable {
+    case backlog
+    case inProgress = "in_progress"
+    case review
+    case done
+
+    var sortOrder: Int {
+        switch self {
+        case .backlog: 0
+        case .inProgress: 1
+        case .review: 2
+        case .done: 3
+        }
+    }
+}
+
+enum TaskPriority: String, Codable, CaseIterable, Content, Sendable {
+    case low
+    case medium
+    case high
+    case urgent
+}
+
+final class Task: Model, @unchecked Sendable {
+    static let schema = "tasks"
+
+    @ID(key: .id)
+    var id: UUID?
+
+    @Parent(key: "board_id")
+    var board: Board
+
+    @Field(key: "title")
+    var title: String
+
+    @OptionalField(key: "description")
+    var description: String?
+
+    @Enum(key: "status")
+    var status: TaskStatus
+
+    @Enum(key: "priority")
+    var priority: TaskPriority
+
+    /// Position uses gaps of 1,000 so most moves can be represented without changing
+    /// neighboring tasks. The move endpoint normalizes a column after each drop.
+    @Field(key: "position")
+    var position: Int
+
+    @Field(key: "labels")
+    var labels: [String]
+
+    @OptionalField(key: "due_at")
+    var dueAt: Date?
+
+    @Timestamp(key: "created_at", on: .create)
+    var createdAt: Date?
+
+    @Timestamp(key: "updated_at", on: .update)
+    var updatedAt: Date?
+
+    init() {}
+
+    init(
+        id: UUID? = nil,
+        boardID: UUID,
+        title: String,
+        description: String? = nil,
+        status: TaskStatus = .backlog,
+        priority: TaskPriority = .medium,
+        position: Int,
+        labels: [String] = [],
+        dueAt: Date? = nil
+    ) {
+        self.id = id
+        self.$board.id = boardID
+        self.title = title
+        self.description = description
+        self.status = status
+        self.priority = priority
+        self.position = position
+        self.labels = labels
+        self.dueAt = dueAt
+    }
+}
+
+struct TaskResponse: Content {
+    let id: UUID
+    let boardID: UUID
+    let title: String
+    let description: String?
+    let status: TaskStatus
+    let priority: TaskPriority
+    let position: Int
+    let labels: [String]
+    let dueAt: Date?
+    let createdAt: Date?
+    let updatedAt: Date?
+
+    init(task: Task) throws {
+        self.id = try task.requireID()
+        self.boardID = task.$board.id
+        self.title = task.title
+        self.description = task.description
+        self.status = task.status
+        self.priority = task.priority
+        self.position = task.position
+        self.labels = task.labels
+        self.dueAt = task.dueAt
+        self.createdAt = task.createdAt
+        self.updatedAt = task.updatedAt
+    }
+}
+
+struct CreateTaskRequest: Content, Validatable {
+    let boardID: UUID
+    let title: String
+    let description: String?
+    let status: TaskStatus?
+    let priority: TaskPriority?
+    let labels: [String]?
+    let dueAt: Date?
+
+    static func validations(_ validations: inout Validations) {
+        validations.add("title", as: String.self, is: .count(1...120))
+        validations.add("description", as: String?.self, is: .nil || .count(...2_000))
+        validations.add("labels", as: [String]?.self, is: .nil || .count(...6))
+    }
+}
+
+struct UpdateTaskRequest: Content, Validatable {
+    let title: String?
+    let description: String?
+    let status: TaskStatus?
+    let priority: TaskPriority?
+    let labels: [String]?
+    let dueAt: Date?
+
+    static func validations(_ validations: inout Validations) {
+        validations.add("title", as: String?.self, is: .nil || .count(1...120))
+        validations.add("description", as: String?.self, is: .nil || .count(...2_000))
+        validations.add("labels", as: [String]?.self, is: .nil || .count(...6))
+    }
+}
+
+struct MoveTaskRequest: Content, Validatable {
+    let status: TaskStatus
+    let targetIndex: Int
+
+    static func validations(_ validations: inout Validations) {
+        validations.add("targetIndex", as: Int.self, is: .range(0...10_000))
+    }
+}
