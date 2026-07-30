@@ -263,7 +263,7 @@ struct AppPageController: RouteCollection {
             csrfToken: req.csrfToken,
             userName: user.name,
             userEmail: user.email,
-            userInitials: makeInitials(for: user.name),
+            userAvatar: AvatarContext(user: user),
             boards: boardContexts
         )
     }

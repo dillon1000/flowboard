@@ -549,6 +549,41 @@ kbd {
   text-transform: uppercase;
 }
 
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.avatar.large {
+  width: 48px;
+  height: 48px;
+  font-size: 14px;
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.profile-identity > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.profile-identity strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.profile-identity small {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
 .sidebar-scrim {
   display: none;
 }

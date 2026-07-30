@@ -245,7 +245,13 @@
                   <div class="comment-thread">
                     #for(comment in taskDetail.comments):
                       <div class="comment">
-                        <span class="avatar">#(comment.authorInitials)</span>
+                        <span class="avatar">
+                          #if(comment.authorAvatar.hasProfilePicture):
+                            <img src="#(comment.authorAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                          #else:
+                            #(comment.authorAvatar.initials)
+                          #endif
+                        </span>
                         <div>
                           <div class="comment-meta">
                             <strong>#(comment.authorName)</strong>
@@ -265,7 +271,13 @@
                   #if(taskDetail.canComment):
                     <form class="comment-composer" method="post" action="/app/tasks/#(taskDetail.task.id)/comments">
                       <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
-                      <span class="avatar">#(common.userInitials)</span>
+                      <span class="avatar">
+                        #if(common.userAvatar.hasProfilePicture):
+                          <img src="#(common.userAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                        #else:
+                          #(common.userAvatar.initials)
+                        #endif
+                      </span>
                       <div>
                         <label class="sr-only" for="new-comment">Add a comment</label>
                         <textarea

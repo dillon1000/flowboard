@@ -12,6 +12,19 @@
                   <div class="section-heading"><h2>Profile</h2></div>
                   <form class="panel panel-form" method="post" action="/app/settings/profile">
                     <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                    <div class="profile-identity">
+                      <span class="avatar large">
+                        #if(common.userAvatar.hasProfilePicture):
+                          <img src="#(common.userAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                        #else:
+                          #(common.userAvatar.initials)
+                        #endif
+                      </span>
+                      <span>
+                        <strong>#(common.userName)</strong>
+                        <small>Profile pictures refresh when you sign in with OAuth.</small>
+                      </span>
+                    </div>
                     <div class="field">
                       <label for="profile-name">Name</label>
                       <input class="input" id="profile-name" name="name" value="#(common.userName)" minlength="2" maxlength="80" required />

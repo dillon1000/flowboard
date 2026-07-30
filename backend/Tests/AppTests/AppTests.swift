@@ -99,6 +99,7 @@ struct AppTests {
             let state = try #require(query["state"])
             #expect(query["response_type"] == "code")
             #expect(query["client_id"] == "test-client")
+            #expect(query["scope"] == "openid profile email profile:picture")
             #expect(query["code_challenge_method"] == "S256")
             #expect((query["code_challenge"]?.count ?? 0) >= 43)
 
@@ -123,6 +124,18 @@ struct AppTests {
             )
             #expect(currentUser.status == .ok)
             let user = try currentUser.content.decode(UserResponse.self)
+            #expect(user.profilePictureURL == "https://images.example/avatar.png")
+
+            let appPage = try await app.testing().sendRequest(
+                .GET,
+                "app",
+                headers: ["Cookie": callbackCookie]
+            )
+            #expect(appPage.status == .ok)
+            expectContains(
+                appPage.body.string,
+                #"src="https://images.example/avatar.png""#
+            )
 
             let account = try #require(
                 try await OAuthAccount.query(on: app.db)
@@ -135,6 +148,32 @@ struct AppTests {
                 .filter(\.$owner.$id == user.id)
                 .count()
             #expect(boardCount == 1)
+
+            app.clients.use { application in
+                OAuthTestClient(
+                    eventLoop: application.eventLoopGroup.any(),
+                    pictureURL: "https://images.example/avatar-updated.png"
+                )
+            }
+            let returningStart = try await app.testing().sendRequest(.GET, "oauth/start")
+            let returningLocation = try #require(returningStart.headers.first(name: .location))
+            let returningComponents = try #require(URLComponents(string: returningLocation))
+            let returningState = try #require(
+                returningComponents.queryItems?.first { $0.name == "state" }?.value
+            )
+            let returningCookieHeader = try #require(returningStart.headers[.setCookie].first)
+            let returningCookie = String(
+                try #require(returningCookieHeader.split(separator: ";").first)
+            )
+            let returningCallback = try await app.testing().sendRequest(
+                .GET,
+                "oauth/callback?code=test-code&state=\(returningState)",
+                headers: ["Cookie": returningCookie]
+            )
+            #expect(returningCallback.status == .seeOther)
+            let refreshedUser = try #require(try await User.find(user.id, on: app.db))
+            #expect(refreshedUser.profilePictureURL == "https://images.example/avatar-updated.png")
+            #expect(try await Board.query(on: app.db).count() == 1)
         }
     }
 
@@ -198,7 +237,8 @@ struct AppTests {
             authorizationURL: "https://provider.example/authorize",
             tokenURL: "https://provider.example/token",
             userInfoURL: "https://provider.example/userinfo",
-            redirectURL: "http://localhost:8080/oauth/callback"
+            redirectURL: "http://localhost:8080/oauth/callback",
+            scopes: ["openid", "profile", "email", "profile:picture"]
         )
     }
 }
@@ -207,9 +247,14 @@ struct AppTests {
 /// and bearer profile request made by the application.
 private final class OAuthTestClient: Client, Sendable {
     let eventLoop: any EventLoop
+    let pictureURL: String
 
-    init(eventLoop: any EventLoop) {
+    init(
+        eventLoop: any EventLoop,
+        pictureURL: String = "https://images.example/avatar.png"
+    ) {
         self.eventLoop = eventLoop
+        self.pictureURL = pictureURL
     }
 
     func send(_ request: ClientRequest) -> EventLoopFuture<ClientResponse> {
@@ -234,7 +279,7 @@ private final class OAuthTestClient: Client, Sendable {
                 return eventLoop.makeSucceededFuture(.init(status: .unauthorized))
             }
             response = jsonResponse(
-                #"{"sub":"provider-user-123","email":"oauth@example.com","email_verified":true,"name":"OAuth User"}"#
+                #"{"sub":"provider-user-123","email":"oauth@example.com","email_verified":true,"name":"OAuth User","picture":"\#(pictureURL)"}"#
             )
         default:
             response = .init(status: .notFound)
@@ -243,7 +288,7 @@ private final class OAuthTestClient: Client, Sendable {
     }
 
     func delegating(to eventLoop: any EventLoop) -> any Client {
-        OAuthTestClient(eventLoop: eventLoop)
+        OAuthTestClient(eventLoop: eventLoop, pictureURL: pictureURL)
     }
 
     private func jsonResponse(_ json: String) -> ClientResponse {

@@ -62,6 +62,7 @@ public func configure(_ app: Application) async throws {
 
     app.migrations.add(CreateUser())
     app.migrations.add(CreateOAuthAccount())
+    app.migrations.add(AddUserProfilePicture())
     app.migrations.add(CreateBoard())
     app.migrations.add(AddBoardOwner())
     app.migrations.add(CreateTask())

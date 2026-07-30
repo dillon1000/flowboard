@@ -94,7 +94,13 @@
           </a>
         </nav>
         <a class="user-row" href="/app/settings" title="#(common.userName)">
-          <span class="avatar">#(common.userInitials)</span>
+          <span class="avatar">
+            #if(common.userAvatar.hasProfilePicture):
+              <img src="#(common.userAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+            #else:
+              #(common.userAvatar.initials)
+            #endif
+          </span>
           <span>
             <strong>#(common.userName)</strong>
             <small>#(common.userEmail)</small>

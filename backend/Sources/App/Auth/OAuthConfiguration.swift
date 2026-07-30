@@ -24,6 +24,7 @@ struct OAuthConfiguration: Sendable {
     let userIDField: String
     let emailField: String
     let nameField: String
+    let pictureField: String
     let emailVerifiedField: String
     let requiresVerifiedEmail: Bool
 
@@ -41,6 +42,7 @@ struct OAuthConfiguration: Sendable {
         userIDField: String = "sub",
         emailField: String = "email",
         nameField: String = "name",
+        pictureField: String = "picture",
         emailVerifiedField: String = "email_verified",
         requiresVerifiedEmail: Bool = true
     ) throws {
@@ -60,6 +62,7 @@ struct OAuthConfiguration: Sendable {
         self.userIDField = try Self.requireValue(userIDField, name: "OAUTH_USER_ID_FIELD")
         self.emailField = try Self.requireValue(emailField, name: "OAUTH_EMAIL_FIELD")
         self.nameField = try Self.requireValue(nameField, name: "OAUTH_NAME_FIELD")
+        self.pictureField = try Self.requireValue(pictureField, name: "OAUTH_PICTURE_FIELD")
         self.emailVerifiedField = try Self.requireValue(
             emailVerifiedField,
             name: "OAUTH_EMAIL_VERIFIED_FIELD"
@@ -86,6 +89,7 @@ struct OAuthConfiguration: Sendable {
             "OAUTH_USER_ID_FIELD",
             "OAUTH_EMAIL_FIELD",
             "OAUTH_NAME_FIELD",
+            "OAUTH_PICTURE_FIELD",
             "OAUTH_EMAIL_VERIFIED_FIELD",
             "OAUTH_REQUIRE_VERIFIED_EMAIL",
         ]
@@ -152,6 +156,7 @@ struct OAuthConfiguration: Sendable {
             userIDField: values["OAUTH_USER_ID_FIELD"] ?? "sub",
             emailField: values["OAUTH_EMAIL_FIELD"] ?? "email",
             nameField: values["OAUTH_NAME_FIELD"] ?? "name",
+            pictureField: values["OAUTH_PICTURE_FIELD"] ?? "picture",
             emailVerifiedField: values["OAUTH_EMAIL_VERIFIED_FIELD"] ?? "email_verified",
             requiresVerifiedEmail: requiresVerifiedEmail
         )

@@ -176,13 +176,25 @@
               <div class="section-heading"><div><h2>Members</h2><p>Viewer, Commenter, Editor, and Admin roles control access.</p></div></div>
               <div class="panel">
                 <div class="panel-row">
-                  <span class="avatar">#(boardSettings.ownerInitials)</span>
+                  <span class="avatar">
+                    #if(boardSettings.ownerAvatar.hasProfilePicture):
+                      <img src="#(boardSettings.ownerAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                    #else:
+                      #(boardSettings.ownerAvatar.initials)
+                    #endif
+                  </span>
                   <span class="panel-row-main"><strong>#(boardSettings.ownerName)</strong><span>#(boardSettings.ownerEmail)</span></span>
                   <span class="badge">Owner</span>
                 </div>
                 #for(member in boardSettings.members):
                   <div class="panel-row">
-                    <span class="avatar">#(member.initials)</span>
+                    <span class="avatar">
+                      #if(member.avatar.hasProfilePicture):
+                        <img src="#(member.avatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                      #else:
+                        #(member.avatar.initials)
+                      #endif
+                    </span>
                     <span class="panel-row-main"><strong>#(member.name)</strong><span>#(member.email)</span></span>
                     <span class="badge">#(member.role)</span>
                     <form method="post" action="/app/boards/#(boardSettings.id)/members/#(member.id)/remove">

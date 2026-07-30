@@ -16,6 +16,7 @@ enum AuthService {
             name: name,
             email: email,
             passwordHash: Bcrypt.hash(input.password),
+            profilePictureURL: nil,
             oauthIdentity: nil,
             on: database
         )
@@ -47,6 +48,11 @@ enum AuthService {
             .with(\.$user)
             .first()
         {
+            try await syncOAuthProfilePicture(
+                normalizedProfilePictureURL(profile.pictureURL),
+                for: account.user,
+                on: database
+            )
             return account.user
         }
 
@@ -64,12 +70,20 @@ enum AuthService {
         guard !Validator<String>.email.validate(email).isFailure else {
             throw Abort(.unprocessableEntity, reason: "The OAuth provider supplied an invalid email.")
         }
+        let profilePictureURL = normalizedProfilePictureURL(profile.pictureURL)
         if let user = try await User.query(on: database).filter(\.$email == email).first() {
-            try await OAuthAccount(
-                userID: try user.requireID(),
-                providerID: providerID,
-                providerUserID: profile.providerUserID
-            ).create(on: database)
+            try await database.transaction { transaction in
+                try await syncOAuthProfilePicture(
+                    profilePictureURL,
+                    for: user,
+                    on: transaction
+                )
+                try await OAuthAccount(
+                    userID: try user.requireID(),
+                    providerID: providerID,
+                    providerUserID: profile.providerUserID
+                ).create(on: transaction)
+            }
             return user
         }
 
@@ -78,6 +92,7 @@ enum AuthService {
             name: name,
             email: email,
             passwordHash: Bcrypt.hash(OAuthService.randomURLSafeValue(byteCount: 48)),
+            profilePictureURL: profilePictureURL,
             oauthIdentity: (providerID, profile.providerUserID),
             on: database
         )
@@ -90,6 +105,7 @@ enum AuthService {
         name: String,
         email: String,
         passwordHash: String,
+        profilePictureURL: String?,
         oauthIdentity: (providerID: String, providerUserID: String)?,
         on database: any Database
     ) async throws -> User {
@@ -98,7 +114,8 @@ enum AuthService {
             id: userID,
             name: name,
             email: email,
-            passwordHash: passwordHash
+            passwordHash: passwordHash,
+            profilePictureURL: profilePictureURL
         )
 
         return try await database.transaction { transaction in
@@ -127,5 +144,34 @@ enum AuthService {
         }
         let emailName = String(email.split(separator: "@", maxSplits: 1).first ?? "")
         return emailName.count >= 2 ? String(emailName.prefix(80)) : "OAuth user"
+    }
+
+    /// Accepts only bounded HTTPS URLs because the value is rendered as an image
+    /// source on authenticated pages. Invalid or missing claims remove stale images.
+    private static func normalizedProfilePictureURL(_ suppliedURL: String?) -> String? {
+        guard
+            let suppliedURL,
+            suppliedURL.count <= 2_048,
+            let components = URLComponents(string: suppliedURL),
+            components.scheme?.lowercased() == "https",
+            components.host != nil
+        else {
+            return nil
+        }
+        return suppliedURL
+    }
+
+    /// Synchronizes the provider-managed image on every OAuth login. The update
+    /// is skipped when the stored value already matches, which avoids timestamp churn.
+    private static func syncOAuthProfilePicture(
+        _ profilePictureURL: String?,
+        for user: User,
+        on database: any Database
+    ) async throws {
+        guard user.profilePictureURL != profilePictureURL else {
+            return
+        }
+        user.profilePictureURL = profilePictureURL
+        try await user.update(on: database)
     }
 }

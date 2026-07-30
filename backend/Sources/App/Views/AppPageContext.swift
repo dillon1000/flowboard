@@ -59,8 +59,22 @@ struct CommonPageContext: Encodable {
     let csrfToken: String
     let userName: String
     let userEmail: String
-    let userInitials: String
+    let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
+}
+
+/// Supplies one image-or-initials choice to Leaf wherever a user identity appears.
+/// OAuth URLs are validated before storage, so templates only select the display.
+struct AvatarContext: Encodable {
+    let initials: String
+    let profilePictureURL: String
+    let hasProfilePicture: Bool
+
+    init(user: User) {
+        self.initials = makeInitials(for: user.name)
+        self.profilePictureURL = user.profilePictureURL ?? ""
+        self.hasProfilePicture = user.profilePictureURL != nil
+    }
 }
 
 struct BoardNavigationContext: Encodable {
@@ -460,7 +474,7 @@ struct TaskDetailPageContext: Encodable {
 struct CommentContext: Encodable {
     let id: UUID
     let authorName: String
-    let authorInitials: String
+    let authorAvatar: AvatarContext
     let body: String
     let createdDisplay: String
     let canDelete: Bool
@@ -468,7 +482,7 @@ struct CommentContext: Encodable {
     init(comment: TaskComment, canDelete: Bool) throws {
         self.id = try comment.requireID()
         self.authorName = comment.author.name
-        self.authorInitials = makeInitials(for: comment.author.name)
+        self.authorAvatar = AvatarContext(user: comment.author)
         self.body = comment.body
         self.createdDisplay = comment.createdAt.map(displayDate) ?? "Recently"
         self.canDelete = canDelete
@@ -531,7 +545,7 @@ struct BoardSettingsPageContext: Encodable {
     let isArchived: Bool
     let ownerName: String
     let ownerEmail: String
-    let ownerInitials: String
+    let ownerAvatar: AvatarContext
     let views: [BoardSettingsViewContext]
     let members: [BoardMemberContext]
     let templates: [TemplateContext]
@@ -559,7 +573,7 @@ struct BoardSettingsPageContext: Encodable {
         self.isArchived = board.isArchived
         self.ownerName = owner.name
         self.ownerEmail = owner.email
-        self.ownerInitials = makeInitials(for: owner.name)
+        self.ownerAvatar = AvatarContext(user: owner)
         self.views = try views.map(BoardSettingsViewContext.init)
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
@@ -604,14 +618,14 @@ struct BoardMemberContext: Encodable {
     let name: String
     let email: String
     let role: String
-    let initials: String
+    let avatar: AvatarContext
 
     init(member: BoardMember) throws {
         self.id = try member.requireID()
         self.name = member.user.name
         self.email = member.user.email
         self.role = member.role.rawValue.capitalized
-        self.initials = makeInitials(for: member.user.name)
+        self.avatar = AvatarContext(user: member.user)
     }
 }
 

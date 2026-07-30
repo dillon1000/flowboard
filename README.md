@@ -109,11 +109,13 @@ required endpoint and client values are present. Register
 `OAUTH_REDIRECT_URL` exactly with the provider; local development normally uses
 `http://localhost:8080/oauth/callback`.
 
-The default profile mapping reads `sub`, `email`, `name`, and `email_verified`.
+The default profile mapping reads `sub`, `email`, `name`, `picture`, and
+`email_verified`.
 The optional field settings accept dot-separated paths for providers with
-nested profile data. Verified email is required before a new provider identity
-can create or link an account; disable that check only when the provider
-guarantees verified emails through another contract.
+nested profile data. Valid HTTPS picture URLs are synchronized on each OAuth
+login. Verified email is required before a new provider identity can create or
+link an account; disable that check only when the provider guarantees verified
+emails through another contract.
 
 Production does not migrate automatically. Build the frontend, run migrations,
 and then start the server:

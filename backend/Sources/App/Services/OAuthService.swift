@@ -5,6 +5,7 @@ struct OAuthProfile: Sendable {
     let providerUserID: String
     let email: String?
     let name: String?
+    let pictureURL: String?
     let emailVerified: Bool?
 }
 
@@ -146,6 +147,7 @@ enum OAuthService {
             providerUserID: providerUserID,
             email: string(value(at: configuration.emailField, in: values)),
             name: string(value(at: configuration.nameField, in: values)),
+            pictureURL: string(value(at: configuration.pictureField, in: values)),
             emailVerified: boolean(value(at: configuration.emailVerifiedField, in: values))
         )
     }
