@@ -13,8 +13,8 @@ export class ThemeController extends Controller {
     this.apply(this.savedTheme());
   }
 
-  labelTargetConnected(): void {
-    this.updateLabel(this.savedTheme());
+  labelTargetConnected(element: HTMLElement): void {
+    element.textContent = this.themeLabel(this.savedTheme());
   }
 
   toggle(): void {
@@ -41,8 +41,12 @@ export class ThemeController extends Controller {
 
   private updateLabel(theme: 'light' | 'dark'): void {
     if (this.hasLabelTarget) {
-      this.labelTarget.textContent = theme === 'dark' ? 'Use light theme' : 'Use dark theme';
+      this.labelTarget.textContent = this.themeLabel(theme);
     }
+  }
+
+  private themeLabel(theme: 'light' | 'dark'): string {
+    return theme === 'dark' ? 'Use light theme' : 'Use dark theme';
   }
 }
 
