@@ -127,7 +127,11 @@ struct TaskResponse: Content {
     let priority: TaskPriority
     let position: Int
     let labels: [String]
+    let startAt: Date?
     let dueAt: Date?
+    let assigneeID: UUID?
+    let properties: [String: String]
+    let isArchived: Bool
     let createdAt: Date?
     let updatedAt: Date?
 
@@ -141,7 +145,11 @@ struct TaskResponse: Content {
         self.priority = task.priority
         self.position = task.position
         self.labels = task.labels
+        self.startAt = task.startAt
         self.dueAt = task.dueAt
+        self.assigneeID = task.$assignee.id
+        self.properties = task.properties ?? [:]
+        self.isArchived = task.isArchived
         self.createdAt = task.createdAt
         self.updatedAt = task.updatedAt
     }
@@ -154,7 +162,34 @@ struct CreateTaskRequest: Content, Validatable {
     let status: TaskStatus?
     let priority: TaskPriority?
     let labels: [String]?
+    let startAt: Date?
     let dueAt: Date?
+    let assigneeID: UUID?
+    let properties: [String: String]?
+
+    init(
+        boardID: UUID,
+        title: String,
+        description: String?,
+        status: TaskStatus?,
+        priority: TaskPriority?,
+        labels: [String]?,
+        startAt: Date? = nil,
+        dueAt: Date?,
+        assigneeID: UUID? = nil,
+        properties: [String: String]? = nil
+    ) {
+        self.boardID = boardID
+        self.title = title
+        self.description = description
+        self.status = status
+        self.priority = priority
+        self.labels = labels
+        self.startAt = startAt
+        self.dueAt = dueAt
+        self.assigneeID = assigneeID
+        self.properties = properties
+    }
 
     static func validations(_ validations: inout Validations) {
         validations.add("title", as: String.self, is: .count(1...120))
@@ -169,7 +204,32 @@ struct UpdateTaskRequest: Content, Validatable {
     let status: TaskStatus
     let priority: TaskPriority
     let labels: [String]
+    let startAt: Date?
     let dueAt: Date?
+    let assigneeID: UUID?
+    let properties: [String: String]?
+
+    init(
+        title: String,
+        description: String?,
+        status: TaskStatus,
+        priority: TaskPriority,
+        labels: [String],
+        startAt: Date? = nil,
+        dueAt: Date?,
+        assigneeID: UUID? = nil,
+        properties: [String: String]? = nil
+    ) {
+        self.title = title
+        self.description = description
+        self.status = status
+        self.priority = priority
+        self.labels = labels
+        self.startAt = startAt
+        self.dueAt = dueAt
+        self.assigneeID = assigneeID
+        self.properties = properties
+    }
 
     static func validations(_ validations: inout Validations) {
         validations.add("title", as: String.self, is: .count(1...120))

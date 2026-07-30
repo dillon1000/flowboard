@@ -56,6 +56,7 @@ struct BoardController: RouteCollection {
             try await WorkspaceService.createBoard(
                 name: input.name.trimmingCharacters(in: .whitespacesAndNewlines),
                 slug: slug,
+                description: input.description?.trimmingCharacters(in: .whitespacesAndNewlines),
                 ownerID: userID,
                 on: database
             )
@@ -70,6 +71,7 @@ struct BoardController: RouteCollection {
         let input = try req.content.decode(UpdateBoardRequest.self)
         let board = try await findBoard(req, permission: .edit)
         board.name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        board.description = input.description?.trimmingCharacters(in: .whitespacesAndNewlines)
         try await board.update(on: req.db)
         return try await response(for: board, on: req.db)
     }

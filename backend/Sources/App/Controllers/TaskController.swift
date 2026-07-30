@@ -17,6 +17,7 @@ struct TaskController: RouteCollection {
 
         var query = Task.query(on: req.db)
             .filter(\.$board.$id ~~ boardIDs)
+            .filter(\.$isArchived == false)
             .with(\.$board)
         if let boardID: UUID = req.query["boardID"] {
             guard boardIDs.contains(boardID) else {
@@ -59,7 +60,17 @@ struct TaskController: RouteCollection {
             priority: input.priority ?? .medium,
             position: (count + 1) * 1_000,
             labels: sanitize(labels: input.labels ?? []),
+            startAt: input.startAt,
             dueAt: input.dueAt
+        )
+        task.properties = sanitize(
+            properties: input.properties ?? [:],
+            definitions: try await boardDefinitions(boardID: input.boardID, on: req.db)
+        )
+        task.$assignee.id = try await validAssignee(
+            input.assigneeID,
+            boardID: input.boardID,
+            on: req.db
         )
         try await task.create(on: req.db)
 
@@ -78,7 +89,17 @@ struct TaskController: RouteCollection {
         task.description = input.description
         task.priority = input.priority
         task.labels = sanitize(labels: input.labels)
+        task.startAt = input.startAt
         task.dueAt = input.dueAt
+        task.properties = sanitize(
+            properties: input.properties ?? [:],
+            definitions: try await boardDefinitions(boardID: task.$board.id, on: req.db)
+        )
+        task.$assignee.id = try await validAssignee(
+            input.assigneeID,
+            boardID: task.$board.id,
+            on: req.db
+        )
         if input.status != task.status {
             let count = try await Task.query(on: req.db)
                 .filter(\.$board.$id == task.$board.id)
@@ -164,5 +185,38 @@ struct TaskController: RouteCollection {
                 .filter { !$0.isEmpty }
                 .prefix(6)
         )
+    }
+
+    private func boardDefinitions(
+        boardID: UUID,
+        on database: any Database
+    ) async throws -> [BoardPropertyDefinition] {
+        try await Board.find(boardID, on: database)?.propertyDefinitions ?? []
+    }
+
+    private func sanitize(
+        properties: [String: String],
+        definitions: [BoardPropertyDefinition]
+    ) -> [String: String] {
+        let allowed = Set(definitions.map(\.id))
+        return properties.reduce(into: [:]) { result, entry in
+            let value = entry.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if allowed.contains(entry.key), !value.isEmpty {
+                result[entry.key] = String(value.prefix(2_000))
+            }
+        }
+    }
+
+    private func validAssignee(
+        _ userID: UUID?,
+        boardID: UUID,
+        on database: any Database
+    ) async throws -> UUID? {
+        guard let userID else { return nil }
+        let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: database)
+        guard boardIDs.contains(boardID) else {
+            throw Abort(.unprocessableEntity, reason: "The assignee cannot access this board.")
+        }
+        return userID
     }
 }

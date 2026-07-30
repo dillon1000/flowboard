@@ -93,6 +93,9 @@ struct BoardResponse: Content {
     let id: UUID
     let name: String
     let slug: String
+    let description: String?
+    let isArchived: Bool
+    let propertyDefinitions: [BoardPropertyDefinition]
     let tasks: [TaskResponse]
     let createdAt: Date?
     let updatedAt: Date?
@@ -101,6 +104,9 @@ struct BoardResponse: Content {
         self.id = try board.requireID()
         self.name = board.name
         self.slug = board.slug
+        self.description = board.description
+        self.isArchived = board.isArchived
+        self.propertyDefinitions = board.propertyDefinitions ?? []
         self.tasks = try tasks
             .sorted { ($0.status.sortOrder, $0.position) < ($1.status.sortOrder, $1.position) }
             .map { try TaskResponse(task: $0) }
@@ -112,6 +118,7 @@ struct BoardResponse: Content {
 struct CreateBoardRequest: Content, Validatable {
     let name: String
     let slug: String?
+    let description: String?
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))
@@ -120,14 +127,17 @@ struct CreateBoardRequest: Content, Validatable {
             as: String?.self,
             is: .nil || (.count(2...48) && .characterSet(.alphanumerics + CharacterSet(charactersIn: "-")))
         )
+        validations.add("description", as: String?.self, is: .nil || .count(...500))
     }
 }
 
 struct UpdateBoardRequest: Content, Validatable {
     let name: String
+    let description: String?
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))
+        validations.add("description", as: String?.self, is: .nil || .count(...500))
     }
 }
 
@@ -135,6 +145,8 @@ struct BoardSummaryResponse: Content {
     let id: UUID
     let name: String
     let slug: String
+    let description: String?
+    let isArchived: Bool
     let taskCount: Int
     let completedCount: Int
     let createdAt: Date?
@@ -144,6 +156,8 @@ struct BoardSummaryResponse: Content {
         self.id = try board.requireID()
         self.name = board.name
         self.slug = board.slug
+        self.description = board.description
+        self.isArchived = board.isArchived
         self.taskCount = tasks.count
         self.completedCount = tasks.filter { $0.status == .done }.count
         self.createdAt = board.createdAt
