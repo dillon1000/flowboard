@@ -1,0 +1,277 @@
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (width <= 1200px) {
+  .overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+}
+
+@media (width <= 1100px) {
+  .split-layout {
+    gap: 28px;
+    grid-template-columns: minmax(0, 1fr) 272px;
+  }
+}
+
+@media (width <= 900px) {
+  .split-layout,
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .task-sidebar,
+  .settings-menu {
+    position: static;
+  }
+
+  /* The settings nav becomes a horizontal rail above the content. */
+  .settings-menu {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    gap: 4px;
+    padding-bottom: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .settings-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Auth collapses to the form pane alone. */
+  .auth-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .auth-aside {
+    display: none;
+  }
+}
+
+@media (width <= 820px) {
+  /* Below the sidebar breakpoint the frame is dropped: the document scrolls
+     again, so the board and its columns grow with their content. */
+  .app-shell {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .workspace {
+    display: block;
+    overflow: visible;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+  }
+
+  .page,
+  .page.framed {
+    display: block;
+    overflow: visible;
+  }
+
+  .board-bar {
+    position: sticky;
+    top: var(--topbar-height);
+    z-index: 10;
+    padding: 20px 16px 0;
+    background: var(--surface);
+  }
+
+  .board-canvas,
+  .board-canvas.flush {
+    padding: 16px;
+    overflow: visible;
+  }
+
+  .kanban {
+    height: auto;
+    grid-auto-columns: minmax(272px, 1fr);
+  }
+
+  .kanban-column {
+    min-height: 400px;
+    max-height: none;
+  }
+
+  .column-tasks {
+    overflow: visible;
+  }
+
+  /* The drawer is always full width, even if the rail was collapsed on desktop. */
+  .sidebar,
+  :root[data-sidebar='collapsed'] .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: 248px;
+    align-items: stretch;
+    box-shadow: var(--shadow-modal);
+    transform: translateX(-100%);
+    transition: transform 240ms var(--ease-out);
+  }
+
+  .sidebar[data-open='true'],
+  :root[data-sidebar='collapsed'] .sidebar[data-open='true'] {
+    transform: none;
+  }
+
+  /* Restore every label the rail hid. */
+  :root[data-sidebar='collapsed'] .sidebar .nav-link span,
+  :root[data-sidebar='collapsed'] .sidebar .nav-link small,
+  :root[data-sidebar='collapsed'] .sidebar .nav-section-header span,
+  :root[data-sidebar='collapsed'] .sidebar .user-row > span:last-child {
+    display: revert;
+  }
+
+  :root[data-sidebar='collapsed'] .sidebar .brand-row {
+    justify-content: flex-start;
+    padding: 0 12px 0 16px;
+  }
+
+  :root[data-sidebar='collapsed'] .sidebar .nav-link {
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 10px;
+    min-height: 32px;
+  }
+
+  :root[data-sidebar='collapsed'] .sidebar .nav-section-header {
+    justify-content: space-between;
+    padding: 0 2px 0 10px;
+  }
+
+  :root[data-sidebar='collapsed'] .sidebar .user-row {
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 16px;
+  }
+
+  .sidebar-scrim {
+    position: fixed;
+    z-index: 25;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 0 0 / 40%);
+    backdrop-filter: blur(2px);
+  }
+
+  .page {
+    padding: 24px 16px 56px;
+  }
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .search-control {
+    width: 180px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-shell {
+    overflow-x: auto;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    min-width: 720px;
+  }
+}
+
+@media (width <= 600px) {
+  .search-control,
+  .topbar .theme-button {
+    display: none;
+  }
+
+  .page-header {
+    display: grid;
+    gap: 16px;
+  }
+
+  .page-title h1 {
+    font-size: 24px;
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions > *,
+  .page-actions .button {
+    flex: 1;
+  }
+
+  .stats,
+  .board-list,
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kanban {
+    grid-auto-columns: 84vw;
+  }
+
+  .auth-form-pane {
+    padding: 88px 20px 40px;
+  }
+
+  .auth-header {
+    padding: 0 16px;
+  }
+
+  .dialog-layer {
+    align-items: end;
+    padding: 0;
+  }
+
+  .dialog,
+  .dialog.wide {
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    border-radius: var(--radius-xlarge) var(--radius-xlarge) 0 0;
+    transform: translateY(16px);
+  }
+
+  .dialog-footer {
+    border-radius: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .toast {
+    right: 12px;
+    left: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .board-card:hover,
+  .task-card:hover,
+  .gallery-card:hover {
+    transform: none;
+  }
+}

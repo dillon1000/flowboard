@@ -1,0 +1,218 @@
+/* ==========================================================================
+   Settings
+   ========================================================================== */
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.settings-menu {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  align-content: start;
+  gap: 1px;
+}
+
+.settings-content {
+  min-width: 0;
+}
+
+/* Anchored sections clear the top of the scroll container when jumped to. */
+.settings-content .section {
+  scroll-margin-top: 24px;
+}
+
+.settings-content .section:first-child {
+  margin-top: 0;
+}
+
+/* ==========================================================================
+   Auth
+   ========================================================================== */
+
+/* Auth is a two-pane split: the form on the left, the product pitch on a
+   decorated panel to the right. The panel drops away under 900px. */
+.auth-page {
+  display: grid;
+  min-height: 100dvh;
+  grid-template-rows: auto 1fr;
+  background: var(--surface);
+}
+
+.auth-header {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  width: 100%;
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.auth-header .brand-wordmark {
+  width: 112px;
+}
+
+.auth-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-row: 1 / -1;
+  min-height: 0;
+}
+
+.auth-main-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.auth-form-pane {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 96px 24px 48px;
+  overflow-y: auto;
+}
+
+.auth-card {
+  width: min(100%, 360px);
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.auth-card-minimal h1 {
+  margin-bottom: 32px;
+}
+
+.auth-card > p:not(.error-message) {
+  margin: 8px 0 32px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding: 64px;
+  border-left: 1px solid var(--border);
+  background: var(--surface-sunken);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* The workspace grid is a faint square lattice faded out at the edges. */
+.auth-aside::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image: linear-gradient(to right, var(--ds-gray-alpha-200) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ds-gray-alpha-200) 1px, transparent 1px);
+  background-size: 56px 56px;
+  content: '';
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 10%, transparent 100%);
+}
+
+.auth-aside blockquote {
+  max-width: 26ch;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.auth-points {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.auth-points li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.auth-points svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+
+.auth-card .input {
+  height: 40px;
+}
+
+.auth-card .button.primary {
+  width: 100%;
+  height: 40px;
+  margin-top: 20px;
+}
+
+.oauth-button {
+  margin-top: -8px;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: '';
+}
+
+.auth-switch {
+  margin: 24px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.auth-switch a {
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Pinned to the panel's bottom margin so the pitch stays optically centred. */
+.auth-footer {
+  position: absolute;
+  bottom: 64px;
+  left: 64px;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+

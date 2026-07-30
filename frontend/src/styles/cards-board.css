@@ -1,0 +1,298 @@
+/* ==========================================================================
+   Card — a titled container. Panels are row lists; cards hold content.
+   ========================================================================== */
+
+.card {
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.card + .card {
+  margin-top: 20px;
+}
+
+.card-header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.card-header .spacer {
+  flex: 1;
+}
+
+.card-body {
+  padding: 16px;
+}
+
+.card-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
+}
+
+.card-empty {
+  padding: 24px 16px;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Row list inside a card — the card already draws the outer border. */
+.card-rows > * + * {
+  border-top: 1px solid var(--border);
+}
+
+.card-rows > :last-child {
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
+}
+
+.danger-zone .card-header,
+.danger-zone .card-rows > * + * {
+  border-color: color-mix(in srgb, var(--ds-red-700) 20%, transparent);
+}
+
+.danger-zone {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-red-700) 30%, transparent);
+}
+
+.danger-zone .panel-row + .panel-row {
+  border-top-color: color-mix(in srgb, var(--ds-red-700) 20%, transparent);
+}
+
+/* ==========================================================================
+   Board cards (overview)
+   ========================================================================== */
+
+/* Overview splits into a boards column and a narrower activity rail. */
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 40px;
+  align-items: start;
+  margin-top: 32px;
+}
+
+.overview-grid > .section {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.overview-rail .panel-row {
+  min-height: 52px;
+  padding: 10px 14px;
+}
+
+.overview-rail .panel-row-main strong {
+  font-size: 13px;
+}
+
+.board-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.board-card {
+  position: relative;
+  display: flex;
+  min-height: 152px;
+  flex-direction: column;
+  padding: 18px;
+  border-radius: var(--radius-large);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  text-decoration: none;
+  transition: box-shadow var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.board-card:hover {
+  box-shadow: var(--shadow-border), var(--shadow-medium);
+  transform: translateY(-1px);
+}
+
+.board-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.board-card-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  background: var(--surface-hover);
+}
+
+.board-card-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.board-card h3 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-card p {
+  display: -webkit-box;
+  margin: 12px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.board-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 16px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.board-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.board-card-meta svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ==========================================================================
+   Board toolbar / view tabs
+   ========================================================================== */
+
+/* Board bar: title, actions and view tabs form one fixed header block that the
+   board content scrolls beneath. */
+.board-bar {
+  flex: 0 0 auto;
+  padding: 24px 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.board-bar > * {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+.board-bar .page-header {
+  margin-bottom: 12px;
+}
+
+.board-canvas {
+  flex: 1;
+  min-height: 0;
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.board-canvas > * {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+/* The kanban manages its own scrolling in both axes. */
+.board-canvas.flush {
+  padding: 12px 24px 24px;
+  overflow: hidden;
+}
+
+.board-toolbar {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.board-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.view-tab {
+  position: relative;
+  display: inline-flex;
+  height: 43px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 4px;
+  margin-right: 12px;
+  border: 0;
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--duration) var(--ease);
+}
+
+.view-tab:hover {
+  color: var(--text);
+}
+
+.view-tab.active {
+  color: var(--text);
+}
+
+.view-tab::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  content: '';
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.view-tab.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.toolbar-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+

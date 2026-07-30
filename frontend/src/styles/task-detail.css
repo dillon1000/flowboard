@@ -1,0 +1,271 @@
+/* ==========================================================================
+   Task detail
+   ========================================================================== */
+
+.split-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 48px;
+  align-items: start;
+}
+
+/* The detail header spans the full measure and rules off from the body. */
+.detail-header {
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-header .page-title h1 {
+  font-size: 24px;
+}
+
+/* A fact strip under the title puts status, owner and dates above the fold. */
+.task-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.fact svg {
+  width: 13px;
+  height: 13px;
+  color: var(--text-tertiary);
+}
+
+.fact.muted {
+  color: var(--text-tertiary);
+}
+
+.fact-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border-strong);
+}
+
+.avatar.small {
+  width: 20px;
+  height: 20px;
+  font-size: 8px;
+}
+
+.task-description {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.task-description.empty {
+  color: var(--text-tertiary);
+}
+
+.task-main {
+  min-width: 0;
+}
+
+.task-sidebar {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.task-sidebar > .card + .card {
+  margin-top: 0;
+}
+
+/* Properties read as a definition list: label left, value right, no boxes. */
+.property-list {
+  display: grid;
+  padding: 6px;
+  margin: 0;
+}
+
+.property-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 34px;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-small);
+  font-size: 13px;
+}
+
+.property-row dt,
+.property-row > span:first-child {
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.property-row dd,
+.property-row > span:last-child {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.property-row dd.muted {
+  color: var(--text-tertiary);
+}
+
+/* ---- Checklist ---- */
+
+.checklist-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+progress.progress {
+  width: 72px;
+  height: 4px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-active);
+  appearance: none;
+}
+
+progress.progress::-webkit-progress-bar {
+  border-radius: var(--radius-full);
+  background: var(--surface-active);
+}
+
+progress.progress::-webkit-progress-value {
+  border-radius: var(--radius-full);
+  background: var(--ds-green-700);
+  transition: width 240ms var(--ease);
+}
+
+progress.progress::-moz-progress-bar {
+  border-radius: var(--radius-full);
+  background: var(--ds-green-700);
+}
+
+.checklist {
+  display: grid;
+  gap: 1px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-radius: var(--radius-small);
+  font-size: 13px;
+  transition: background-color var(--duration) var(--ease);
+}
+
+.checklist-item:hover {
+  background: var(--surface-hover);
+}
+
+.checklist-item.completed > span {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: var(--ds-gray-500);
+}
+
+.checklist-add {
+  display: flex;
+  gap: 8px;
+}
+
+.checklist-add .input {
+  flex: 1;
+}
+
+/* ---- Comments ---- */
+
+.comment-thread {
+  display: grid;
+}
+
+.comment {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px;
+}
+
+.comment + .comment {
+  border-top: 1px solid var(--border);
+}
+
+.comment-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.comment-meta strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.comment-meta span {
+  color: var(--text-tertiary);
+}
+
+.comment-body {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Delete stays out of the way until the comment is hovered or focused. */
+.comment-actions {
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.comment:hover .comment-actions,
+.comment:focus-within .comment-actions {
+  opacity: 1;
+}
+
+.comment-composer {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
+}
+
+.comment-composer .textarea {
+  min-height: 76px;
+}
+
+.comment-composer .form-actions {
+  margin-top: 10px;
+}
+

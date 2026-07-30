@@ -1,0 +1,290 @@
+/* ==========================================================================
+   App shell
+   ========================================================================== */
+
+/* The app is a fixed viewport frame: the shell never scrolls, the sidebar and
+   the workspace own their own scroll. Only the page body moves. */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+  transition: grid-template-columns 200ms var(--ease);
+}
+
+.sidebar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  width: var(--sidebar-width);
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--surface-sunken);
+  transition: width 200ms var(--ease);
+}
+
+.brand-row {
+  display: flex;
+  min-height: var(--topbar-height);
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 16px;
+}
+
+.brand {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  text-decoration: none;
+}
+
+.brand-wordmark,
+.brand-logo {
+  display: block;
+  width: 104px;
+  max-width: 100%;
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.sidebar-section {
+  padding: 4px 8px;
+}
+
+.sidebar-section + .sidebar-section {
+  padding-top: 8px;
+}
+
+.main-nav,
+.settings-nav,
+.boards-nav nav {
+  display: grid;
+  gap: 1px;
+}
+
+.nav-link {
+  position: relative;
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: var(--radius-small);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.nav-link.active {
+  color: var(--text);
+  background: var(--surface-active);
+  font-weight: 500;
+}
+
+.nav-link svg {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+
+.nav-link.active svg,
+.nav-link:hover svg {
+  color: var(--text);
+}
+
+.nav-link span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-link small {
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.boards-nav {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: 8px 8px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.nav-section-header {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 0 10px;
+  margin-bottom: 2px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.nav-section-header .icon-button {
+  width: 24px;
+  height: 24px;
+}
+
+.sidebar-spacer {
+  flex: 1;
+  min-height: 8px;
+}
+
+.settings-nav {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.user-row {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color var(--duration) var(--ease);
+}
+
+.user-row:hover {
+  background: var(--surface-hover);
+}
+
+.user-row > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.user-row strong,
+.user-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-row strong {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.user-row small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.avatar {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--surface);
+  background: var(--ds-gray-1000);
+  box-shadow: var(--shadow-border);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.avatar.large {
+  width: 48px;
+  height: 48px;
+  font-size: 14px;
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.profile-identity > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.profile-identity strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.profile-identity small {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.sidebar-scrim {
+  display: none;
+}
+
+/* ==========================================================================
+   Collapsed sidebar (desktop rail)
+   ========================================================================== */
+
+:root[data-sidebar='collapsed'] {
+  --sidebar-width: var(--sidebar-rail-width);
+}
+
+/* Every rule below is scoped to .sidebar — .nav-link is also used by the
+   settings pages, which must never collapse with the rail. */
+:root[data-sidebar='collapsed'] .sidebar .nav-link span,
+:root[data-sidebar='collapsed'] .sidebar .nav-link small,
+:root[data-sidebar='collapsed'] .sidebar .nav-section-header span,
+:root[data-sidebar='collapsed'] .sidebar .user-row > span:last-child {
+  display: none;
+}
+
+/* The rail is one 40px icon column, centred: mark, links and avatar all share
+   the same vertical axis. */
+:root[data-sidebar='collapsed'] .sidebar .brand-row,
+:root[data-sidebar='collapsed'] .sidebar .nav-section-header,
+:root[data-sidebar='collapsed'] .sidebar .user-row {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 8px;
+}
+
+:root[data-sidebar='collapsed'] .sidebar .brand-logo {
+  width: 24px;
+}
+
+:root[data-sidebar='collapsed'] .sidebar .nav-link {
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  min-height: 40px;
+}
+
+:root[data-sidebar='collapsed'] .sidebar .user-row {
+  padding-block: 12px;
+}
+

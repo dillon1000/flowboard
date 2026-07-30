@@ -1,0 +1,336 @@
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field + .field {
+  margin-top: 16px;
+}
+
+.field > label,
+.field-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.input,
+.textarea,
+.select-trigger {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  font-size: 13px;
+  transition: box-shadow var(--duration) var(--ease);
+}
+
+.input,
+.select-trigger {
+  height: 36px;
+  padding: 0 10px;
+}
+
+.textarea {
+  min-height: 96px;
+  padding: 9px 10px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input:hover,
+.textarea:hover,
+.select-trigger:hover {
+  box-shadow: 0 0 0 1px var(--ds-gray-alpha-500);
+}
+
+.input:focus,
+.textarea:focus,
+.select-trigger:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.input:disabled,
+.textarea:disabled {
+  color: var(--text-tertiary);
+  background: var(--surface-sunken);
+  cursor: not-allowed;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-grid .field + .field {
+  margin-top: 0;
+}
+
+.form-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.field-help {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  border-radius: var(--radius-medium);
+  color: var(--ds-red-900);
+  background: var(--ds-red-100);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-red-700) 30%, transparent);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.custom-checkbox {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: transparent;
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  cursor: pointer;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.custom-checkbox:hover {
+  box-shadow: 0 0 0 1px var(--ds-gray-alpha-600);
+}
+
+.custom-checkbox.checked {
+  color: var(--ds-background-100);
+  background: var(--ds-gray-1000);
+  box-shadow: none;
+}
+
+.custom-checkbox svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+/* ==========================================================================
+   Menus (custom select)
+   ========================================================================== */
+
+.menu {
+  position: relative;
+}
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 0 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.select-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-trigger svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+
+.menu-panel {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max(100%, 200px);
+  max-height: 280px;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border), var(--shadow-menu);
+  animation: menu-in 120ms var(--ease-out);
+}
+
+.menu-panel.right {
+  right: 0;
+  left: auto;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.menu-option {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+.menu-option:hover,
+.menu-option:focus-visible {
+  outline: 0;
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.menu-option[aria-selected='true'] {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.menu-option[aria-selected='true']::after {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  content: '✓';
+  font-size: 12px;
+}
+
+.menu-option.danger {
+  color: var(--ds-red-900);
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 6px -6px;
+  background: var(--border);
+}
+
+/* ==========================================================================
+   Dialogs
+   ========================================================================== */
+
+.dialog-layer {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: min(10vh, 88px) 20px 40px;
+  overflow-y: auto;
+  background: rgb(0 0 0 / 40%);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
+}
+
+.dialog-layer[data-open='true'] {
+  opacity: 1;
+}
+
+.dialog {
+  width: min(100%, 540px);
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border), var(--shadow-modal);
+  transform: translateY(-6px) scale(0.98);
+  transition: transform 180ms var(--ease-out);
+}
+
+.dialog-layer[data-open='true'] .dialog {
+  transform: none;
+}
+
+.dialog.wide {
+  width: min(100%, 720px);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 20px 0;
+}
+
+.dialog-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.dialog-header p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dialog-header .icon-button {
+  margin: -4px -4px 0 0;
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
+}
+

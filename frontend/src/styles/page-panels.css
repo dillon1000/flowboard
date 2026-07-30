@@ -1,0 +1,267 @@
+/* ==========================================================================
+   Page scaffolding & typography
+   ========================================================================== */
+
+/* The page is the workspace's scroll container. Children that want to stick
+   (right rails, settings nav) anchor to this, not to the viewport. */
+/* The page is the workspace's scroll container. Children that want to stick
+   (right rails, settings nav) anchor to this, not to the viewport. */
+.page {
+  flex: 1;
+  min-height: 0;
+  padding: 32px 24px 64px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+}
+
+/* Direct children share one centered measure, so the scrollbar can still
+   ride the full edge of the workspace. */
+.page > * {
+  width: 100%;
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+.page.narrow > * {
+  max-width: 960px;
+}
+
+/* Framed pages fill the viewport instead of scrolling as one document. */
+.page.framed {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.page.framed > * {
+  max-width: none;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.page-title h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.page-title p {
+  max-width: 600px;
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.page-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-decoration: none;
+  transition: color var(--duration) var(--ease);
+}
+
+.page-eyebrow:hover {
+  color: var(--text);
+}
+
+.page-eyebrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.section {
+  margin-top: 32px;
+}
+
+.section:first-child {
+  margin-top: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.section-heading p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Stats
+   ========================================================================== */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.stat {
+  display: grid;
+  align-content: start;
+  padding: 16px;
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.stat span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.stat span svg {
+  width: 14px;
+  height: 14px;
+}
+
+.stat strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+/* ==========================================================================
+   Panels & lists
+   ========================================================================== */
+
+/* Panels must not clip: rows contain dropdown menus that escape the box.
+   Corners are rounded per-row instead of by an overflow clip. */
+.panel {
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.panel > :first-child {
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
+}
+
+.panel > :last-child {
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
+}
+
+.panel > :only-child {
+  border-radius: var(--radius-large);
+}
+
+.panel-row {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--duration) var(--ease);
+}
+
+/* Every direct child of a panel is a row; rows are separated, not boxed. */
+.panel > * + * {
+  border-top: 1px solid var(--border);
+}
+
+a.panel-row:hover {
+  background: var(--surface-hover);
+}
+
+.panel-row > svg {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+
+.panel-row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.panel-row-main strong,
+.panel-row-main > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-row-main strong {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.panel-row-main > span {
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.panel-row-main a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-row-main a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.panel-form {
+  padding: 20px;
+}
+
+/* Inline "add a thing" rows inside panels. */
+form.panel-row {
+  background: var(--surface-sunken);
+  flex-wrap: wrap;
+}
+
+form.panel-row .input,
+form.panel-row .menu {
+  width: auto;
+  flex: 1 1 160px;
+}
+
+form.panel-row .button {
+  flex: 0 0 auto;
+}
+

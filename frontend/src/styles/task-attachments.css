@@ -1,0 +1,163 @@
+/* ---- Attachments ---- */
+
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.attachment {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  align-content: start;
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-border);
+  transition: box-shadow var(--duration) var(--ease);
+}
+
+.attachment:hover {
+  box-shadow: 0 0 0 1px var(--ds-gray-alpha-500);
+}
+
+.attachment-media {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  background: var(--surface-active);
+}
+
+.attachment-image,
+.attachment-video {
+  height: 148px;
+}
+
+.attachment-image img,
+.attachment-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-video video {
+  object-fit: contain;
+  background: #000;
+}
+
+.attachment-audio {
+  min-height: 76px;
+  padding: 14px;
+  place-items: center;
+}
+
+.attachment-audio audio {
+  width: 100%;
+  min-width: 0;
+}
+
+.attachment-file-icon {
+  display: grid;
+  height: 76px;
+  place-items: center;
+  color: var(--text-tertiary);
+  background: var(--surface-active);
+}
+
+.attachment-file-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.attachment-details {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 12px 12px;
+}
+
+.attachment-copy {
+  min-width: 0;
+}
+
+.attachment-copy strong {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-copy small {
+  display: block;
+  margin-top: 1px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.attachment-actions form {
+  margin: 0;
+}
+
+.attachment-actions .button {
+  padding-inline: 7px;
+}
+
+.attachment-actions .attachment-delete {
+  color: var(--ds-red-900);
+}
+
+/* A file input styled as a single control: label reports the chosen name. */
+.attachment-upload-form {
+  display: grid;
+  gap: 9px;
+}
+
+.file-field {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-field .file-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-progress {
+  display: grid;
+  gap: 5px;
+}
+
+.upload-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+progress.upload-progress-bar {
+  width: 100%;
+  height: 6px;
+}
+
+.upload-error {
+  margin: 0;
+  color: var(--ds-red-900);
+  font-size: 12px;
+}
+

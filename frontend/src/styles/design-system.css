@@ -1,0 +1,338 @@
+/* ==========================================================================
+   Flowboard design system
+   Tokens use ten-step light and dark scales.
+   Semantic aliases sit on top so components never reach for a raw step.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Background */
+  --ds-background-100: #fff;
+  --ds-background-200: #fafafa;
+
+  /* Gray */
+  --ds-gray-100: hsl(0deg 0% 95%);
+  --ds-gray-200: hsl(0deg 0% 92%);
+  --ds-gray-300: hsl(0deg 0% 90%);
+  --ds-gray-400: hsl(0deg 0% 92%);
+  --ds-gray-500: hsl(0deg 0% 79%);
+  --ds-gray-600: hsl(0deg 0% 66%);
+  --ds-gray-700: hsl(0deg 0% 56%);
+  --ds-gray-800: hsl(0deg 0% 49%);
+  --ds-gray-900: hsl(0deg 0% 40%);
+  --ds-gray-1000: hsl(0deg 0% 9%);
+
+  /* Gray alpha — for borders that sit on unknown surfaces */
+  --ds-gray-alpha-100: rgb(0 0 0 / 5%);
+  --ds-gray-alpha-200: rgb(0 0 0 / 8%);
+  --ds-gray-alpha-300: rgb(0 0 0 / 10%);
+  --ds-gray-alpha-400: rgb(0 0 0 / 8%);
+  --ds-gray-alpha-500: rgb(0 0 0 / 21%);
+  --ds-gray-alpha-600: rgb(0 0 0 / 34%);
+  --ds-gray-alpha-700: rgb(0 0 0 / 44%);
+  --ds-gray-alpha-800: rgb(0 0 0 / 51%);
+  --ds-gray-alpha-900: rgb(0 0 0 / 61%);
+  --ds-gray-alpha-1000: rgb(0 0 0 / 91%);
+
+  /* Blue */
+  --ds-blue-100: hsl(212deg 100% 97%);
+  --ds-blue-200: hsl(210deg 100% 96%);
+  --ds-blue-300: hsl(210deg 100% 94%);
+  --ds-blue-400: hsl(209deg 100% 90%);
+  --ds-blue-500: hsl(209deg 100% 80%);
+  --ds-blue-600: hsl(208deg 100% 66%);
+  --ds-blue-700: hsl(212deg 100% 48%);
+  --ds-blue-800: hsl(212deg 100% 41%);
+  --ds-blue-900: hsl(211deg 100% 42%);
+  --ds-blue-1000: hsl(211deg 100% 15%);
+
+  /* Red */
+  --ds-red-100: hsl(0deg 100% 97%);
+  --ds-red-200: hsl(0deg 100% 96%);
+  --ds-red-300: hsl(0deg 100% 95%);
+  --ds-red-400: hsl(0deg 90% 92%);
+  --ds-red-500: hsl(0deg 82% 85%);
+  --ds-red-600: hsl(359deg 90% 71%);
+  --ds-red-700: hsl(358deg 75% 59%);
+  --ds-red-800: hsl(358deg 70% 52%);
+  --ds-red-900: hsl(358deg 66% 48%);
+  --ds-red-1000: hsl(355deg 49% 15%);
+
+  /* Amber */
+  --ds-amber-100: hsl(39deg 100% 95%);
+  --ds-amber-200: hsl(44deg 100% 92%);
+  --ds-amber-300: hsl(43deg 96% 90%);
+  --ds-amber-400: hsl(42deg 100% 78%);
+  --ds-amber-500: hsl(38deg 100% 71%);
+  --ds-amber-600: hsl(36deg 90% 62%);
+  --ds-amber-700: hsl(39deg 100% 57%);
+  --ds-amber-800: hsl(35deg 100% 52%);
+  --ds-amber-900: hsl(30deg 100% 32%);
+  --ds-amber-1000: hsl(20deg 79% 17%);
+
+  /* Green */
+  --ds-green-100: hsl(120deg 60% 96%);
+  --ds-green-200: hsl(120deg 60% 95%);
+  --ds-green-300: hsl(120deg 60% 91%);
+  --ds-green-400: hsl(122deg 60% 86%);
+  --ds-green-500: hsl(124deg 60% 75%);
+  --ds-green-600: hsl(125deg 60% 64%);
+  --ds-green-700: hsl(131deg 41% 46%);
+  --ds-green-800: hsl(132deg 43% 39%);
+  --ds-green-900: hsl(133deg 50% 32%);
+  --ds-green-1000: hsl(128deg 29% 15%);
+
+  /* Purple */
+  --ds-purple-100: hsl(276deg 100% 97%);
+  --ds-purple-200: hsl(277deg 87% 97%);
+  --ds-purple-300: hsl(274deg 78% 95%);
+  --ds-purple-400: hsl(276deg 71% 92%);
+  --ds-purple-500: hsl(274deg 70% 82%);
+  --ds-purple-600: hsl(273deg 72% 73%);
+  --ds-purple-700: hsl(272deg 51% 54%);
+  --ds-purple-800: hsl(272deg 47% 45%);
+  --ds-purple-900: hsl(274deg 71% 43%);
+  --ds-purple-1000: hsl(276deg 100% 15%);
+
+  /* Teal */
+  --ds-teal-700: hsl(173deg 80% 36%);
+  --ds-teal-900: hsl(174deg 91% 25%);
+
+  /* ---- Materials: radii ---- */
+  --radius-small: 6px;
+  --radius-medium: 8px;
+  --radius-large: 12px;
+  --radius-xlarge: 16px;
+  --radius-full: 999px;
+
+  /* ---- Materials: shadows (ambient + direct light, layered) ---- */
+  --shadow-border: 0 0 0 1px var(--ds-gray-alpha-400);
+  --shadow-small: 0 1px 2px rgb(0 0 0 / 5%);
+  --shadow-medium: 0 2px 2px rgb(0 0 0 / 4%), 0 8px 8px -8px rgb(0 0 0 / 4%);
+  --shadow-menu: 0 1px 1px rgb(0 0 0 / 2%), 0 4px 8px -4px rgb(0 0 0 / 4%),
+    0 16px 24px -8px rgb(0 0 0 / 6%);
+  --shadow-modal: 0 8px 12px -4px rgb(0 0 0 / 6%), 0 24px 48px -12px rgb(0 0 0 / 14%);
+
+  /* ---- Semantic aliases ----
+     surface        canvas and cards that sit on the canvas
+     surface-sunken wells: kanban columns, table headers, footers, sidebar
+     surface-raised cards that sit inside a well, one step above it */
+  --surface: var(--ds-background-100);
+  --surface-sunken: var(--ds-background-200);
+  --surface-raised: var(--ds-background-100);
+  --surface-hover: var(--ds-gray-100);
+  --surface-active: var(--ds-gray-200);
+  --text: var(--ds-gray-1000);
+  --text-secondary: var(--ds-gray-900);
+  --text-tertiary: var(--ds-gray-700);
+  --border: var(--ds-gray-alpha-400);
+  --border-strong: var(--ds-gray-alpha-500);
+  --focus: var(--ds-blue-900);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration: 150ms;
+
+  /* ---- Layout ---- */
+  --sidebar-width: 248px;
+  --sidebar-rail-width: 56px;
+  --topbar-height: 56px;
+
+  font-family: 'Rubik Variable', -apple-system, blinkmacsystemfont, 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ds-background-100: #0a0a0a;
+  --ds-background-200: #000;
+
+  --ds-gray-100: hsl(0deg 0% 10%);
+  --ds-gray-200: hsl(0deg 0% 12%);
+  --ds-gray-300: hsl(0deg 0% 16%);
+  --ds-gray-400: hsl(0deg 0% 18%);
+  --ds-gray-500: hsl(0deg 0% 27%);
+  --ds-gray-600: hsl(0deg 0% 53%);
+  --ds-gray-700: hsl(0deg 0% 56%);
+  --ds-gray-800: hsl(0deg 0% 49%);
+  --ds-gray-900: hsl(0deg 0% 63%);
+  --ds-gray-1000: hsl(0deg 0% 93%);
+
+  --ds-gray-alpha-100: rgb(255 255 255 / 6%);
+  --ds-gray-alpha-200: rgb(255 255 255 / 9%);
+  --ds-gray-alpha-300: rgb(255 255 255 / 13%);
+  --ds-gray-alpha-400: rgb(255 255 255 / 14%);
+  --ds-gray-alpha-500: rgb(255 255 255 / 24%);
+  --ds-gray-alpha-600: rgb(255 255 255 / 51%);
+  --ds-gray-alpha-700: rgb(255 255 255 / 54%);
+  --ds-gray-alpha-800: rgb(255 255 255 / 47%);
+  --ds-gray-alpha-900: rgb(255 255 255 / 61%);
+  --ds-gray-alpha-1000: rgb(255 255 255 / 92%);
+
+  --ds-blue-100: hsl(216deg 50% 12%);
+  --ds-blue-200: hsl(214deg 59% 15%);
+  --ds-blue-300: hsl(213deg 71% 20%);
+  --ds-blue-400: hsl(212deg 78% 23%);
+  --ds-blue-500: hsl(211deg 86% 27%);
+  --ds-blue-600: hsl(206deg 100% 50%);
+  --ds-blue-700: hsl(212deg 100% 48%);
+  --ds-blue-800: hsl(212deg 100% 41%);
+  --ds-blue-900: hsl(210deg 100% 66%);
+  --ds-blue-1000: hsl(206deg 100% 96%);
+
+  --ds-red-100: hsl(357deg 37% 12%);
+  --ds-red-200: hsl(357deg 46% 16%);
+  --ds-red-300: hsl(356deg 54% 22%);
+  --ds-red-400: hsl(357deg 55% 26%);
+  --ds-red-500: hsl(357deg 60% 32%);
+  --ds-red-600: hsl(358deg 75% 59%);
+  --ds-red-700: hsl(358deg 75% 59%);
+  --ds-red-800: hsl(358deg 69% 52%);
+  --ds-red-900: hsl(358deg 100% 69%);
+  --ds-red-1000: hsl(353deg 90% 96%);
+
+  --ds-amber-100: hsl(35deg 100% 8%);
+  --ds-amber-200: hsl(32deg 100% 10%);
+  --ds-amber-300: hsl(33deg 100% 15%);
+  --ds-amber-400: hsl(35deg 100% 17%);
+  --ds-amber-500: hsl(35deg 91% 22%);
+  --ds-amber-600: hsl(39deg 85% 49%);
+  --ds-amber-700: hsl(39deg 100% 57%);
+  --ds-amber-800: hsl(35deg 100% 52%);
+  --ds-amber-900: hsl(39deg 90% 50%);
+  --ds-amber-1000: hsl(40deg 94% 93%);
+
+  --ds-green-100: hsl(136deg 50% 9%);
+  --ds-green-200: hsl(137deg 50% 12%);
+  --ds-green-300: hsl(136deg 50% 14%);
+  --ds-green-400: hsl(135deg 70% 16%);
+  --ds-green-500: hsl(135deg 70% 23%);
+  --ds-green-600: hsl(135deg 70% 34%);
+  --ds-green-700: hsl(131deg 41% 46%);
+  --ds-green-800: hsl(132deg 43% 39%);
+  --ds-green-900: hsl(131deg 43% 57%);
+  --ds-green-1000: hsl(136deg 73% 94%);
+
+  --ds-purple-100: hsl(283deg 30% 12%);
+  --ds-purple-200: hsl(281deg 38% 16%);
+  --ds-purple-300: hsl(279deg 44% 23%);
+  --ds-purple-400: hsl(277deg 46% 28%);
+  --ds-purple-500: hsl(274deg 49% 35%);
+  --ds-purple-600: hsl(272deg 51% 54%);
+  --ds-purple-700: hsl(272deg 51% 54%);
+  --ds-purple-800: hsl(272deg 47% 45%);
+  --ds-purple-900: hsl(275deg 80% 71%);
+  --ds-purple-1000: hsl(281deg 73% 96%);
+
+  --ds-teal-700: hsl(173deg 80% 40%);
+  --ds-teal-900: hsl(172deg 70% 48%);
+
+  --shadow-small: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-medium: 0 2px 4px rgb(0 0 0 / 40%), 0 8px 8px -8px rgb(0 0 0 / 40%);
+  --shadow-menu: 0 1px 1px rgb(0 0 0 / 40%), 0 4px 8px -4px rgb(0 0 0 / 40%),
+    0 16px 24px -8px rgb(0 0 0 / 50%);
+  --shadow-modal: 0 8px 12px -4px rgb(0 0 0 / 50%), 0 24px 48px -12px rgb(0 0 0 / 70%);
+
+  /* In dark mode a well cannot be darker than the canvas without going to pure
+     black, so wells step *up* instead: canvas → sunken → raised. */
+  --surface: var(--ds-background-100);
+  --surface-sunken: hsl(0deg 0% 7%);
+  --surface-raised: hsl(0deg 0% 11%);
+  --surface-hover: var(--ds-gray-200);
+  --surface-active: var(--ds-gray-300);
+}
+
+/* ==========================================================================
+   Reset & base
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--surface);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+body.no-scroll {
+  overflow: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+button,
+a,
+label,
+summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+::selection {
+  background: var(--ds-blue-400);
+  color: var(--ds-blue-1000);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Numeric text should never jitter between renders. */
+.tabular,
+.stat strong,
+.nav-link small,
+.column-header .count,
+.calendar-day > .calendar-date,
+kbd {
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
