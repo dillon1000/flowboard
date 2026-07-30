@@ -46,6 +46,7 @@ import {
 import {
   BoardController,
   ChecklistController,
+  CompletionController,
   DatePickerController,
   DialogController,
   FileFieldController,
@@ -61,6 +62,7 @@ import {
 const application = Application.start();
 application.register('board', BoardController);
 application.register('checklist', ChecklistController);
+application.register('completion', CompletionController);
 application.register('date-picker', DatePickerController);
 application.register('dialog', DialogController);
 application.register('file-field', FileFieldController);

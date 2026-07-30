@@ -45,7 +45,12 @@
                       tabindex="-1"
                       hidden
                     >
-                      <form class="dialog wide" method="post" action="/app/tasks/#(taskDetail.task.id)/update">
+                      <form
+                        class="dialog wide"
+                        method="post"
+                        action="/app/tasks/#(taskDetail.task.id)/update"
+                        data-completion-status="#(taskDetail.task.statusValue)"
+                      >
                         <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                         <div class="dialog-header">
                           <div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div>
