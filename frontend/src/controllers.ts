@@ -13,6 +13,10 @@ export class ThemeController extends Controller {
     this.apply(this.savedTheme());
   }
 
+  labelTargetConnected(): void {
+    this.updateLabel(this.savedTheme());
+  }
+
   toggle(): void {
     const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('flowboard-theme', next);
@@ -32,6 +36,10 @@ export class ThemeController extends Controller {
     document.documentElement.style.colorScheme = theme;
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
       ?.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#ffffff');
+    this.updateLabel(theme);
+  }
+
+  private updateLabel(theme: 'light' | 'dark'): void {
     if (this.hasLabelTarget) {
       this.labelTarget.textContent = theme === 'dark' ? 'Use light theme' : 'Use dark theme';
     }
