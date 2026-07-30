@@ -5,9 +5,7 @@
 
   export let status: TaskStatus;
   export let title: string;
-  export let note: string;
   export let tasks: Task[];
-  export let compact = false;
   export let draggingTaskID: string | null;
   export let oncreate: (status: TaskStatus) => void;
   export let onopen: (task: Task) => void;
@@ -57,7 +55,6 @@
         <h2 id={`column-${status}`}>{title}</h2>
         <span class="task-count">{tasks.length}</span>
       </div>
-      <p>{note}</p>
     </div>
     <button
       type="button"
@@ -71,7 +68,7 @@
 
   <div class="column-rule"></div>
 
-  <div class:compact class="task-stack" role="list">
+  <div class="task-stack" role="list">
     {#each tasks as task, index (task.id)}
       <div
         class="card-drop-target"
@@ -81,7 +78,6 @@
       >
         <TaskCard
           {task}
-          {compact}
           dragging={draggingTaskID === task.id}
           {onopen}
           {ondragstart}

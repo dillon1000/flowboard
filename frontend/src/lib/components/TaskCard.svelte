@@ -3,7 +3,6 @@
   import type { Task } from '../types';
 
   export let task: Task;
-  export let compact = false;
   export let dragging = false;
   export let onopen: (task: Task) => void;
   export let ondragstart: (event: DragEvent, task: Task) => void;
@@ -23,7 +22,6 @@
 
 <button
   type="button"
-  class:compact
   class:dragging
   class="task-card"
   draggable={true}
@@ -38,7 +36,7 @@
 
   <span class="task-title">{task.title}</span>
 
-  {#if !compact && task.description}
+  {#if task.description}
     <span class="task-description">{task.description}</span>
   {/if}
 
@@ -56,7 +54,7 @@
     {/if}
   </span>
 
-  {#if !compact && task.labels.length}
+  {#if task.labels.length}
     <span class="task-labels">
       {#each task.labels as label}
         <span class="task-label">{label}</span>
