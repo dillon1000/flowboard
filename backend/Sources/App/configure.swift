@@ -57,6 +57,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateBoard())
     app.migrations.add(AddBoardOwner())
     app.migrations.add(CreateTask())
+    app.migrations.add(ExpandWorkspace())
+    app.migrations.add(CreateWorkspaceFeatures())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

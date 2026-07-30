@@ -53,8 +53,31 @@ final class Task: Model, @unchecked Sendable {
     @Field(key: "labels")
     var labels: [String]
 
+    @OptionalField(key: "start_at")
+    var startAt: Date?
+
     @OptionalField(key: "due_at")
     var dueAt: Date?
+
+    @OptionalParent(key: "assignee_id")
+    var assignee: User?
+
+    /// Values are keyed by a definition ID from the parent board. A string
+    /// representation keeps form handling predictable for all supported field types.
+    @OptionalField(key: "properties")
+    var properties: [String: String]?
+
+    @Field(key: "is_archived")
+    var isArchived: Bool
+
+    @Children(for: \.$task)
+    var comments: [TaskComment]
+
+    @Children(for: \.$task)
+    var checklistItems: [ChecklistItem]
+
+    @Children(for: \.$task)
+    var attachments: [TaskAttachment]
 
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
@@ -73,6 +96,7 @@ final class Task: Model, @unchecked Sendable {
         priority: TaskPriority = .medium,
         position: Int,
         labels: [String] = [],
+        startAt: Date? = nil,
         dueAt: Date? = nil
     ) {
         self.id = id
@@ -83,7 +107,10 @@ final class Task: Model, @unchecked Sendable {
         self.priority = priority
         self.position = position
         self.labels = labels
+        self.startAt = startAt
         self.dueAt = dueAt
+        self.properties = [:]
+        self.isArchived = false
     }
 }
 

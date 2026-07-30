@@ -13,11 +13,31 @@ final class Board: Model, @unchecked Sendable {
     @Field(key: "slug")
     var slug: String
 
+    @OptionalField(key: "description")
+    var description: String?
+
+    @Field(key: "is_archived")
+    var isArchived: Bool
+
+    /// Board-level definitions let each board add typed fields without changing
+    /// the SQL schema for every new property that a user creates.
+    @OptionalField(key: "property_definitions")
+    var propertyDefinitions: [BoardPropertyDefinition]?
+
     @OptionalParent(key: "owner_id")
     var owner: User?
 
     @Children(for: \.$board)
     var tasks: [Task]
+
+    @Children(for: \.$board)
+    var views: [BoardView]
+
+    @Children(for: \.$board)
+    var members: [BoardMember]
+
+    @Children(for: \.$board)
+    var templates: [TaskTemplate]
 
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
@@ -27,12 +47,46 @@ final class Board: Model, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, name: String, slug: String, ownerID: UUID? = nil) {
+    init(
+        id: UUID? = nil,
+        name: String,
+        slug: String,
+        description: String? = nil,
+        ownerID: UUID? = nil
+    ) {
         self.id = id
         self.name = name
         self.slug = slug
+        self.description = description
+        self.isArchived = false
+        self.propertyDefinitions = []
         self.$owner.id = ownerID
     }
+}
+
+enum BoardPropertyType: String, Codable, CaseIterable, Sendable {
+    case text
+    case number
+    case select
+    case multiSelect = "multi_select"
+    case date
+    case checkbox
+    case url
+    case email
+    case person
+}
+
+struct BoardPropertyOption: Codable, Sendable {
+    let id: String
+    let name: String
+    let color: String
+}
+
+struct BoardPropertyDefinition: Codable, Sendable {
+    let id: String
+    let name: String
+    let type: BoardPropertyType
+    let options: [BoardPropertyOption]
 }
 
 struct BoardResponse: Content {
