@@ -1,0 +1,173 @@
+            <header class="page-header detail-header">
+              <div class="page-title">
+                <h1>#(taskDetail.task.title)</h1>
+                <div class="task-facts">
+                  <span class="badge status status-#(taskDetail.task.statusValue)">#(taskDetail.task.statusName)</span>
+                  <span class="badge priority-#(taskDetail.task.priorityValue)">#(taskDetail.task.priorityName)</span>
+                  #for(label in taskDetail.task.labels):
+                    <span class="badge subtle">#(label)</span>
+                  #endfor
+                  <span class="fact-divider" aria-hidden="true"></span>
+                  #if(taskDetail.task.hasAssignee):
+                    <span class="fact"><i data-lucide="user"></i>#(taskDetail.task.assigneeName)</span>
+                  #else:
+                    <span class="fact muted"><i data-lucide="user"></i>Unassigned</span>
+                  #endif
+                  <span class="fact#if(!taskDetail.task.hasDueDate): muted#endif">
+                    <i data-lucide="calendar-days"></i>#(taskDetail.task.dueDisplay)
+                  </span>
+                </div>
+              </div>
+              <div class="page-actions">
+                #if(taskDetail.canEdit):
+                  <form
+                    class="menu"
+                    method="post"
+                    action="/app/tasks/#(taskDetail.task.id)/status"
+                    data-controller="menu"
+                    data-action="click@window->menu#outside keydown.esc@window->menu#close"
+                    data-submit-on-choose="true"
+                    data-completion-status="#(taskDetail.task.statusValue)"
+                  >
+                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                    <input data-menu-target="input" type="hidden" name="status" value="#(taskDetail.task.statusValue)" />
+                    <button
+                      class="button primary"
+                      type="button"
+                      data-menu-target="trigger"
+                      data-action="menu#toggle"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                    >
+                      <i data-lucide="arrow-up-right"></i>
+                      <span>Promote</span>
+                      <i data-lucide="chevron-down"></i>
+                    </button>
+                    <div class="menu-panel right" data-menu-target="panel" role="listbox" aria-label="Change task status" hidden>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(taskDetail.task.isBacklog)">
+                        <span class="badge status status-backlog">Backlog</span>
+                      </button>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(taskDetail.task.isInProgress)">
+                        <span class="badge status status-in_progress">In progress</span>
+                      </button>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(taskDetail.task.isReview)">
+                        <span class="badge status status-review">Review</span>
+                      </button>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(taskDetail.task.isDone)">
+                        <span class="badge status status-done">Done</span>
+                      </button>
+                    </div>
+                  </form>
+                #endif
+                <form method="post" action="/app/tasks/#(taskDetail.task.id)/follow">
+                  <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                  <button class="button" type="submit">
+                    <i data-lucide="bell"></i>
+                    #if(taskDetail.isFollowing):Unfollow#else:Follow#endif
+                    <span class="badge count tabular">#(taskDetail.followerCount)</span>
+                  </button>
+                </form>
+                #if(taskDetail.canEdit):
+                  <div data-controller="dialog">
+                    <button class="button" type="button" data-action="dialog#open">Edit task</button>
+                    <div
+                      class="dialog-layer"
+                      data-dialog-target="panel"
+                      data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="edit-task-title"
+                      tabindex="-1"
+                      hidden
+                    >
+                      <form
+                        class="dialog wide"
+                        method="post"
+                        action="/app/tasks/#(taskDetail.task.id)/update"
+                        data-completion-status="#(taskDetail.task.statusValue)"
+                      >
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <div class="dialog-header">
+                          <div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div>
+                          <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="dialog-body">
+                          <div class="form-grid">
+                            <div class="field wide">
+                              <label for="edit-task-name">Title</label>
+                              <input class="input" id="edit-task-name" name="title" value="#(taskDetail.task.title)" maxlength="120" required data-dialog-target="initial" />
+                            </div>
+                            <div class="field wide">
+                              <label for="edit-task-description">Description</label>
+                              <textarea class="textarea" id="edit-task-description" name="description" maxlength="5000">#(taskDetail.task.description)</textarea>
+                              <span class="field-help">Markdown supported: **bold**, `code`, lists, and links.</span>
+                            </div>
+                            <div class="field">
+                              <span class="field-label">Status</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="status" value="#(taskDetail.task.statusValue)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(taskDetail.task.statusName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(taskDetail.task.isBacklog)">Backlog</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(taskDetail.task.isInProgress)">In progress</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(taskDetail.task.isReview)">Review</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(taskDetail.task.isDone)">Done</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field">
+                              <span class="field-label">Priority</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="priority" value="#(taskDetail.task.priorityValue)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(taskDetail.task.priorityName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="low" data-label="Low" aria-selected="#(taskDetail.task.isLowPriority)">Low</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="medium" data-label="Medium" aria-selected="#(taskDetail.task.isMediumPriority)">Medium</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="high" data-label="High" aria-selected="#(taskDetail.task.isHighPriority)">High</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="urgent" data-label="Urgent" aria-selected="#(taskDetail.task.isUrgentPriority)">Urgent</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field wide">
+                              <span class="field-label">Assignee</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="assigneeID" value="#(taskDetail.task.assigneeID)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(taskDetail.task.assigneeName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="" data-label="Unassigned" aria-selected="#if(taskDetail.task.hasAssignee):false#else:true#endif">Unassigned</button>
+                                  #for(member in taskDetail.members):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(member.id)" data-label="#(member.name)" aria-selected="#(member.isSelected)">#(member.name) · #(member.email)</button>
+                                  #endfor
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field" data-controller="date-picker">
+                              <label for="edit-task-start">Start date</label>
+                              <input class="input" id="edit-task-start" name="startAt" value="#(taskDetail.task.startInput)" data-date-picker-target="input" />
+                            </div>
+                            <div class="field" data-controller="date-picker">
+                              <label for="edit-task-due">Due date</label>
+                              <input class="input" id="edit-task-due" name="dueAt" value="#(taskDetail.task.dueInput)" data-date-picker-target="input" />
+                            </div>
+                            <div class="field wide">
+                              <label for="edit-task-labels">Labels</label>
+                              <input class="input" id="edit-task-labels" name="labels" value="#(taskDetail.task.labelsJoined)" />
+                            </div>
+                          </div>
+                        </div>
+                        <div class="dialog-footer">
+                          <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                          <button class="button primary" type="submit">Save changes</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                #endif
+              </div>
+            </header>

@@ -1,0 +1,225 @@
+                <section class="card">
+                  <div class="card-header"><h2>Description</h2></div>
+                  <div class="card-body">
+                    #if(taskDetail.task.hasDescription):
+                      <div class="task-description markdown" data-controller="markdown">#(taskDetail.task.description)</div>
+                    #else:
+                      <div class="task-description empty">No description yet.</div>
+                    #endif
+                  </div>
+                </section>
+
+                <section class="card" data-controller="checklist">
+                  <div class="card-header">
+                    <h2>Checklist</h2>
+                    <span class="checklist-progress">
+                      <span data-checklist-target="label">No items</span>
+                      <progress class="progress" data-checklist-target="bar" value="0" max="1"></progress>
+                    </span>
+                  </div>
+                  #if(taskDetail.hasChecklist):
+                    <div class="card-body">
+                      <div class="checklist">
+                        #for(item in taskDetail.checklist):
+                          <form
+                            class="checklist-item#if(item.isCompleted): completed#endif"
+                            method="post"
+                            action="/app/checklist/#(item.id)/toggle"
+                            data-checklist-target="item"
+                          >
+                            <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                            <button class="custom-checkbox#if(item.isCompleted): checked#endif" type="submit" aria-label="Toggle “#(item.title)”">
+                              <i data-lucide="check"></i>
+                            </button>
+                            <span>#(item.title)</span>
+                          </form>
+                        #endfor
+                      </div>
+                    </div>
+                  #else:
+                    <p class="card-empty">Nothing to check off yet.</p>
+                  #endif
+                  #if(taskDetail.canEdit):
+                    <div class="card-footer">
+                      <form class="checklist-add" method="post" action="/app/tasks/#(taskDetail.task.id)/checklist">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <input class="input" name="title" placeholder="Add checklist item" maxlength="200" required aria-label="New checklist item" />
+                        <button class="button" type="submit"><i data-lucide="plus"></i>Add</button>
+                      </form>
+                    </div>
+                  #endif
+                </section>
+
+                <section class="card">
+                  <div class="card-header"><h2>Attachments</h2></div>
+                  #if(taskDetail.hasAttachments):
+                    <div class="card-body">
+                      <div class="attachment-grid">
+                        #for(attachment in taskDetail.attachments):
+                          <div class="attachment">
+                            #if(attachment.isImage):
+                              <a
+                                class="attachment-media attachment-image"
+                                href="#(attachment.previewHref)"
+                                target="_blank"
+                                rel="noopener"
+                                aria-label="Open preview of #(attachment.fileName)"
+                              >
+                                <img src="#(attachment.previewHref)" alt="" loading="lazy" />
+                              </a>
+                            #elseif(attachment.isAudio):
+                              <div class="attachment-media attachment-audio">
+                                <audio
+                                  controls
+                                  preload="metadata"
+                                  src="#(attachment.previewHref)"
+                                  aria-label="Preview #(attachment.fileName)"
+                                ></audio>
+                              </div>
+                            #elseif(attachment.isVideo):
+                              <div class="attachment-media attachment-video">
+                                <video
+                                  controls
+                                  preload="metadata"
+                                  src="#(attachment.previewHref)"
+                                  aria-label="Preview #(attachment.fileName)"
+                                  playsinline
+                                ></video>
+                              </div>
+                            #else:
+                              <span class="attachment-file-icon"><i data-lucide="paperclip"></i></span>
+                            #endif
+                            <div class="attachment-details">
+                              <span class="attachment-copy">
+                                <strong title="#(attachment.fileName)">#(attachment.fileName)</strong>
+                                <small>#(attachment.sizeDisplay)</small>
+                              </span>
+                              <span class="attachment-actions">
+                                <a class="button ghost small" href="#(attachment.href)">
+                                  <i data-lucide="download"></i>Download
+                                </a>
+                                #if(taskDetail.canEdit):
+                                  <form
+                                    method="post"
+                                    action="/app/attachments/#(attachment.id)/delete"
+                                    data-turbo-confirm="Delete this attachment?"
+                                  >
+                                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                                    <button class="button ghost small attachment-delete" type="submit">Delete</button>
+                                  </form>
+                                #endif
+                              </span>
+                            </div>
+                          </div>
+                        #endfor
+                      </div>
+                    </div>
+                  #else:
+                    <p class="card-empty">No files attached.</p>
+                  #endif
+                  #if(taskDetail.canEdit):
+                    <div class="card-footer">
+                      <form
+                        class="attachment-upload-form"
+                        method="post"
+                        action="/app/tasks/#(taskDetail.task.id)/attachments"
+                        enctype="multipart/form-data"
+                        data-controller="file-field"
+                        data-action="submit->file-field#upload"
+                      >
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <span class="file-field">
+                          <label class="button small">
+                            <i data-lucide="upload"></i>Choose file
+                            <input
+                              class="sr-only"
+                              type="file"
+                              name="file"
+                              required
+                              data-file-field-target="input"
+                              data-action="change->file-field#choose"
+                            />
+                          </label>
+                          <span class="file-name" data-file-field-target="name">No file chosen</span>
+                          <button class="button small primary" type="submit" data-file-field-target="button">Upload</button>
+                        </span>
+                        <div class="upload-progress" data-file-field-target="panel" hidden>
+                          <span class="upload-progress-meta">
+                            <span data-file-field-target="status" role="status" aria-live="polite">Uploading…</span>
+                            <span class="tabular" data-file-field-target="percent" aria-hidden="true">0%</span>
+                          </span>
+                          <progress
+                            class="progress upload-progress-bar"
+                            data-file-field-target="bar"
+                            value="0"
+                            max="100"
+                            aria-label="Attachment upload progress"
+                          ></progress>
+                        </div>
+                        <p class="upload-error" data-file-field-target="error" role="alert" hidden></p>
+                      </form>
+                    </div>
+                  #endif
+                </section>
+
+                <section class="card">
+                  <div class="card-header">
+                    <h2>Comments</h2>
+                    <span class="badge count tabular">#count(taskDetail.comments)</span>
+                  </div>
+                  #if(!taskDetail.hasComments):
+                    <p class="card-empty">No comments yet.</p>
+                  #endif
+                  <div class="comment-thread">
+                    #for(comment in taskDetail.comments):
+                      <div class="comment">
+                        <span class="avatar">
+                          #if(comment.authorAvatar.hasProfilePicture):
+                            <img src="#(comment.authorAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                          #else:
+                            #(comment.authorAvatar.initials)
+                          #endif
+                        </span>
+                        <div>
+                          <div class="comment-meta">
+                            <strong>#(comment.authorName)</strong>
+                            <span>#(comment.createdDisplay)</span>
+                          </div>
+                          <div class="comment-body">#(comment.body)</div>
+                          #if(comment.canDelete):
+                            <form class="comment-actions" method="post" action="/app/comments/#(comment.id)/delete">
+                              <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                              <button class="button ghost small" type="submit">Delete</button>
+                            </form>
+                          #endif
+                        </div>
+                      </div>
+                    #endfor
+                  </div>
+                  #if(taskDetail.canComment):
+                    <form class="comment-composer" method="post" action="/app/tasks/#(taskDetail.task.id)/comments">
+                      <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                      <span class="avatar">
+                        #if(common.userAvatar.hasProfilePicture):
+                          <img src="#(common.userAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                        #else:
+                          #(common.userAvatar.initials)
+                        #endif
+                      </span>
+                      <div>
+                        <label class="sr-only" for="new-comment">Add a comment</label>
+                        <textarea
+                          class="textarea"
+                          id="new-comment"
+                          name="body"
+                          maxlength="4000"
+                          placeholder="Leave a comment…"
+                          required
+                        ></textarea>
+                        <div class="form-actions">
+                          <button class="button primary" type="submit">Comment</button>
+                        </div>
+                      </div>
+                    </form>
+                  #endif
+                </section>
