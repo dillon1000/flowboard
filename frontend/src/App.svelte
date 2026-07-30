@@ -155,7 +155,6 @@
       page = 'overview';
       activeBoard = null;
     }
-    document.title = `${pageTitle} · Flowboard`;
   }
 
   async function navigate(path: string): Promise<void> {
@@ -438,6 +437,7 @@
 </script>
 
 <svelte:head>
+  <title>{pageTitle} · Flowboard</title>
   <meta
     name="description"
     content="Flowboard is a focused workspace for boards and tasks."
