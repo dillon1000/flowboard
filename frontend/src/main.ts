@@ -1,4 +1,4 @@
-import '@fontsource-variable/geist';
+import '@fontsource-variable/rubik';
 import '@fontsource-variable/geist-mono';
 import 'flatpickr/dist/flatpickr.css';
 import './app.css';
@@ -7,6 +7,7 @@ import { Application } from '@hotwired/stimulus';
 import {
   Archive,
   ArrowDownUp,
+  ArrowUpRight,
   Bell,
   CalendarDays,
   Check,
@@ -29,6 +30,7 @@ import {
   MessageSquare,
   Moon,
   MoreHorizontal,
+  PanelLeft,
   Paperclip,
   Plus,
   Search,
@@ -44,22 +46,32 @@ import {
 } from 'lucide';
 import {
   BoardController,
+  ChecklistController,
+  CompletionController,
   DatePickerController,
   DialogController,
+  FileFieldController,
+  MarkdownController,
   MenuController,
   SearchController,
   SidebarController,
+  TaskPreviewController,
   ThemeController,
   ToastController,
 } from './controllers';
 
 const application = Application.start();
 application.register('board', BoardController);
+application.register('checklist', ChecklistController);
+application.register('completion', CompletionController);
 application.register('date-picker', DatePickerController);
 application.register('dialog', DialogController);
+application.register('file-field', FileFieldController);
+application.register('markdown', MarkdownController);
 application.register('menu', MenuController);
 application.register('search', SearchController);
 application.register('sidebar', SidebarController);
+application.register('task-preview', TaskPreviewController);
 application.register('theme', ThemeController);
 application.register('toast', ToastController);
 
@@ -68,6 +80,7 @@ function renderIcons(): void {
     icons: {
       Archive,
       ArrowDownUp,
+      ArrowUpRight,
       Bell,
       CalendarDays,
       Check,
@@ -90,6 +103,7 @@ function renderIcons(): void {
       MessageSquare,
       Moon,
       MoreHorizontal,
+      PanelLeft,
       Paperclip,
       Plus,
       Search,

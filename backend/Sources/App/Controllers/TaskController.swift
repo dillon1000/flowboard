@@ -61,7 +61,8 @@ struct TaskController: RouteCollection {
             position: (count + 1) * 1_000,
             labels: sanitize(labels: input.labels ?? []),
             startAt: input.startAt,
-            dueAt: input.dueAt
+            dueAt: input.dueAt,
+            creatorID: userID
         )
         task.properties = sanitize(
             properties: input.properties ?? [:],

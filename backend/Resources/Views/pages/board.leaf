@@ -1,5 +1,6 @@
         #if(isBoard):
-          <div class="page">
+          <div class="page framed">
+            <div class="board-bar">
             <header class="page-header">
               <div class="page-title">
                 <h1>#(board.name)</h1>
@@ -102,20 +103,22 @@
                 </a>
               #endfor
               <span class="toolbar-spacer"></span>
-              <span class="badge">Group: #(board.groupByName)</span>
-              #if(board.hasFilters):<span class="badge"><i data-lucide="filter"></i>#(board.filterSummary)</span>#endif
-              #if(board.hasSorts):<span class="badge"><i data-lucide="arrow-down-up"></i>#(board.sortSummary)</span>#endif
+              <span class="badge subtle">Group: #(board.groupByName)</span>
+              #if(board.hasFilters):<span class="badge subtle"><i data-lucide="filter"></i>#(board.filterSummary)</span>#endif
+              #if(board.hasSorts):<span class="badge subtle"><i data-lucide="arrow-down-up"></i>#(board.sortSummary)</span>#endif
               <a class="button ghost small" href="/app/boards/#(board.id)/settings"><i data-lucide="settings"></i>Configure</a>
             </nav>
+            </div>
 
+            <div class="board-canvas#if(board.activeView.isBoard): flush#endif">
             #if(board.activeView.isBoard):
               <div class="kanban" data-controller="board" data-board-editable-value="#(board.canDrag)">
                 #for(column in board.columns):
                   <section class="kanban-column">
                     <header class="column-header">
-                      <span class="column-dot #(column.dotClass)"></span>
+                      <span class="column-dot #(column.dotClass)" aria-hidden="true"></span>
                       <strong>#(column.name)</strong>
-                      <span>#(column.count)</span>
+                      <span class="count">#(column.count)</span>
                     </header>
                     <div class="column-tasks" data-board-target="column" data-status="#(column.value)">
                       #for(task in column.tasks):
@@ -134,20 +137,36 @@
                     <thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Start</th><th>Due</th></tr></thead>
                     <tbody>
                       #for(task in board.tasks):
-                        <tr>
+                        <tr
+                          data-preview-title="#(task.title)"
+                          data-preview-board="#(board.name)"
+                          data-preview-status="#(task.statusName)"
+                          data-preview-status-value="#(task.statusValue)"
+                          data-preview-priority="#(task.priorityName)"
+                          data-preview-priority-value="#(task.priorityValue)"
+                          data-preview-assignee="#(task.assigneeName)"
+                          data-preview-due="#(task.dueDisplay)"
+                          data-preview-body="#(task.description)"
+                        >
                           <td><a href="#(task.href)">#(task.title)</a></td>
-                          <td><span class="badge">#(task.statusName)</span></td>
+                          <td><span class="badge status status-#(task.statusValue)">#(task.statusName)</span></td>
                           <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
-                          <td>#(task.assigneeName)</td>
-                          <td>#(task.startDisplay)</td>
-                          <td>#(task.dueDisplay)</td>
+                          <td#if(!task.hasAssignee): class="muted"#endif>#(task.assigneeName)</td>
+                          <td class="muted">#(task.startDisplay)</td>
+                          <td#if(!task.hasDueDate): class="muted"#endif>#(task.dueDisplay)</td>
                         </tr>
                       #endfor
                     </tbody>
                   </table>
                 </div>
               #else:
-                <div class="empty-state"><div><h2>No tasks in this view</h2><p>Create a task or change this view’s filters.</p></div></div>
+                <div class="empty-state">
+                  <div>
+                    <span class="empty-state-icon" aria-hidden="true"><i data-lucide="table-2"></i></span>
+                    <h2>No tasks in this view</h2>
+                    <p>Create a task, or loosen this view’s filters in board settings.</p>
+                  </div>
+                </div>
               #endif
             #endif
 
@@ -159,15 +178,27 @@
                     <h2>#(board.calendarMonthLabel)</h2>
                     <a class="icon-button" href="#(board.nextMonthHref)" aria-label="Next month"><i data-lucide="chevron-right"></i></a>
                   </div>
-                  <a class="button secondary small" href="#(board.todayMonthHref)">Today</a>
+                  <a class="button small" href="#(board.todayMonthHref)">Today</a>
                 </div>
                 <div class="calendar-weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
                 <div class="calendar-grid">
                   #for(day in board.calendarDays):
-                    <div class="calendar-day#if(day.isMuted): muted#endif">
-                      <span>#(day.day)</span>
+                    <div class="calendar-day#if(day.isMuted): muted#endif#if(day.isToday): today#endif">
+                      <span class="calendar-date">#(day.day)</span>
                       #for(task in day.tasks):
-                        <a class="calendar-task" href="#(task.href)">#(task.title)</a>
+                        <a
+                          class="calendar-task status-#(task.statusValue)"
+                          href="#(task.href)"
+                          data-preview-title="#(task.title)"
+                          data-preview-board="#(board.name)"
+                          data-preview-status="#(task.statusName)"
+                          data-preview-status-value="#(task.statusValue)"
+                          data-preview-priority="#(task.priorityName)"
+                          data-preview-priority-value="#(task.priorityValue)"
+                          data-preview-assignee="#(task.assigneeName)"
+                          data-preview-due="#(task.dueDisplay)"
+                          data-preview-body="#(task.description)"
+                        ><span>#(task.title)</span></a>
                       #endfor
                     </div>
                   #endfor
@@ -179,19 +210,38 @@
               #if(board.hasTasks):
                 <div class="gallery">
                   #for(task in board.tasks):
-                    <a class="gallery-card" href="#(task.href)">
+                    <a
+                      class="gallery-card"
+                      href="#(task.href)"
+                      data-preview-title="#(task.title)"
+                      data-preview-board="#(board.name)"
+                      data-preview-status="#(task.statusName)"
+                      data-preview-status-value="#(task.statusValue)"
+                      data-preview-priority="#(task.priorityName)"
+                      data-preview-priority-value="#(task.priorityValue)"
+                      data-preview-assignee="#(task.assigneeName)"
+                      data-preview-due="#(task.dueDisplay)"
+                      data-preview-body="#(task.description)"
+                    >
                       <h3>#(task.title)</h3>
                       <p>#if(task.hasDescription):#(task.description)#else:No description.#endif</p>
                       <div class="task-meta">
-                        <span class="badge">#(task.statusName)</span>
+                        <span class="badge status status-#(task.statusValue)">#(task.statusName)</span>
                         <span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span>
                       </div>
                     </a>
                   #endfor
                 </div>
               #else:
-                <div class="empty-state"><div><h2>No tasks in this view</h2><p>Create a task or change this view’s filters.</p></div></div>
+                <div class="empty-state">
+                  <div>
+                    <span class="empty-state-icon" aria-hidden="true"><i data-lucide="gallery-horizontal-end"></i></span>
+                    <h2>No tasks in this view</h2>
+                    <p>Create a task, or loosen this view’s filters in board settings.</p>
+                  </div>
+                </div>
               #endif
             #endif
+            </div>
           </div>
         #endif

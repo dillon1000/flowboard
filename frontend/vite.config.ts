@@ -8,6 +8,7 @@ export default defineConfig({
       '/login': 'http://127.0.0.1:8080',
       '/register': 'http://127.0.0.1:8080',
       '/logout': 'http://127.0.0.1:8080',
+      '/oauth': 'http://127.0.0.1:8080',
       '/app': 'http://127.0.0.1:8080'
     }
   },

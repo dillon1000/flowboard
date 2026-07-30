@@ -1,0 +1,2 @@
+# GitHub Linguist does not define Leaf, so count Leaf templates as HTML.
+*.leaf linguist-language=HTML

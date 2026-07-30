@@ -1,11 +1,21 @@
         <header class="topbar">
-          <button class="icon-button menu-button" type="button" data-action="sidebar#open" aria-label="Open navigation">
-            <i data-lucide="menu"></i>
+          <button
+            class="icon-button menu-button"
+            type="button"
+            data-action="sidebar#toggleCollapse"
+            title="Toggle sidebar (⌘B)"
+          >
+            <i data-lucide="panel-left"></i>
+            <span class="sr-only" data-sidebar-target="collapseLabel">Collapse sidebar</span>
           </button>
           <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="/app">Workspace</a>
-            <span aria-hidden="true">/</span>
-            <span>#(pageTitle)</span>
+            <span class="separator" aria-hidden="true">/</span>
+            #if(isTaskDetail):
+              <a href="#(taskDetail.boardHref)">#(taskDetail.boardName)</a>
+              <span class="separator" aria-hidden="true">/</span>
+            #endif
+            <span aria-current="page">#(pageTitle)</span>
           </nav>
           <div class="topbar-actions">
             <form

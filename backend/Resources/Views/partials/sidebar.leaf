@@ -1,25 +1,32 @@
       <aside class="sidebar" data-sidebar-target="panel">
         <div class="brand-row">
-          <a class="brand" href="/app">
-            <span class="brand-symbol" aria-hidden="true"></span>
-            Flowboard
+          <a class="brand" href="/app" aria-label="Focalboard home">
+            <img
+              class="brand-logo"
+              src="/focalboard-wordmark.webp"
+              data-sidebar-target="brandLogo"
+              data-wordmark-src="/focalboard-wordmark.webp"
+              data-abbreviation-src="/focalboard-fb-abbreviation-tp.webp"
+              alt=""
+              width="104"
+              height="14"
+            />
           </a>
-          <button
-            class="icon-button sidebar-close"
-            type="button"
-            aria-label="Close navigation"
-            data-action="sidebar#close"
-          ><i data-lucide="x"></i></button>
         </div>
 
-        <nav class="main-nav" aria-label="Primary navigation">
-          <a class="nav-link#if(isOverview): active#endif" href="/app">
-            <i data-lucide="layout-dashboard"></i><span>Overview</span>
-          </a>
-          <a class="nav-link#if(isTasks): active#endif" href="/app/tasks">
-            <i data-lucide="check-square"></i><span>All tasks</span>
-          </a>
-        </nav>
+        <div class="sidebar-section">
+          <nav class="main-nav" aria-label="Primary navigation">
+            <a class="nav-link#if(isOverview): active#endif" href="/app"#if(isOverview): aria-current="page"#endif title="Overview">
+              <i data-lucide="layout-dashboard"></i><span>Overview</span>
+            </a>
+            <a class="nav-link#if(isActiveTasks): active#endif" href="/app/tasks"#if(isActiveTasks): aria-current="page"#endif title="All tasks">
+              <i data-lucide="check-square"></i><span>All tasks</span>
+            </a>
+            <a class="nav-link#if(isArchivedTasks): active#endif" href="/app/tasks/archived"#if(isArchivedTasks): aria-current="page"#endif title="Archived tasks">
+              <i data-lucide="archive"></i><span>Archived tasks</span>
+            </a>
+          </nav>
+        </div>
 
         <div class="boards-nav">
           <div class="nav-section-header" data-controller="dialog">
@@ -81,7 +88,7 @@
           <nav aria-label="Boards">
             #for(navBoard in common.boards):
               #if(!navBoard.isArchived):
-                <a class="nav-link" href="#(navBoard.href)">
+                <a class="nav-link" href="#(navBoard.href)" title="#(navBoard.name)">
                   <i data-lucide="folder"></i>
                   <span>#(navBoard.name)</span>
                   <small>#(navBoard.taskCount)</small>
@@ -93,12 +100,18 @@
 
         <div class="sidebar-spacer"></div>
         <nav class="settings-nav">
-          <a class="nav-link#if(isSettings): active#endif" href="/app/settings">
+          <a class="nav-link#if(isSettings): active#endif" href="/app/settings"#if(isSettings): aria-current="page"#endif title="Settings">
             <i data-lucide="settings"></i><span>Settings</span>
           </a>
         </nav>
-        <a class="user-row" href="/app/settings">
-          <span class="avatar">#(common.userInitials)</span>
+        <a class="user-row" href="/app/settings" title="#(common.userName)">
+          <span class="avatar">
+            #if(common.userAvatar.hasProfilePicture):
+              <img src="#(common.userAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+            #else:
+              #(common.userAvatar.initials)
+            #endif
+          </span>
           <span>
             <strong>#(common.userName)</strong>
             <small>#(common.userEmail)</small>

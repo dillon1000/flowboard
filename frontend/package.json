@@ -10,15 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource-variable/rubik": "^5.3.0",
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo": "^8.0.23",
+    "canvas-confetti": "^1.9.4",
     "flatpickr": "^4.6.13",
     "lucide": "^1.27.0",
     "sortablejs": "^1.15.7"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@types/sortablejs": "^1.15.9",
     "typescript": "^6.0.3",
     "vite": "^8.1.5"

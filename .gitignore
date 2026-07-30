@@ -1,20 +1,14 @@
 .DS_Store
-.env
-.env.*
-!.env.example
-.playwright-cli/
-.vscode/
-work/
+
+frontend/node_modules/
+frontend/dist/
+frontend/.playwright-cli/
 
 backend/.build/
 backend/.swiftpm/
-backend/db.sqlite
-backend/db.sqlite-*
-backend/Public/assets/
-backend/Public/favicon.svg
-backend/Public/index.html
+backend/.env
+backend/db.sqlite*
+backend/Public/
+backend/Uploads/
 
-frontend/node_modules/
-frontend/.svelte-kit/
-frontend/dist/
-frontend/.vite/
+work/

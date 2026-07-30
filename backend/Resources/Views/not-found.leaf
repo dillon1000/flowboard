@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" data-controller="theme">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Page not found · Flowboard</title>
+    <link rel="icon" type="image/webp" href="/focalboard-fb-abbreviation-tp.webp" />
+    <script>try{const t=localStorage.getItem('flowboard-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch{}</script>
+    #extend("partials/assets")
+  </head>
+  <body class="not-found-page">
+    <header class="not-found-header">
+      <a class="brand" href="/" aria-label="Focalboard home">
+        <img class="brand-wordmark" src="/focalboard-wordmark.webp" alt="" width="112" height="15" />
+      </a>
+      <button
+        class="icon-button"
+        type="button"
+        data-action="theme#toggle"
+        aria-label="Change color theme"
+        title="Change color theme"
+      >
+        <i class="theme-icon-dark" data-lucide="moon"></i>
+        <i class="theme-icon-light" data-lucide="sun"></i>
+        <span class="sr-only" data-theme-target="label">Use dark theme</span>
+      </button>
+    </header>
+
+    <main class="not-found-main">
+      <section class="not-found-copy" aria-labelledby="not-found-title">
+        <p class="not-found-kicker"><span>404</span> Page not found</p>
+        <h1 id="not-found-title">This card isn’t on the board.</h1>
+        <p>The page may have moved, changed its name, or been archived.</p>
+        <a class="button primary large" href="#(destination)">#(actionLabel)</a>
+      </section>
+
+      <div class="not-found-board" aria-hidden="true">
+        <section class="not-found-column">
+          <div class="not-found-column-title"><span></span>Backlog</div>
+          <div class="not-found-task">
+            <strong>Plan the next release</strong>
+            <span></span>
+          </div>
+          <div class="not-found-task short">
+            <strong>Review feedback</strong>
+            <span></span>
+          </div>
+        </section>
+        <section class="not-found-column">
+          <div class="not-found-column-title"><span></span>In progress</div>
+          <div class="not-found-task missing">
+            <b>?</b>
+            <strong>Missing task</strong>
+          </div>
+        </section>
+        <section class="not-found-column">
+          <div class="not-found-column-title"><span></span>Done</div>
+          <div class="not-found-task complete">
+            <strong>Ship the workspace</strong>
+            <span></span>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

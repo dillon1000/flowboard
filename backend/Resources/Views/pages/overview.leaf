@@ -8,23 +8,44 @@
             </header>
 
             <section class="stats" aria-label="Workspace summary">
-              <div class="stat"><span>Open tasks</span><strong>#(overview.totalTasks)</strong></div>
-              <div class="stat"><span>Completed</span><strong>#(overview.completedTasks)</strong></div>
-              <div class="stat"><span>With due dates</span><strong>#(overview.dueTasks)</strong></div>
-              <div class="stat"><span>Active boards</span><strong>#(overview.boardCount)</strong></div>
+              <div class="stat">
+                <span><i data-lucide="check-square"></i>Open tasks</span>
+                <strong>#(overview.totalTasks)</strong>
+              </div>
+              <div class="stat">
+                <span><i data-lucide="check"></i>Completed</span>
+                <strong>#(overview.completedTasks)</strong>
+              </div>
+              <div class="stat">
+                <span><i data-lucide="calendar-days"></i>With due dates</span>
+                <strong>#(overview.dueTasks)</strong>
+              </div>
+              <div class="stat">
+                <span><i data-lucide="folder"></i>Active boards</span>
+                <strong>#(overview.boardCount)</strong>
+              </div>
             </section>
 
+            <div class="overview-grid">
             <section class="section">
-              <div class="section-heading"><h2>Boards</h2></div>
+              <div class="section-heading">
+                <div>
+                  <h2>Boards</h2>
+                  <p>Every board you own or have been given access to.</p>
+                </div>
+              </div>
               <div class="board-list">
                 #for(navBoard in common.boards):
                   #if(!navBoard.isArchived):
                     <a class="board-card" href="#(navBoard.href)">
-                      <h3>#(navBoard.name)</h3>
+                      <span class="board-card-head">
+                        <span class="board-card-icon" aria-hidden="true"><i data-lucide="folder"></i></span>
+                        <h3>#(navBoard.name)</h3>
+                      </span>
                       <p>#(navBoard.description)</p>
                       <span class="board-card-meta">
-                        <span>#(navBoard.taskCount) tasks</span>
-                        <span>#(navBoard.completedCount) done</span>
+                        <span><i data-lucide="check-square"></i><span class="tabular">#(navBoard.taskCount)</span> tasks</span>
+                        <span><i data-lucide="check"></i><span class="tabular">#(navBoard.completedCount)</span> done</span>
                       </span>
                     </a>
                   #endif
@@ -32,29 +53,47 @@
               </div>
             </section>
 
-            <section class="section">
+            <section class="section overview-rail">
               <div class="section-heading">
-                <h2>Recent tasks</h2>
-                <a class="button ghost small" href="/app/tasks">View all</a>
+                <div>
+                  <h2>Recent tasks</h2>
+                </div>
+                <a class="button small" href="/app/tasks">View all</a>
               </div>
               #if(overview.hasRecentTasks):
                 <div class="panel">
                   #for(task in overview.recentTasks):
-                    <a class="panel-row" href="#(task.href)">
-                      <span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span>
+                    <a
+                      class="panel-row"
+                      href="#(task.href)"
+                      data-preview-title="#(task.title)"
+                      data-preview-board="#(task.boardName)"
+                      data-preview-status="#(task.statusName)"
+                      data-preview-status-value="#(task.statusValue)"
+                      data-preview-priority="#(task.priorityName)"
+                      data-preview-priority-value="#(task.priorityValue)"
+                      data-preview-assignee="#(task.assigneeName)"
+                      data-preview-due="#(task.dueDisplay)"
+                      data-preview-body="#(task.description)"
+                    >
                       <span class="panel-row-main">
                         <strong>#(task.title)</strong>
-                        <span>#(task.boardName) · #(task.statusName)</span>
+                        <span>#(task.boardName) · #(task.updatedDisplay)</span>
                       </span>
-                      <span class="badge">#(task.updatedDisplay)</span>
+                      <span class="badge status status-#(task.statusValue)">#(task.statusName)</span>
                     </a>
                   #endfor
                 </div>
               #else:
                 <div class="empty-state">
-                  <div><h2>No tasks yet</h2><p>Open a board and create the first task.</p></div>
+                  <div>
+                    <span class="empty-state-icon" aria-hidden="true"><i data-lucide="check-square"></i></span>
+                    <h2>No tasks yet</h2>
+                    <p>Open a board and create the first task to see recent activity here.</p>
+                  </div>
                 </div>
               #endif
             </section>
+            </div>
           </div>
         #endif

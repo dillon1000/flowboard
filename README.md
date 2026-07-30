@@ -2,8 +2,10 @@
 
 Flowboard is a server-rendered project workspace built with Swift Vapor, Leaf,
 Fluent, Turbo, and Stimulus. Fluent stores accounts, sessions, boards, saved
-views, tasks, comments, checklists, attachments, templates, and sharing roles in
-SQLite. The browser uses the same Vapor origin, so normal use does not need CORS.
+views, tasks, comments, checklists, attachment metadata, templates, and sharing
+roles in SQLite. Attachment objects use Railway's private S3-compatible storage
+in production. The browser uses the same Vapor origin, so normal use does not
+need CORS.
 
 ## Run locally
 
@@ -49,7 +51,8 @@ docker run --rm -p 8080:8080 \
 ```
 
 Open [http://localhost:8080/register](http://localhost:8080/register). The named
-volume keeps the SQLite database and uploaded files when the container stops.
+volume keeps the SQLite database and local development uploads when the
+container stops.
 
 In production, start the image without an extra command:
 
@@ -61,12 +64,42 @@ The production entrypoint applies pending Fluent migrations and then starts
 Vapor. Production session cookies require HTTPS, so put this container behind a
 TLS reverse proxy.
 
+## Deploy on Railway
+
+Create a Railway service from this repository. Railway reads `railway.json`,
+builds the root `Dockerfile`, checks `/health`, and passes its assigned `PORT`
+to the container.
+
+Attach one persistent volume to the service at `/data`. The volume stores the
+SQLite database and legacy uploads, and the startup entrypoint applies pending
+migrations after Railway mounts it. Connect a Railway bucket by setting its six
+`AWS_*` configuration values from `backend/.env.example`; all new attachments use
+that private bucket. Keep this service at one replica because SQLite does not
+support multiple application containers writing to the same database.
+
+Generate a public Railway domain, then add the OAuth values from
+`backend/.env.example` as Railway service variables. Set `OAUTH_REDIRECT_URL`
+to the public HTTPS domain followed by `/oauth/callback`, and register that
+exact URI with the OAuth provider. Do not add `PORT`; Railway supplies it.
+
+Deploy from the Railway dashboard or from the repository root:
+
+```sh
+railway up
+```
+
+The Docker build context excludes `backend/.env`, local databases, uploads,
+dependencies, and generated artifacts, so local credentials and user data are
+not sent to Railway.
+
 ## Features
 
 - Leaf-rendered registration, login, overview, task search, board, task detail,
   board settings, and account settings pages
 - Bcrypt password hashes, CSRF protection, and persistent `HttpOnly`,
-  `SameSite=Strict` Fluent sessions
+  `SameSite=Lax` Fluent sessions
+- Generic OAuth 2.0 authorization-code login with PKCE, verified-email linking,
+  and persisted provider identities
 - Board, Table, Calendar, and Gallery views with saved grouping, filtering, and
   sorting rules
 - Month navigation in Calendar views and custom Flatpickr date controls in forms
@@ -101,9 +134,21 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
 
 ## Configuration
 
-`backend/.env.example` defines the SQLite path and optional development CORS
-origins for external API clients. Leaf pages and browser forms remain
-same-origin and do not need a frontend environment file.
+`backend/.env.example` defines the SQLite path, optional development CORS
+origins, Railway bucket values, and the generic OAuth settings. Production
+requires the full bucket configuration, while development and tests use local
+files when those values are absent. OAuth stays disabled until all six required
+endpoint and client values are present. Register
+`OAUTH_REDIRECT_URL` exactly with the provider; local development normally uses
+`http://localhost:8080/oauth/callback`.
+
+The default profile mapping reads `sub`, `email`, `name`, `picture`, and
+`email_verified`.
+The optional field settings accept dot-separated paths for providers with
+nested profile data. Valid HTTPS picture URLs are synchronized on each OAuth
+login. Verified email is required before a new provider identity can create or
+link an account; disable that check only when the provider guarantees verified
+emails through another contract.
 
 Production does not migrate automatically. Build the frontend, run migrations,
 and then start the server:
@@ -117,8 +162,10 @@ swift run App --env production migrate --yes
 swift run App --env production serve
 ```
 
-Production session cookies use the `Secure`, `HttpOnly`, and `SameSite=Strict`
-attributes. Put Vapor behind HTTPS before you use production mode.
+Production session cookies use the `Secure`, `HttpOnly`, and `SameSite=Lax`
+attributes. Lax mode lets the provider return to the OAuth callback while the
+per-session state and PKCE verifier protect the transaction. Put Vapor behind
+HTTPS before you use production mode.
 
 ## Routes
 
@@ -126,6 +173,7 @@ Web pages:
 
 - `GET /login` and `POST /login`
 - `GET /register` and `POST /register`
+- `GET /oauth/start` and `GET /oauth/callback`
 - `POST /logout`
 - `GET /app/**` for protected application pages
 
