@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Flowboard — Geist design system
-   Tokens follow the Vercel Geist scales (10 steps per scale, light + dark).
+   Flowboard design system
+   Tokens use ten-step light and dark scales.
    Semantic aliases sit on top so components never reach for a raw step.
    ========================================================================== */
 
@@ -140,7 +140,7 @@
   --sidebar-rail-width: 56px;
   --topbar-height: 56px;
 
-  font-family: 'Geist Variable', -apple-system, blinkmacsystemfont, 'Segoe UI', sans-serif;
+  font-family: 'Rubik Variable', -apple-system, blinkmacsystemfont, 'Segoe UI', sans-serif;
   font-synthesis: none;
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
@@ -2892,7 +2892,7 @@ progress.progress::-moz-progress-bar {
   overflow: hidden;
 }
 
-/* The Geist grid: a faint square lattice, faded out at the edges. */
+/* The workspace grid is a faint square lattice faded out at the edges. */
 .auth-aside::before {
   position: absolute;
   z-index: -1;
@@ -3440,7 +3440,7 @@ progress.progress::-moz-progress-bar {
   color: var(--text);
   background: var(--surface);
   box-shadow: var(--shadow-border), var(--shadow-menu) !important;
-  font-family: 'Geist Variable', sans-serif;
+  font-family: 'Rubik Variable', sans-serif;
   font-size: 13px;
 }
 

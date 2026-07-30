@@ -1,4 +1,4 @@
-import '@fontsource-variable/geist';
+import '@fontsource-variable/rubik';
 import '@fontsource-variable/geist-mono';
 import 'flatpickr/dist/flatpickr.css';
 import './app.css';
