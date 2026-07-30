@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+backend/.build/
+backend/.swiftpm/
+backend/db.sqlite
+backend/db.sqlite-*
+
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/dist/
+frontend/.vite/
+
