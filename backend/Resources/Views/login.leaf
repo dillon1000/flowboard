@@ -14,7 +14,7 @@
   <body class="auth-page">
     <header class="auth-header">
       <a class="brand" href="/" aria-label="Focalboard home">
-        <img class="brand-wordmark" src="/focalboard-wordmark.webp" alt="" />
+        <img class="brand-wordmark" src="/focalboard-wordmark.webp" alt="" width="112" height="15" />
       </a>
       <button
         class="icon-button"

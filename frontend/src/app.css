@@ -380,14 +380,16 @@ kbd {
 
 .brand-wordmark {
   display: block;
-  width: 112px;
+  width: 104px;
+  max-width: 100%;
   height: auto;
   flex: 0 0 auto;
 }
 
 .brand-abbreviation {
   display: none;
-  width: 28px;
+  width: 24px;
+  max-width: 100%;
   height: auto;
   flex: 0 0 auto;
 }
@@ -2844,7 +2846,7 @@ progress.progress::-moz-progress-bar {
 }
 
 .auth-header .brand-wordmark {
-  width: 124px;
+  width: 112px;
 }
 
 .auth-main {
