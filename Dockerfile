@@ -56,6 +56,7 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q dist-upgrade -y \
     && apt-get -q install -y \
         ca-certificates \
+        gosu \
         libcurl4 \
         libjemalloc2 \
         libsqlite3-0 \
@@ -84,6 +85,6 @@ ENV SWIFT_BACKTRACE=enable=yes,sanitize=yes,threads=all,images=all,interactive=n
 VOLUME ["/data"]
 EXPOSE 8080
 
-USER vapor:vapor
-
+# The entrypoint starts as root because Railway mounts new volumes as root.
+# It fixes only the writable data paths and then uses gosu to run App as vapor.
 ENTRYPOINT ["./docker-entrypoint.sh"]

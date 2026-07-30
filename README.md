@@ -61,6 +61,33 @@ The production entrypoint applies pending Fluent migrations and then starts
 Vapor. Production session cookies require HTTPS, so put this container behind a
 TLS reverse proxy.
 
+## Deploy on Railway
+
+Create a Railway service from this repository. Railway reads `railway.json`,
+builds the root `Dockerfile`, checks `/health`, and passes its assigned `PORT`
+to the container.
+
+Attach one persistent volume to the service at `/data`. The volume stores the
+SQLite database and uploaded files, and the startup entrypoint applies pending
+migrations after Railway mounts it. Keep this service at one replica because
+SQLite does not support multiple application containers writing to the same
+database.
+
+Generate a public Railway domain, then add the OAuth values from
+`backend/.env.example` as Railway service variables. Set `OAUTH_REDIRECT_URL`
+to the public HTTPS domain followed by `/oauth/callback`, and register that
+exact URI with the OAuth provider. Do not add `PORT`; Railway supplies it.
+
+Deploy from the Railway dashboard or from the repository root:
+
+```sh
+railway up
+```
+
+The Docker build context excludes `backend/.env`, local databases, uploads,
+dependencies, and generated artifacts, so local credentials and user data are
+not sent to Railway.
+
 ## Features
 
 - Leaf-rendered registration, login, overview, task search, board, task detail,
