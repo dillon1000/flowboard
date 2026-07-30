@@ -15,9 +15,14 @@ public func configure(_ app: Application) async throws {
         app.databases.use(.sqlite(.file(databasePath)), as: .sqlite)
     }
 
-    let allowedOrigin = Environment.get("CORS_ORIGIN") ?? "http://localhost:5173"
+    // CORS_ORIGIN accepts a comma-separated allowlist. Both local hostnames work by
+    // default because Vite can advertise either one based on its bind address.
+    let allowedOrigins = (Environment.get("CORS_ORIGIN")
+        ?? "http://localhost:5173,http://127.0.0.1:5173")
+        .split(separator: ",")
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     let corsConfiguration = CORSMiddleware.Configuration(
-        allowedOrigin: .custom(allowedOrigin),
+        allowedOrigin: .any(allowedOrigins),
         allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],
         allowedHeaders: [.accept, .authorization, .contentType, .origin]
     )
