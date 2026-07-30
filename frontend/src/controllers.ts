@@ -10,7 +10,12 @@ export class ThemeController extends Controller {
   declare readonly labelTarget: HTMLElement;
 
   connect(): void {
+    document.addEventListener('turbo:render', this.handleTurboRender);
     this.apply(this.savedTheme());
+  }
+
+  disconnect(): void {
+    document.removeEventListener('turbo:render', this.handleTurboRender);
   }
 
   labelTargetConnected(element: HTMLElement): void {
@@ -48,6 +53,11 @@ export class ThemeController extends Controller {
   private themeLabel(theme: 'light' | 'dark'): string {
     return theme === 'dark' ? 'Use light theme' : 'Use dark theme';
   }
+
+  // Turbo retains the root element, so refresh theme-dependent controls after it replaces the body.
+  private readonly handleTurboRender = (): void => {
+    this.apply(this.savedTheme());
+  };
 }
 
 export class SidebarController extends Controller {
