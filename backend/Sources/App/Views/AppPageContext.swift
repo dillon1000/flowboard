@@ -300,6 +300,7 @@ struct TaskCardContext: Encodable {
     let labelsJoined: String
     let hasLabels: Bool
     let startInput: String
+    let startDisplay: String
     let dueInput: String
     let dueDisplay: String
     let hasDueDate: Bool
@@ -342,6 +343,7 @@ struct TaskCardContext: Encodable {
         self.labelsJoined = task.labels.joined(separator: ", ")
         self.hasLabels = !task.labels.isEmpty
         self.startInput = task.startAt.map(inputDate) ?? ""
+        self.startDisplay = task.startAt.map(displayDateOnly) ?? "No start date"
         self.dueInput = task.dueAt.map(inputDate) ?? ""
         self.dueDisplay = task.dueAt.map(displayDateOnly) ?? "No due date"
         self.hasDueDate = task.dueAt != nil

@@ -405,7 +405,7 @@
                           <td><span class="badge">#(task.statusName)</span></td>
                           <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
                           <td>#(task.assigneeName)</td>
-                          <td>#if(task.startInput):#(task.startInput)#else:—#endif</td>
+                          <td>#(task.startDisplay)</td>
                           <td>#(task.dueDisplay)</td>
                         </tr>
                       #endfor
@@ -657,7 +657,7 @@
                   <div class="property-row"><span>Status</span><span class="badge">#(taskDetail.task.statusName)</span></div>
                   <div class="property-row"><span>Priority</span><span class="badge priority-#(taskDetail.task.priorityValue)">#(taskDetail.task.priorityName)</span></div>
                   <div class="property-row"><span>Assignee</span><span>#(taskDetail.task.assigneeName)</span></div>
-                  <div class="property-row"><span>Start</span><span>#if(taskDetail.task.startInput):#(taskDetail.task.startInput)#else:—#endif</span></div>
+                  <div class="property-row"><span>Start</span><span>#(taskDetail.task.startDisplay)</span></div>
                   <div class="property-row"><span>Due</span><span>#(taskDetail.task.dueDisplay)</span></div>
                   #for(property in taskDetail.properties):
                     <div class="property-row"><span>#(property.name)</span><span>#(property.value)</span></div>
