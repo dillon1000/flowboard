@@ -373,22 +373,23 @@ kbd {
 
 .brand {
   display: flex;
+  min-height: 40px;
   align-items: center;
-  gap: 10px;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
   text-decoration: none;
 }
 
-.brand-symbol {
-  width: 0;
-  height: 0;
+.brand-wordmark {
+  display: block;
+  width: 112px;
+  height: auto;
   flex: 0 0 auto;
-  border-right: 8px solid transparent;
-  border-bottom: 14px solid var(--text);
-  border-left: 8px solid transparent;
+}
+
+.brand-abbreviation {
+  display: none;
+  width: 28px;
+  height: auto;
+  flex: 0 0 auto;
 }
 
 .sidebar-section {
@@ -598,7 +599,6 @@ kbd {
 
 /* Every rule below is scoped to .sidebar — .nav-link is also used by the
    settings pages, which must never collapse with the rail. */
-:root[data-sidebar='collapsed'] .sidebar .brand-name,
 :root[data-sidebar='collapsed'] .sidebar .nav-link span,
 :root[data-sidebar='collapsed'] .sidebar .nav-link small,
 :root[data-sidebar='collapsed'] .sidebar .nav-section-header span,
@@ -616,8 +616,12 @@ kbd {
   padding-inline: 8px;
 }
 
-:root[data-sidebar='collapsed'] .sidebar .brand {
-  gap: 0;
+:root[data-sidebar='collapsed'] .sidebar .brand-wordmark {
+  display: none;
+}
+
+:root[data-sidebar='collapsed'] .sidebar .brand-abbreviation {
+  display: block;
 }
 
 :root[data-sidebar='collapsed'] .sidebar .nav-link {
@@ -2839,6 +2843,10 @@ progress.progress::-moz-progress-bar {
   padding: 0 24px;
 }
 
+.auth-header .brand-wordmark {
+  width: 124px;
+}
+
 .auth-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -3443,7 +3451,6 @@ span.flatpickr-weekday {
   }
 
   /* Restore every label the rail hid. */
-  :root[data-sidebar='collapsed'] .sidebar .brand-name,
   :root[data-sidebar='collapsed'] .sidebar .nav-link span,
   :root[data-sidebar='collapsed'] .sidebar .nav-link small,
   :root[data-sidebar='collapsed'] .sidebar .nav-section-header span,
@@ -3451,8 +3458,12 @@ span.flatpickr-weekday {
     display: revert;
   }
 
-  :root[data-sidebar='collapsed'] .sidebar .brand {
-    gap: 10px;
+  :root[data-sidebar='collapsed'] .sidebar .brand-wordmark {
+    display: block;
+  }
+
+  :root[data-sidebar='collapsed'] .sidebar .brand-abbreviation {
+    display: none;
   }
 
   :root[data-sidebar='collapsed'] .sidebar .brand-row {

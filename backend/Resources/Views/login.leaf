@@ -6,16 +6,15 @@
     <meta name="theme-color" content="#ffffff" />
     <meta name="csrf-token" content="#(csrfToken)" />
     <title>Log in · Flowboard</title>
-    <link rel="icon" href="/favicon.svg" />
+    <link rel="icon" type="image/webp" href="/focalboard-fb-abbreviation-tp.webp" />
     <script>try{const t=localStorage.getItem('flowboard-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch{}</script>
     <link rel="stylesheet" href="/assets/index.css" />
     <script type="module" src="/assets/app.js"></script>
   </head>
   <body class="auth-page">
     <header class="auth-header">
-      <a class="brand" href="/" aria-label="Flowboard home">
-        <span class="brand-symbol" aria-hidden="true"></span>
-        <span class="brand-name">Flowboard</span>
+      <a class="brand" href="/" aria-label="Focalboard home">
+        <img class="brand-wordmark" src="/focalboard-wordmark.webp" alt="" />
       </a>
       <button
         class="icon-button"
