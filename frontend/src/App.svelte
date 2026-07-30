@@ -85,6 +85,20 @@
   $: openTaskCount = totalTaskCount - completedTaskCount;
   $: inProgressCount = allTasks.filter((task) => task.status === 'in_progress').length;
   $: filteredAllTasks = allTasks.filter(matchesSearch);
+  $: groupedTasks = {
+    backlog: (activeBoard?.tasks ?? [])
+      .filter((task) => task.status === 'backlog' && matchesSearch(task))
+      .sort((left, right) => left.position - right.position),
+    in_progress: (activeBoard?.tasks ?? [])
+      .filter((task) => task.status === 'in_progress' && matchesSearch(task))
+      .sort((left, right) => left.position - right.position),
+    review: (activeBoard?.tasks ?? [])
+      .filter((task) => task.status === 'review' && matchesSearch(task))
+      .sort((left, right) => left.position - right.position),
+    done: (activeBoard?.tasks ?? [])
+      .filter((task) => task.status === 'done' && matchesSearch(task))
+      .sort((left, right) => left.position - right.position)
+  };
   $: pageTitle =
     page === 'board'
       ? activeBoard?.name ?? 'Board'
@@ -189,15 +203,6 @@
     const [nextBoards, taskPage] = await Promise.all([api.getBoards(), api.getTasks()]);
     boards = nextBoards;
     allTasks = taskPage.items;
-  }
-
-  function tasksFor(status: TaskStatus): Task[] {
-    if (!activeBoard) {
-      return [];
-    }
-    return activeBoard.tasks
-      .filter((task) => task.status === status && matchesSearch(task))
-      .sort((left, right) => left.position - right.position);
   }
 
   function matchesSearch(task: Task): boolean {
@@ -677,7 +682,7 @@
             <KanbanColumn
               status={column.status}
               title={column.title}
-              tasks={tasksFor(column.status)}
+              tasks={groupedTasks[column.status]}
               {draggingTaskID}
               oncreate={openCreate}
               onopen={openTask}
