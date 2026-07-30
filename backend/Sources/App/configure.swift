@@ -35,8 +35,8 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(CORSMiddleware(configuration: corsConfiguration), at: .beginning)
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))
 
-    // Leaf renders the account pages and the authenticated Svelte shell. File
-    // middleware serves the frontend bundle created by `pnpm build`.
+    // Leaf renders every browser page. File middleware serves the Hotwire,
+    // Stimulus, and design assets created by `pnpm build`.
     app.views.use(.leaf)
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
