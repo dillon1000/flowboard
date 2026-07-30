@@ -32,6 +32,7 @@ RUN --mount=type=cache,target=/root/.cache/org.swift.swiftpm \
     swift package resolve --force-resolved-versions
 
 COPY backend/Sources ./Sources
+COPY backend/Tests ./Tests
 COPY backend/Resources ./Resources
 COPY --from=frontend /workspace/backend/Public ./Public
 
