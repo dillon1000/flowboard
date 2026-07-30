@@ -1,0 +1,35 @@
+        <header class="topbar">
+          <button class="icon-button menu-button" type="button" data-action="sidebar#open" aria-label="Open navigation">
+            <i data-lucide="menu"></i>
+          </button>
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="/app">Workspace</a>
+            <span aria-hidden="true">/</span>
+            <span>#(pageTitle)</span>
+          </nav>
+          <div class="topbar-actions">
+            <form
+              class="search-control"
+              method="get"
+              action="/app/tasks"
+              role="search"
+              data-controller="search"
+              data-action="keydown@window->search#shortcut"
+            >
+              <i data-lucide="search"></i>
+              <input name="q" aria-label="Search tasks" placeholder="Search tasks" data-search-target="input" />
+              <kbd>⌘ K</kbd>
+            </form>
+            <button
+              class="icon-button theme-button"
+              type="button"
+              data-action="theme#toggle"
+              aria-label="Change color theme"
+              title="Change color theme"
+            >
+              <i class="theme-icon-dark" data-lucide="moon"></i>
+              <i class="theme-icon-light" data-lucide="sun"></i>
+              <span class="sr-only" data-theme-target="label">Use dark theme</span>
+            </button>
+          </div>
+        </header>

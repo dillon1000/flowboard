@@ -1,0 +1,33 @@
+        #if(isTasks):
+          <div class="page">
+            <header class="page-header">
+              <div class="page-title">
+                <h1>#if(tasks.query):Search results#else:All tasks#endif</h1>
+                <p>#if(tasks.query):Tasks matching “#(tasks.query)”.#else:Every active task you can access.#endif</p>
+              </div>
+            </header>
+            #if(tasks.hasTasks):
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Task</th><th>Board</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Due</th></tr></thead>
+                  <tbody>
+                    #for(task in tasks.tasks):
+                      <tr>
+                        <td><a href="#(task.href)">#(task.title)</a></td>
+                        <td>#(task.boardName)</td>
+                        <td><span class="badge">#(task.statusName)</span></td>
+                        <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
+                        <td>#(task.assigneeName)</td>
+                        <td>#(task.dueDisplay)</td>
+                      </tr>
+                    #endfor
+                  </tbody>
+                </table>
+              </div>
+            #else:
+              <div class="empty-state">
+                <div><h2>No tasks found</h2><p>Try a different search, or create a task from a board.</p></div>
+              </div>
+            #endif
+          </div>
+        #endif

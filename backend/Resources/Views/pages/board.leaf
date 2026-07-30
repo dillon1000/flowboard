@@ -1,0 +1,197 @@
+        #if(isBoard):
+          <div class="page">
+            <header class="page-header">
+              <div class="page-title">
+                <h1>#(board.name)</h1>
+                <p>#if(board.description):#(board.description)#else:Shared as #(board.role).#endif</p>
+              </div>
+              <div class="page-actions">
+                <a class="button" href="/app/boards/#(board.id)/settings"><i data-lucide="settings"></i>Board settings</a>
+                #if(board.canEdit):
+                  <div data-controller="dialog">
+                    <button class="button primary" type="button" data-action="dialog#open">
+                      <i data-lucide="plus"></i>New task
+                    </button>
+                    <div
+                      class="dialog-layer"
+                      data-dialog-target="panel"
+                      data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="new-task-title"
+                      tabindex="-1"
+                      hidden
+                    >
+                      <form class="dialog wide" method="post" action="/app/tasks">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <input type="hidden" name="boardID" value="#(board.id)" />
+                        <input type="hidden" name="returnTo" value="#(board.activeView.href)" />
+                        <div class="dialog-header">
+                          <div><h2 id="new-task-title">Create task</h2><p>#if(board.hasDefaultTemplate):Using the #(board.defaultTemplateName) template.#else:Add the work, then refine its details.#endif</p></div>
+                          <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="dialog-body">
+                          <div class="form-grid">
+                            <div class="field wide">
+                              <label for="new-task-name">Title</label>
+                              <input class="input" id="new-task-name" name="title" value="#(board.newTaskTitle)" maxlength="120" required data-dialog-target="initial" />
+                            </div>
+                            <div class="field wide">
+                              <label for="new-task-description">Description</label>
+                              <textarea class="textarea" id="new-task-description" name="description" maxlength="5000">#(board.newTaskDescription)</textarea>
+                            </div>
+                            <div class="field">
+                              <span class="field-label">Status</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="status" value="#(board.newTaskStatus)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(board.newTaskStatusName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(board.newTaskIsBacklog)">Backlog</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(board.newTaskIsInProgress)">In progress</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(board.newTaskIsReview)">Review</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(board.newTaskIsDone)">Done</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field">
+                              <span class="field-label">Priority</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="priority" value="#(board.newTaskPriority)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(board.newTaskPriorityName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="low" data-label="Low" aria-selected="#(board.newTaskIsLowPriority)">Low</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="medium" data-label="Medium" aria-selected="#(board.newTaskIsMediumPriority)">Medium</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="high" data-label="High" aria-selected="#(board.newTaskIsHighPriority)">High</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="urgent" data-label="Urgent" aria-selected="#(board.newTaskIsUrgentPriority)">Urgent</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field" data-controller="date-picker">
+                              <label for="new-task-start">Start date</label>
+                              <input class="input" id="new-task-start" name="startAt" data-date-picker-target="input" />
+                            </div>
+                            <div class="field" data-controller="date-picker">
+                              <label for="new-task-due">Due date</label>
+                              <input class="input" id="new-task-due" name="dueAt" data-date-picker-target="input" />
+                            </div>
+                            <div class="field wide">
+                              <label for="new-task-labels">Labels</label>
+                              <input class="input" id="new-task-labels" name="labels" value="#(board.newTaskLabels)" placeholder="Design, Launch" />
+                            </div>
+                          </div>
+                        </div>
+                        <div class="dialog-footer">
+                          <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                          <button class="button primary" type="submit">Create task</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                #endif
+              </div>
+            </header>
+
+            <nav class="board-toolbar" aria-label="Board views">
+              #for(view in board.views):
+                <a class="view-tab#if(view.isActive): active#endif" href="#(view.href)">
+                  <i data-lucide="#(view.icon)"></i>#(view.name)
+                </a>
+              #endfor
+              <span class="toolbar-spacer"></span>
+              <span class="badge">Group: #(board.groupByName)</span>
+              #if(board.hasFilters):<span class="badge"><i data-lucide="filter"></i>#(board.filterSummary)</span>#endif
+              #if(board.hasSorts):<span class="badge"><i data-lucide="arrow-down-up"></i>#(board.sortSummary)</span>#endif
+              <a class="button ghost small" href="/app/boards/#(board.id)/settings"><i data-lucide="settings"></i>Configure</a>
+            </nav>
+
+            #if(board.activeView.isBoard):
+              <div class="kanban" data-controller="board" data-board-editable-value="#(board.canDrag)">
+                #for(column in board.columns):
+                  <section class="kanban-column">
+                    <header class="column-header">
+                      <span class="column-dot #(column.dotClass)"></span>
+                      <strong>#(column.name)</strong>
+                      <span>#(column.count)</span>
+                    </header>
+                    <div class="column-tasks" data-board-target="column" data-status="#(column.value)">
+                      #for(task in column.tasks):
+                        #extend("partials/task-card", task)
+                      #endfor
+                    </div>
+                  </section>
+                #endfor
+              </div>
+            #endif
+
+            #if(board.activeView.isTable):
+              #if(board.hasTasks):
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Start</th><th>Due</th></tr></thead>
+                    <tbody>
+                      #for(task in board.tasks):
+                        <tr>
+                          <td><a href="#(task.href)">#(task.title)</a></td>
+                          <td><span class="badge">#(task.statusName)</span></td>
+                          <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
+                          <td>#(task.assigneeName)</td>
+                          <td>#(task.startDisplay)</td>
+                          <td>#(task.dueDisplay)</td>
+                        </tr>
+                      #endfor
+                    </tbody>
+                  </table>
+                </div>
+              #else:
+                <div class="empty-state"><div><h2>No tasks in this view</h2><p>Create a task or change this view’s filters.</p></div></div>
+              #endif
+            #endif
+
+            #if(board.activeView.isCalendar):
+              <div class="calendar-shell">
+                <div class="calendar-toolbar">
+                  <div class="calendar-navigation">
+                    <a class="icon-button" href="#(board.previousMonthHref)" aria-label="Previous month"><i data-lucide="chevron-left"></i></a>
+                    <h2>#(board.calendarMonthLabel)</h2>
+                    <a class="icon-button" href="#(board.nextMonthHref)" aria-label="Next month"><i data-lucide="chevron-right"></i></a>
+                  </div>
+                  <a class="button secondary small" href="#(board.todayMonthHref)">Today</a>
+                </div>
+                <div class="calendar-weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+                <div class="calendar-grid">
+                  #for(day in board.calendarDays):
+                    <div class="calendar-day#if(day.isMuted): muted#endif">
+                      <span>#(day.day)</span>
+                      #for(task in day.tasks):
+                        <a class="calendar-task" href="#(task.href)">#(task.title)</a>
+                      #endfor
+                    </div>
+                  #endfor
+                </div>
+              </div>
+            #endif
+
+            #if(board.activeView.isGallery):
+              #if(board.hasTasks):
+                <div class="gallery">
+                  #for(task in board.tasks):
+                    <a class="gallery-card" href="#(task.href)">
+                      <h3>#(task.title)</h3>
+                      <p>#if(task.hasDescription):#(task.description)#else:No description.#endif</p>
+                      <div class="task-meta">
+                        <span class="badge">#(task.statusName)</span>
+                        <span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span>
+                      </div>
+                    </a>
+                  #endfor
+                </div>
+              #else:
+                <div class="empty-state"><div><h2>No tasks in this view</h2><p>Create a task or change this view’s filters.</p></div></div>
+              #endif
+            #endif
+          </div>
+        #endif

@@ -1,0 +1,60 @@
+        #if(isOverview):
+          <div class="page">
+            <header class="page-header">
+              <div class="page-title">
+                <h1>Overview</h1>
+                <p>Boards, deadlines, and recent work in one place.</p>
+              </div>
+            </header>
+
+            <section class="stats" aria-label="Workspace summary">
+              <div class="stat"><span>Open tasks</span><strong>#(overview.totalTasks)</strong></div>
+              <div class="stat"><span>Completed</span><strong>#(overview.completedTasks)</strong></div>
+              <div class="stat"><span>With due dates</span><strong>#(overview.dueTasks)</strong></div>
+              <div class="stat"><span>Active boards</span><strong>#(overview.boardCount)</strong></div>
+            </section>
+
+            <section class="section">
+              <div class="section-heading"><h2>Boards</h2></div>
+              <div class="board-list">
+                #for(navBoard in common.boards):
+                  #if(!navBoard.isArchived):
+                    <a class="board-card" href="#(navBoard.href)">
+                      <h3>#(navBoard.name)</h3>
+                      <p>#(navBoard.description)</p>
+                      <span class="board-card-meta">
+                        <span>#(navBoard.taskCount) tasks</span>
+                        <span>#(navBoard.completedCount) done</span>
+                      </span>
+                    </a>
+                  #endif
+                #endfor
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-heading">
+                <h2>Recent tasks</h2>
+                <a class="button ghost small" href="/app/tasks">View all</a>
+              </div>
+              #if(overview.hasRecentTasks):
+                <div class="panel">
+                  #for(task in overview.recentTasks):
+                    <a class="panel-row" href="#(task.href)">
+                      <span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span>
+                      <span class="panel-row-main">
+                        <strong>#(task.title)</strong>
+                        <span>#(task.boardName) · #(task.statusName)</span>
+                      </span>
+                      <span class="badge">#(task.updatedDisplay)</span>
+                    </a>
+                  #endfor
+                </div>
+              #else:
+                <div class="empty-state">
+                  <div><h2>No tasks yet</h2><p>Open a board and create the first task.</p></div>
+                </div>
+              #endif
+            </section>
+          </div>
+        #endif
