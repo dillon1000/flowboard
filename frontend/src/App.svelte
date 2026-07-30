@@ -1,86 +1,201 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    Bell,
     Check,
-    Command,
-    Inbox,
+    ChevronRight,
+    House,
     LayoutDashboard,
+    ListTodo,
+    Menu,
     PanelLeftClose,
-    PanelLeftOpen,
     Plus,
     Search,
     Settings,
-    SlidersHorizontal
+    X
   } from '@lucide/svelte';
+  import BoardDialog from './lib/components/BoardDialog.svelte';
+  import ConfirmDialog from './lib/components/ConfirmDialog.svelte';
   import KanbanColumn from './lib/components/KanbanColumn.svelte';
   import TaskDialog from './lib/components/TaskDialog.svelte';
   import { api } from './lib/api';
-  import type { Activity, Board, Task, TaskDraft, TaskStatus } from './lib/types';
+  import type {
+    Board,
+    BoardSummary,
+    Task,
+    TaskDraft,
+    TaskPriority,
+    TaskStatus,
+    User
+  } from './lib/types';
 
-  const columns: Array<{ status: TaskStatus; title: string; note: string }> = [
-    { status: 'backlog', title: 'Backlog', note: 'Ready to shape' },
-    { status: 'in_progress', title: 'In progress', note: 'Actively moving' },
-    { status: 'review', title: 'Review', note: 'Needs a second look' },
-    { status: 'done', title: 'Done', note: 'Shipped this cycle' }
+  type PageName = 'overview' | 'board' | 'tasks' | 'settings';
+  type BoardDialogState = { mode: 'create' } | { mode: 'rename'; board: Board };
+  type ConfirmState =
+    | { kind: 'task'; task: Task }
+    | { kind: 'board'; board: Board };
+
+  const columns: Array<{ status: TaskStatus; title: string }> = [
+    { status: 'backlog', title: 'Backlog' },
+    { status: 'in_progress', title: 'In Progress' },
+    { status: 'review', title: 'Review' },
+    { status: 'done', title: 'Done' }
   ];
+  const statusLabels: Record<TaskStatus, string> = {
+    backlog: 'Backlog',
+    in_progress: 'In Progress',
+    review: 'Review',
+    done: 'Done'
+  };
+  const priorityLabels: Record<TaskPriority, string> = {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    urgent: 'Urgent'
+  };
 
-  let board: Board | null = null;
+  const root = document.getElementById('app');
+  let user: User | null = root?.dataset.userName
+    ? {
+        id: '',
+        name: root.dataset.userName,
+        email: root.dataset.userEmail ?? '',
+        createdAt: null
+      }
+    : null;
+  let boards: BoardSummary[] = [];
+  let activeBoard: Board | null = null;
+  let allTasks: Task[] = [];
+  let page: PageName = 'overview';
   let loading = true;
   let error = '';
   let search = '';
-  let compact = false;
   let sidebarOpen = true;
-  let createStatus: TaskStatus | null = null;
   let selectedTask: Task | null = null;
-  let dialogVersion = 0;
+  let createStatus: TaskStatus | null = null;
+  let boardDialog: BoardDialogState | null = null;
+  let confirmState: ConfirmState | null = null;
   let saving = false;
   let draggingTaskID: string | null = null;
   let toast = '';
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
-  let activityCounter = 4;
-  let activities: Activity[] = [
-    { id: 1, verb: 'Board ready', detail: 'Launch week', time: 'Now' },
-    { id: 2, verb: 'Release branch', detail: 'Rules set', time: '12m' },
-    { id: 3, verb: 'Billing copy', detail: 'Ready for review', time: '38m' }
-  ];
+  let profileName = user?.name ?? '';
 
-  $: filteredCount = board
-    ? board.tasks.filter((task) => matchesSearch(task)).length
-    : 0;
-  $: completedCount = board
-    ? board.tasks.filter((task) => task.status === 'done').length
-    : 0;
-  $: progress = board?.tasks.length
-    ? Math.round((completedCount / board.tasks.length) * 100)
-    : 0;
+  $: totalTaskCount = boards.reduce((total, board) => total + board.taskCount, 0);
+  $: completedTaskCount = boards.reduce((total, board) => total + board.completedCount, 0);
+  $: openTaskCount = totalTaskCount - completedTaskCount;
+  $: inProgressCount = allTasks.filter((task) => task.status === 'in_progress').length;
+  $: filteredAllTasks = allTasks.filter(matchesSearch);
+  $: pageTitle =
+    page === 'board'
+      ? activeBoard?.name ?? 'Board'
+      : page === 'tasks'
+        ? 'All Tasks'
+        : page === 'settings'
+          ? 'Settings'
+          : 'Overview';
 
   onMount(() => {
     sidebarOpen = window.innerWidth > 820;
-    void loadBoard();
+    const handlePopState = () => void syncRoute();
+    window.addEventListener('popstate', handlePopState);
+    void loadWorkspace();
+    return () => window.removeEventListener('popstate', handlePopState);
   });
 
-  async function loadBoard(silent = false): Promise<void> {
-    if (!silent) {
-      loading = true;
-    }
+  async function loadWorkspace(): Promise<void> {
+    loading = true;
     error = '';
-
     try {
-      board = await api.getDefaultBoard();
+      const [nextUser, nextBoards, taskPage] = await Promise.all([
+        api.getMe(),
+        api.getBoards(),
+        api.getTasks()
+      ]);
+      user = nextUser;
+      profileName = nextUser.name;
+      boards = nextBoards;
+      allTasks = taskPage.items;
+      await syncRoute();
     } catch (caught) {
-      error = caught instanceof Error ? caught.message : 'The board could not load.';
+      error = caught instanceof Error ? caught.message : 'The workspace could not load.';
     } finally {
       loading = false;
     }
   }
 
+  /// Resolves the current browser URL into app state. Board and task pages keep
+  /// their own URLs so refresh, Back, Forward, and copied links preserve context.
+  async function syncRoute(): Promise<void> {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    search = '';
+    if (parts[1] === 'boards' && parts[2]) {
+      page = 'board';
+      await loadBoard(parts[2]);
+    } else if (parts[1] === 'tasks') {
+      page = 'tasks';
+      activeBoard = null;
+    } else if (parts[1] === 'settings') {
+      page = 'settings';
+      activeBoard = null;
+    } else {
+      page = 'overview';
+      activeBoard = null;
+    }
+    document.title = `${pageTitle} · Flowboard`;
+  }
+
+  async function navigate(path: string): Promise<void> {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+    if (window.innerWidth <= 820) {
+      sidebarOpen = false;
+    }
+    await syncRoute();
+  }
+
+  function handleLink(event: MouseEvent, path: string): void {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    void navigate(path);
+  }
+
+  async function loadBoard(boardID: string, silent = false): Promise<void> {
+    if (!silent) {
+      loading = true;
+    }
+    error = '';
+    try {
+      activeBoard = await api.getBoard(boardID);
+    } catch (caught) {
+      activeBoard = null;
+      error = caught instanceof Error ? caught.message : 'The board could not load.';
+    } finally {
+      if (!silent) {
+        loading = false;
+      }
+    }
+  }
+
+  async function refreshCollections(): Promise<void> {
+    const [nextBoards, taskPage] = await Promise.all([api.getBoards(), api.getTasks()]);
+    boards = nextBoards;
+    allTasks = taskPage.items;
+  }
+
   function tasksFor(status: TaskStatus): Task[] {
-    if (!board) {
+    if (!activeBoard) {
       return [];
     }
-
-    return board.tasks
+    return activeBoard.tasks
       .filter((task) => task.status === status && matchesSearch(task))
       .sort((left, right) => left.position - right.position);
   }
@@ -90,52 +205,49 @@
     if (!value) {
       return true;
     }
-
-    return [task.title, task.description ?? '', ...task.labels]
+    return [task.title, task.description ?? '', task.boardName ?? '', ...task.labels]
       .join(' ')
       .toLowerCase()
       .includes(value);
   }
 
   function openCreate(status: TaskStatus = 'backlog'): void {
+    if (!activeBoard) {
+      return;
+    }
     selectedTask = null;
     createStatus = status;
-    dialogVersion += 1;
   }
 
   function openTask(task: Task): void {
     createStatus = null;
     selectedTask = task;
-    dialogVersion += 1;
   }
 
-  function closeDialog(): void {
+  function closeTaskDialog(): void {
     createStatus = null;
     selectedTask = null;
   }
 
   async function saveTask(draft: TaskDraft): Promise<void> {
-    if (!board) {
-      return;
-    }
     saving = true;
-
     try {
       if (selectedTask) {
         const updated = await api.updateTask(selectedTask.id, draft);
-        board = {
-          ...board,
-          tasks: board.tasks.map((task) => (task.id === updated.id ? updated : task))
-        };
-        addActivity('Task updated', updated.title);
-        showToast('Changes saved');
-      } else {
-        const created = await api.createTask(board.id, draft);
-        board = { ...board, tasks: [...board.tasks, created] };
-        addActivity('Task created', created.title);
+        if (activeBoard) {
+          activeBoard = {
+            ...activeBoard,
+            tasks: activeBoard.tasks.map((task) => (task.id === updated.id ? updated : task))
+          };
+        }
+        showToast('Task updated');
+      } else if (activeBoard) {
+        const created = await api.createTask(activeBoard.id, draft);
+        activeBoard = { ...activeBoard, tasks: [...activeBoard.tasks, created] };
         showToast('Task created');
       }
-      closeDialog();
+      closeTaskDialog();
+      await refreshCollections();
     } catch (caught) {
       showToast(caught instanceof Error ? caught.message : 'The task could not be saved.');
     } finally {
@@ -143,21 +255,91 @@
     }
   }
 
-  async function deleteTask(task: Task): Promise<void> {
-    if (!board || !window.confirm(`Delete “${task.title}”? This cannot be undone.`)) {
+  function requestTaskDelete(task: Task): void {
+    closeTaskDialog();
+    confirmState = { kind: 'task', task };
+  }
+
+  function requestBoardDelete(): void {
+    if (activeBoard) {
+      confirmState = { kind: 'board', board: activeBoard };
+    }
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (!confirmState) {
       return;
     }
     saving = true;
-
     try {
-      await api.deleteTask(task.id);
-      board = { ...board, tasks: board.tasks.filter((item) => item.id !== task.id) };
-      addActivity('Task deleted', task.title);
-      showToast('Task deleted');
-      closeDialog();
+      if (confirmState.kind === 'task') {
+        await api.deleteTask(confirmState.task.id);
+        if (activeBoard) {
+          activeBoard = {
+            ...activeBoard,
+            tasks: activeBoard.tasks.filter((task) => task.id !== confirmState?.task.id)
+          };
+        }
+        showToast('Task deleted');
+      } else {
+        await api.deleteBoard(confirmState.board.id);
+        showToast('Board deleted');
+        await navigate('/app');
+      }
+      confirmState = null;
+      await refreshCollections();
     } catch (caught) {
-      showToast(caught instanceof Error ? caught.message : 'The task could not be deleted.');
+      showToast(caught instanceof Error ? caught.message : 'The item could not be deleted.');
     } finally {
+      saving = false;
+    }
+  }
+
+  async function saveBoard(name: string): Promise<void> {
+    if (!boardDialog) {
+      return;
+    }
+    saving = true;
+    try {
+      if (boardDialog.mode === 'create') {
+        const created = await api.createBoard(name);
+        boardDialog = null;
+        await refreshCollections();
+        await navigate(`/app/boards/${created.id}`);
+        showToast('Board created');
+      } else {
+        const updated = await api.updateBoard(boardDialog.board.id, name);
+        activeBoard = updated;
+        boardDialog = null;
+        await refreshCollections();
+        showToast('Board renamed');
+      }
+    } catch (caught) {
+      showToast(caught instanceof Error ? caught.message : 'The board could not be saved.');
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function saveProfile(): Promise<void> {
+    saving = true;
+    try {
+      user = await api.updateProfile(profileName.trim());
+      showToast('Profile updated');
+    } catch (caught) {
+      showToast(caught instanceof Error ? caught.message : 'The profile could not be saved.');
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function logout(): Promise<void> {
+    saving = true;
+    try {
+      await api.logout();
+      window.location.assign('/login');
+    } catch (caught) {
+      showToast(caught instanceof Error ? caught.message : 'Log out did not complete.');
       saving = false;
     }
   }
@@ -174,54 +356,68 @@
     draggingTaskID = null;
   }
 
-  /// Applies an immediate local reorder, then asks Vapor to commit and normalize it.
-  /// A failed request reloads the server state so the UI cannot keep a false order.
+  /// Applies the move immediately, then reconciles with Vapor. A failed request
+  /// reloads the board so the interface cannot retain an order the server rejected.
   async function moveTask(status: TaskStatus, targetIndex: number): Promise<void> {
-    if (!board || !draggingTaskID) {
+    if (!activeBoard || !draggingTaskID) {
       return;
     }
-
-    const task = board.tasks.find((item) => item.id === draggingTaskID);
+    const task = activeBoard.tasks.find((item) => item.id === draggingTaskID);
     if (!task) {
       return;
     }
 
-    const destination = board.tasks
+    const destination = activeBoard.tasks
       .filter((item) => item.status === status && item.id !== task.id)
       .sort((left, right) => left.position - right.position);
     const safeIndex = Math.min(targetIndex, destination.length);
-    const moved = { ...task, status };
-    destination.splice(safeIndex, 0, moved);
-
+    destination.splice(safeIndex, 0, { ...task, status });
     const normalized = new Map(
       destination.map((item, index) => [item.id, { ...item, position: (index + 1) * 1000 }])
     );
-    board = {
-      ...board,
-      tasks: board.tasks.map((item) => normalized.get(item.id) ?? item)
+    activeBoard = {
+      ...activeBoard,
+      tasks: activeBoard.tasks.map((item) => normalized.get(item.id) ?? item)
     };
     draggingTaskID = null;
 
     try {
       await api.moveTask(task.id, status, safeIndex);
-      await loadBoard(true);
-      addActivity('Task moved', `${task.title} → ${columnTitle(status)}`);
-      showToast(`Moved to ${columnTitle(status)}`);
+      await loadBoard(activeBoard.id, true);
+      await refreshCollections();
+      showToast(`Moved to ${statusLabels[status]}`);
     } catch (caught) {
-      await loadBoard(true);
+      await loadBoard(activeBoard.id, true);
       showToast(caught instanceof Error ? caught.message : 'The task could not be moved.');
     }
   }
 
-  function columnTitle(status: TaskStatus): string {
-    return columns.find((column) => column.status === status)?.title ?? status;
+  async function openTaskFromList(task: Task): Promise<void> {
+    if (task.boardID) {
+      await navigate(`/app/boards/${task.boardID}`);
+      selectedTask = activeBoard?.tasks.find((item) => item.id === task.id) ?? task;
+    }
   }
 
-  function addActivity(verb: string, detail: string): void {
-    activities = [
-      { id: activityCounter++, verb, detail, time: 'Now' },
-      ...activities
-    ].slice(0, 3);
+  function formatDate(value: string | null): string {
+    if (!value) {
+      return 'No date';
+    }
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }).format(new Date(value));
+  }
+
+  function initials(name: string): string {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
   }
 
   function showToast(message: string): void {
@@ -236,210 +432,390 @@
 </script>
 
 <svelte:head>
-  <title>{board ? `${board.name} · Flowboard` : 'Flowboard'}</title>
+  <meta
+    name="description"
+    content="Flowboard is a focused workspace for boards and tasks."
+  />
 </svelte:head>
 
-<div class:sidebar-closed={!sidebarOpen} class="app-shell">
+<div class:sidebar-open={sidebarOpen} class="app-shell">
   <aside class="sidebar" aria-label="Workspace navigation">
     <div class="brand-row">
-      <span class="brand-mark" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </span>
-      <span class="brand-name">Flowboard</span>
+      <a href="/app" class="brand" on:click={(event) => handleLink(event, '/app')}>
+        <span class="brand-symbol" aria-hidden="true"></span>
+        <span>Flowboard</span>
+      </a>
       <button
         type="button"
-        class="icon-button sidebar-toggle"
-        on:click={() => (sidebarOpen = !sidebarOpen)}
-        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        class="icon-button sidebar-close"
+        on:click={() => (sidebarOpen = false)}
+        aria-label="Close navigation"
       >
-        {#if sidebarOpen}
-          <PanelLeftClose size={16} />
-        {:else}
-          <PanelLeftOpen size={16} />
-        {/if}
+        <PanelLeftClose size={17} />
       </button>
     </div>
 
     <nav class="main-nav">
-      <a href="#board" class="active">
-        <LayoutDashboard size={17} strokeWidth={1.8} />
-        <span>Board</span>
-        <span class="nav-key">B</span>
+      <a
+        href="/app"
+        class:active={page === 'overview'}
+        on:click={(event) => handleLink(event, '/app')}
+      >
+        <House size={16} strokeWidth={1.8} />
+        Overview
       </a>
-      <a href="#inbox">
-        <Inbox size={17} strokeWidth={1.8} />
-        <span>Inbox</span>
-        <span class="nav-count">3</span>
+      <a
+        href="/app/tasks"
+        class:active={page === 'tasks'}
+        on:click={(event) => handleLink(event, '/app/tasks')}
+      >
+        <ListTodo size={16} strokeWidth={1.8} />
+        All Tasks
       </a>
     </nav>
 
-    <div class="sidebar-section">
-      <span class="sidebar-label">Workspace</span>
-      <button type="button" class="workspace-item active">
-        <span class="workspace-glyph">LW</span>
-        <span>
-          <strong>{board?.name ?? 'Launch week'}</strong>
-          <small>{board?.tasks.length ?? 0} open items</small>
-        </span>
-      </button>
+    <div class="boards-nav">
+      <div class="nav-section-header">
+        <span>Boards</span>
+        <button
+          type="button"
+          class="icon-button"
+          on:click={() => (boardDialog = { mode: 'create' })}
+          aria-label="Create board"
+        >
+          <Plus size={15} />
+        </button>
+      </div>
+      <nav>
+        {#each boards as board (board.id)}
+          <a
+            href={`/app/boards/${board.id}`}
+            class:active={page === 'board' && activeBoard?.id === board.id}
+            on:click={(event) => handleLink(event, `/app/boards/${board.id}`)}
+          >
+            <LayoutDashboard size={15} strokeWidth={1.8} />
+            <span>{board.name}</span>
+            <small>{board.taskCount}</small>
+          </a>
+        {/each}
+      </nav>
     </div>
 
     <div class="sidebar-spacer"></div>
 
-    <div class="cycle-card">
-      <span class="cycle-label">Current cycle</span>
-      <div class="cycle-value">
-        <strong>{progress}%</strong>
-        <span>{completedCount}/{board?.tasks.length ?? 0} shipped</span>
-      </div>
-      <span class="progress-track"><span style={`width: ${progress}%`}></span></span>
-    </div>
-
-    <nav class="utility-nav">
-      <a href="#settings">
-        <Settings size={17} strokeWidth={1.8} />
-        <span>Settings</span>
+    <nav class="settings-nav">
+      <a
+        href="/app/settings"
+        class:active={page === 'settings'}
+        on:click={(event) => handleLink(event, '/app/settings')}
+      >
+        <Settings size={16} strokeWidth={1.8} />
+        Settings
       </a>
-      <button type="button" on:click={() => showToast('No new notifications')}>
-        <Bell size={17} strokeWidth={1.8} />
-        <span>Notifications</span>
-        <span class="online-dot"></span>
-      </button>
     </nav>
 
-    <div class="user-row">
-      <span class="avatar">DM</span>
+    <a
+      href="/app/settings"
+      class="user-row"
+      on:click={(event) => handleLink(event, '/app/settings')}
+    >
+      <span class="avatar">{initials(user?.name ?? 'User')}</span>
       <span>
-        <strong>Dillon</strong>
-        <small>Workspace owner</small>
+        <strong>{user?.name ?? 'Account'}</strong>
+        <small>{user?.email ?? ''}</small>
       </span>
-    </div>
+    </a>
   </aside>
+
+  {#if sidebarOpen}
+    <button
+      type="button"
+      class="sidebar-scrim"
+      on:click={() => (sidebarOpen = false)}
+      aria-label="Close navigation"
+    ></button>
+  {/if}
 
   <main class="workspace">
     <header class="topbar">
-      {#if !sidebarOpen}
-        <button
-          type="button"
-          class="icon-button floating-sidebar-toggle"
-          on:click={() => (sidebarOpen = true)}
-          aria-label="Expand sidebar"
-        >
-          <PanelLeftOpen size={17} />
-        </button>
+      <button
+        type="button"
+        class="icon-button menu-button"
+        on:click={() => (sidebarOpen = true)}
+        aria-label="Open navigation"
+      >
+        <Menu size={18} />
+      </button>
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/app" on:click={(event) => handleLink(event, '/app')}>Workspace</a>
+        <ChevronRight size={13} aria-hidden="true" />
+        <span>{pageTitle}</span>
+      </nav>
+      {#if page === 'board' && activeBoard}
+        <div class="topbar-actions">
+          <label class="search-control">
+            <Search size={15} strokeWidth={1.8} />
+            <span class="sr-only">Search this board</span>
+            <input bind:value={search} name="board-search" autocomplete="off" placeholder="Search…" />
+          </label>
+          <button type="button" class="button primary-button" on:click={() => openCreate()}>
+            <Plus size={15} />
+            New Task
+          </button>
+        </div>
       {/if}
-
-      <div class="breadcrumbs" aria-label="Breadcrumb">
-        <span>Workspace</span>
-        <span class="breadcrumb-divider">/</span>
-        <strong>{board?.name ?? 'Board'}</strong>
-      </div>
-
-      <div class="topbar-actions">
-        <label class="search-control">
-          <Search size={15} strokeWidth={1.8} />
-          <span class="sr-only">Search tasks</span>
-          <input bind:value={search} placeholder="Search work" />
-          <kbd><Command size={11} /> K</kbd>
-        </label>
-        <button
-          type="button"
-          class:active={compact}
-          class="button view-button"
-          on:click={() => (compact = !compact)}
-          aria-pressed={compact}
-        >
-          <SlidersHorizontal size={15} strokeWidth={1.8} />
-          {compact ? 'Comfortable' : 'Compact'}
-        </button>
-        <button type="button" class="button primary-button" on:click={() => openCreate()}>
-          <Plus size={16} strokeWidth={2} />
-          New task
-        </button>
-      </div>
     </header>
 
-    <section class="board-intro">
-      <div class="board-heading">
-        <span class="board-kicker">Product operations / July cycle</span>
-        <div class="title-line">
-          <h1>{board?.name ?? 'Launch week'}</h1>
-          <span class="live-badge"><span></span> Live</span>
-        </div>
-        <p>Keep the work visible, make the handoffs clean, and ship the smallest useful thing.</p>
-      </div>
-
-      <div class="activity-rail" aria-label="Recent board activity">
-        <div class="rail-header">
-          <span>Signal</span>
-          <span>{filteredCount} visible</span>
-        </div>
-        <div class="rail-events">
-          {#each activities as activity, index (activity.id)}
-            <div class="rail-event">
-              <span class:current={index === 0} class="rail-node"></span>
-              <span>
-                <strong>{activity.verb}</strong>
-                <small>{activity.detail}</small>
-              </span>
-              <time>{activity.time}</time>
-            </div>
-          {/each}
-        </div>
-      </div>
-    </section>
-
     {#if loading}
-      <section class="board-state" aria-live="polite">
-        <span class="loading-line"></span>
-        <h2>Opening the board</h2>
-        <p>Vapor is loading the latest task state.</p>
+      <section class="page-state" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <h1>Loading workspace…</h1>
       </section>
     {:else if error}
-      <section class="board-state error-state" aria-live="assertive">
-        <span class="state-code">API / 01</span>
-        <h2>The board could not connect</h2>
-        <p>{error} Start the Vapor server on port 8080, then try again.</p>
-        <button type="button" class="button primary-button" on:click={() => loadBoard()}>Try again</button>
+      <section class="page-state">
+        <h1>Workspace unavailable</h1>
+        <p>{error}</p>
+        <button type="button" class="button primary-button" on:click={loadWorkspace}>Try Again</button>
       </section>
-    {:else if board}
-      <section id="board" class="kanban-board" aria-label={`${board.name} Kanban board`}>
-        {#each columns as column (column.status)}
-          <KanbanColumn
-            status={column.status}
-            title={column.title}
-            note={column.note}
-            tasks={tasksFor(column.status)}
-            {compact}
-            {draggingTaskID}
-            oncreate={openCreate}
-            onopen={openTask}
-            ondragstart={startDrag}
-            ondragend={endDrag}
-            ondrop={moveTask}
-          />
-        {/each}
+    {:else if page === 'overview'}
+      <section class="page-content">
+        <header class="page-header">
+          <div>
+            <h1>Overview</h1>
+            <p>Your current work across {boards.length} {boards.length === 1 ? 'board' : 'boards'}.</p>
+          </div>
+          <button type="button" class="button primary-button" on:click={() => (boardDialog = { mode: 'create' })}>
+            <Plus size={15} />
+            New Board
+          </button>
+        </header>
+
+        <section class="metrics" aria-label="Workspace totals">
+          <div><span>Open Tasks</span><strong>{openTaskCount}</strong></div>
+          <div><span>In Progress</span><strong>{inProgressCount}</strong></div>
+          <div><span>Completed</span><strong>{completedTaskCount}</strong></div>
+        </section>
+
+        <section class="content-section">
+          <div class="section-header">
+            <h2>Boards</h2>
+          </div>
+          {#if boards.length}
+            <div class="board-list">
+              {#each boards as board (board.id)}
+                <a
+                  href={`/app/boards/${board.id}`}
+                  on:click={(event) => handleLink(event, `/app/boards/${board.id}`)}
+                >
+                  <span class="board-icon"><LayoutDashboard size={17} /></span>
+                  <span class="board-list-name">
+                    <strong>{board.name}</strong>
+                    <small>Updated {formatDate(board.updatedAt ?? board.createdAt)}</small>
+                  </span>
+                  <span class="board-progress">
+                    {board.completedCount} of {board.taskCount} done
+                  </span>
+                  <ChevronRight size={15} aria-hidden="true" />
+                </a>
+              {/each}
+            </div>
+          {:else}
+            <div class="empty-state">
+              <h3>Create your first board</h3>
+              <p>Boards keep related tasks and their status in one place.</p>
+              <button type="button" class="button primary-button" on:click={() => (boardDialog = { mode: 'create' })}>
+                Create Board
+              </button>
+            </div>
+          {/if}
+        </section>
+
+        {#if allTasks.length}
+          <section class="content-section">
+            <div class="section-header">
+              <h2>Recently Updated</h2>
+              <a href="/app/tasks" on:click={(event) => handleLink(event, '/app/tasks')}>View All</a>
+            </div>
+            <div class="task-table">
+              {#each allTasks.slice(0, 6) as task (task.id)}
+                <button type="button" on:click={() => openTaskFromList(task)}>
+                  <span class={`status-dot status-${task.status}`}></span>
+                  <span class="table-task-title">{task.title}</span>
+                  <span>{task.boardName ?? 'Board'}</span>
+                  <span>{statusLabels[task.status]}</span>
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              {/each}
+            </div>
+          </section>
+        {/if}
+      </section>
+    {:else if page === 'board' && activeBoard}
+      <section class="board-page">
+        <header class="page-header board-page-header">
+          <div>
+            <h1>{activeBoard.name}</h1>
+            <p>{activeBoard.tasks.length} {activeBoard.tasks.length === 1 ? 'task' : 'tasks'}</p>
+          </div>
+          <div class="page-actions">
+            <button
+              type="button"
+              class="button secondary-button"
+              on:click={() => (boardDialog = { mode: 'rename', board: activeBoard! })}
+            >
+              Rename
+            </button>
+            <button type="button" class="button secondary-button" on:click={requestBoardDelete}>
+              Delete
+            </button>
+          </div>
+        </header>
+
+        <section class="kanban-board" aria-label={`${activeBoard.name} Kanban board`}>
+          {#each columns as column (column.status)}
+            <KanbanColumn
+              status={column.status}
+              title={column.title}
+              tasks={tasksFor(column.status)}
+              {draggingTaskID}
+              oncreate={openCreate}
+              onopen={openTask}
+              ondragstart={startDrag}
+              ondragend={endDrag}
+              ondrop={moveTask}
+            />
+          {/each}
+        </section>
+      </section>
+    {:else if page === 'tasks'}
+      <section class="page-content">
+        <header class="page-header">
+          <div>
+            <h1>All Tasks</h1>
+            <p>Review work from every board.</p>
+          </div>
+          <label class="search-control page-search">
+            <Search size={15} strokeWidth={1.8} />
+            <span class="sr-only">Search all tasks</span>
+            <input bind:value={search} name="task-search" autocomplete="off" placeholder="Search tasks…" />
+          </label>
+        </header>
+
+        <section class="content-section task-page-section">
+          {#if filteredAllTasks.length}
+            <div class="task-list-header" aria-hidden="true">
+              <span>Task</span><span>Board</span><span>Status</span><span>Priority</span><span></span>
+            </div>
+            <div class="task-table full-task-table">
+              {#each filteredAllTasks as task (task.id)}
+                <button type="button" on:click={() => openTaskFromList(task)}>
+                  <span class="table-task-title">{task.title}</span>
+                  <span>{task.boardName ?? 'Board'}</span>
+                  <span class="status-cell"><span class={`status-dot status-${task.status}`}></span>{statusLabels[task.status]}</span>
+                  <span>{priorityLabels[task.priority]}</span>
+                  <ChevronRight size={14} aria-hidden="true" />
+                </button>
+              {/each}
+            </div>
+          {:else}
+            <div class="empty-state">
+              <h3>No tasks found</h3>
+              <p>{search ? 'Try a different search.' : 'Create a task from one of your boards.'}</p>
+            </div>
+          {/if}
+        </section>
+      </section>
+    {:else if page === 'settings' && user}
+      <section class="page-content settings-page">
+        <header class="page-header">
+          <div>
+            <h1>Settings</h1>
+            <p>Manage your account.</p>
+          </div>
+        </header>
+
+        <section class="settings-section">
+          <div class="settings-copy">
+            <h2>Profile</h2>
+            <p>This name appears throughout your workspace.</p>
+          </div>
+          <form on:submit={(event) => {
+            event.preventDefault();
+            void saveProfile();
+          }}>
+            <label class="field">
+              <span>Name</span>
+              <input bind:value={profileName} name="name" autocomplete="name" maxlength="80" required />
+            </label>
+            <label class="field">
+              <span>Email</span>
+              <input value={user.email} name="email" autocomplete="email" disabled />
+            </label>
+            <div>
+              <button type="submit" class="button primary-button" disabled={saving || !profileName.trim()}>
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="settings-section">
+          <div class="settings-copy">
+            <h2>Session</h2>
+            <p>End your session on this device.</p>
+          </div>
+          <div>
+            <button type="button" class="button secondary-button" on:click={logout} disabled={saving}>
+              Log Out
+            </button>
+          </div>
+        </section>
       </section>
     {/if}
   </main>
 </div>
 
 {#if createStatus || selectedTask}
-  {#key dialogVersion}
-    <TaskDialog
-      task={selectedTask}
-      defaultStatus={createStatus ?? selectedTask?.status ?? 'backlog'}
-      {saving}
-      onclose={closeDialog}
-      onsave={saveTask}
-      ondelete={selectedTask ? deleteTask : null}
-    />
-  {/key}
+  <TaskDialog
+    task={selectedTask}
+    defaultStatus={createStatus ?? selectedTask?.status ?? 'backlog'}
+    {saving}
+    onclose={closeTaskDialog}
+    onsave={saveTask}
+    onrequestdelete={selectedTask ? requestTaskDelete : null}
+  />
+{/if}
+
+{#if boardDialog}
+  <BoardDialog
+    initialName={boardDialog.mode === 'rename' ? boardDialog.board.name : ''}
+    title={boardDialog.mode === 'rename' ? 'Rename Board' : 'Create Board'}
+    submitLabel={boardDialog.mode === 'rename' ? 'Save Changes' : 'Create Board'}
+    {saving}
+    onclose={() => (boardDialog = null)}
+    onsave={saveBoard}
+  />
+{/if}
+
+{#if confirmState}
+  <ConfirmDialog
+    title={confirmState.kind === 'task' ? 'Delete Task' : 'Delete Board'}
+    message={confirmState.kind === 'task'
+      ? `Delete “${confirmState.task.title}”? This action cannot be undone.`
+      : `Delete “${confirmState.board.name}” and all of its tasks? This action cannot be undone.`}
+    confirmLabel={confirmState.kind === 'task' ? 'Delete Task' : 'Delete Board'}
+    busy={saving}
+    oncancel={() => (confirmState = null)}
+    onconfirm={confirmDelete}
+  />
 {/if}
 
 {#if toast}
-  <div class="toast" role="status">
-    <span class="toast-icon"><Check size={13} strokeWidth={2.2} /></span>
+  <div class="toast" role="status" aria-live="polite">
+    <Check size={14} strokeWidth={2.2} />
     {toast}
+    <button type="button" on:click={() => (toast = '')} aria-label="Dismiss">
+      <X size={14} />
+    </button>
   </div>
 {/if}
