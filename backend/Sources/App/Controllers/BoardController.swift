@@ -14,7 +14,7 @@ struct BoardController: RouteCollection {
         let boards = try await Board.query(on: req.db)
             .sort(\.$createdAt, .ascending)
             .all()
-        return try boards.map(BoardResponse.init)
+        return try boards.map { try BoardResponse(board: $0) }
     }
 
     func showDefault(req: Request) async throws -> BoardResponse {
