@@ -971,6 +971,31 @@ button {
   border-radius: var(--radius);
 }
 
+.calendar-toolbar,
+.calendar-navigation {
+  display: flex;
+  align-items: center;
+}
+
+.calendar-toolbar {
+  min-width: 720px;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.calendar-navigation {
+  gap: 8px;
+}
+
+.calendar-navigation h2 {
+  min-width: 130px;
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
 .calendar-weekdays,
 .calendar-grid {
   display: grid;

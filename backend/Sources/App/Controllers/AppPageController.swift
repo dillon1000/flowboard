@@ -115,13 +115,25 @@ struct AppPageController: RouteCollection {
             .first()
         let filteredTasks = apply(activeView.configuration, to: tasks)
         let taskContexts = try await makeTaskContexts(filteredTasks, on: req.db)
+        let calendarMonth = requestedCalendarMonth(from: req)
+        let viewPath = "/app/boards/\(boardID)/views/\(viewID)"
         let boardContext = try BoardPageContext(
             board: access.board,
             access: access,
             views: views,
             activeView: activeView,
             tasks: taskContexts,
-            calendarDays: makeCalendarDays(tasks: taskContexts),
+            calendarDays: makeCalendarDays(tasks: taskContexts, monthStart: calendarMonth),
+            calendarMonthLabel: calendarMonthLabel(calendarMonth),
+            previousMonthHref: calendarHref(
+                path: viewPath,
+                month: calendarDate(byAddingMonths: -1, to: calendarMonth)
+            ),
+            nextMonthHref: calendarHref(
+                path: viewPath,
+                month: calendarDate(byAddingMonths: 1, to: calendarMonth)
+            ),
+            todayMonthHref: calendarHref(path: viewPath, month: calendarDate()),
             defaultTemplate: defaultTemplate
         )
 
@@ -406,12 +418,11 @@ struct AppPageController: RouteCollection {
         return users
     }
 
-    private func makeCalendarDays(tasks: [TaskCardContext]) -> [CalendarDayContext] {
-        let calendar = Calendar(identifier: .gregorian)
-        let now = Date()
-        let monthStart = calendar.date(
-            from: calendar.dateComponents([.year, .month], from: now)
-        ) ?? now
+    private func makeCalendarDays(
+        tasks: [TaskCardContext],
+        monthStart: Date
+    ) -> [CalendarDayContext] {
+        let calendar = utcCalendar()
         let firstWeekday = calendar.component(.weekday, from: monthStart)
         let gridStart = calendar.date(byAdding: .day, value: -(firstWeekday - 1), to: monthStart) ?? monthStart
         let activeMonth = calendar.component(.month, from: monthStart)
@@ -427,6 +438,53 @@ struct AppPageController: RouteCollection {
                 tasks: tasks.filter { $0.dueInput == key }
             )
         }
+    }
+
+    private func requestedCalendarMonth(from req: Request) -> Date {
+        guard
+            let value = try? req.query.get(String.self, at: "month"),
+            value.count == 7
+        else {
+            return calendarDate()
+        }
+        let parts = value.split(separator: "-")
+        guard
+            parts.count == 2,
+            let year = Int(parts[0]),
+            let month = Int(parts[1]),
+            (1...12).contains(month),
+            let date = utcCalendar().date(from: DateComponents(year: year, month: month, day: 1))
+        else {
+            return calendarDate()
+        }
+        return date
+    }
+
+    private func calendarDate(byAddingMonths offset: Int = 0, to date: Date = Date()) -> Date {
+        let calendar = utcCalendar()
+        let monthStart = calendar.date(
+            from: calendar.dateComponents([.year, .month], from: date)
+        ) ?? date
+        return calendar.date(byAdding: .month, value: offset, to: monthStart) ?? monthStart
+    }
+
+    private func calendarHref(path: String, month: Date) -> String {
+        let components = utcCalendar().dateComponents([.year, .month], from: month)
+        return "\(path)?month=\(components.year ?? 1970)-\(String(format: "%02d", components.month ?? 1))"
+    }
+
+    private func calendarMonthLabel(_ month: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: month)
+    }
+
+    private func utcCalendar() -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        return calendar
     }
 }
 

@@ -131,6 +131,10 @@ struct BoardPageContext: Encodable {
     let canDrag: Bool
     let columns: [TaskColumnContext]
     let calendarDays: [CalendarDayContext]
+    let calendarMonthLabel: String
+    let previousMonthHref: String
+    let nextMonthHref: String
+    let todayMonthHref: String
     let hasDefaultTemplate: Bool
     let defaultTemplateName: String
     let newTaskTitle: String
@@ -156,6 +160,10 @@ struct BoardPageContext: Encodable {
         activeView: BoardView,
         tasks: [TaskCardContext],
         calendarDays: [CalendarDayContext],
+        calendarMonthLabel: String,
+        previousMonthHref: String,
+        nextMonthHref: String,
+        todayMonthHref: String,
         defaultTemplate: TaskTemplate?
     ) throws {
         self.id = try board.requireID()
@@ -206,6 +214,10 @@ struct BoardPageContext: Encodable {
             }
         }
         self.calendarDays = calendarDays
+        self.calendarMonthLabel = calendarMonthLabel
+        self.previousMonthHref = previousMonthHref
+        self.nextMonthHref = nextMonthHref
+        self.todayMonthHref = todayMonthHref
         self.hasDefaultTemplate = defaultTemplate != nil
         self.defaultTemplateName = defaultTemplate?.name ?? ""
         self.newTaskTitle = defaultTemplate?.title ?? ""

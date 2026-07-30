@@ -419,6 +419,14 @@
 
             #if(board.activeView.isCalendar):
               <div class="calendar-shell">
+                <div class="calendar-toolbar">
+                  <div class="calendar-navigation">
+                    <a class="icon-button" href="#(board.previousMonthHref)" aria-label="Previous month"><i data-lucide="chevron-left"></i></a>
+                    <h2>#(board.calendarMonthLabel)</h2>
+                    <a class="icon-button" href="#(board.nextMonthHref)" aria-label="Next month"><i data-lucide="chevron-right"></i></a>
+                  </div>
+                  <a class="button secondary small" href="#(board.todayMonthHref)">Today</a>
+                </div>
                 <div class="calendar-weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
                 <div class="calendar-grid">
                   #for(day in board.calendarDays):
