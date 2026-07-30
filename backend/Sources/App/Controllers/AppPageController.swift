@@ -109,6 +109,10 @@ struct AppPageController: RouteCollection {
         let tasks = try await taskQuery(boardIDs: [boardID], on: req.db)
             .sort(\.$position, .ascending)
             .all()
+        let defaultTemplate = try await TaskTemplate.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .filter(\.$isDefault == true)
+            .first()
         let filteredTasks = apply(activeView.configuration, to: tasks)
         let taskContexts = try await makeTaskContexts(filteredTasks, on: req.db)
         let boardContext = try BoardPageContext(
@@ -117,7 +121,8 @@ struct AppPageController: RouteCollection {
             views: views,
             activeView: activeView,
             tasks: taskContexts,
-            calendarDays: makeCalendarDays(tasks: taskContexts)
+            calendarDays: makeCalendarDays(tasks: taskContexts),
+            defaultTemplate: defaultTemplate
         )
 
         return try await render(
@@ -145,6 +150,14 @@ struct AppPageController: RouteCollection {
             .filter(\.$board.$id == boardID)
             .sort(\.$createdAt, .ascending)
             .all()
+        let owner = if
+            let ownerID = access.board.$owner.id,
+            let owner = try await User.find(ownerID, on: req.db)
+        {
+            owner
+        } else {
+            try req.auth.require(User.self)
+        }
         let firstViewID = try views.first?.requireID()
 
         return try await render(
@@ -156,6 +169,7 @@ struct AppPageController: RouteCollection {
                 views: views,
                 members: members,
                 templates: templates,
+                owner: owner,
                 firstViewID: firstViewID,
                 isOwner: access.isOwner
             ),
@@ -237,7 +251,7 @@ struct AppPageController: RouteCollection {
             csrfToken: req.csrfToken,
             userName: user.name,
             userEmail: user.email,
-            userInitials: initials(for: user.name),
+            userInitials: makeInitials(for: user.name),
             boards: boardContexts
         )
     }

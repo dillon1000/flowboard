@@ -21,11 +21,17 @@ struct WorkspaceActionController: RouteCollection {
         routes.post("app", "boards", ":boardID", "members", use: addMember)
         routes.post("app", "boards", ":boardID", "members", ":memberID", "remove", use: removeMember)
         routes.post("app", "boards", ":boardID", "templates", use: createTemplate)
+        routes.post("app", "boards", ":boardID", "templates", ":templateID", "use", use: useTemplate)
+        routes.post("app", "boards", ":boardID", "templates", ":templateID", "default", use: setDefaultTemplate)
+        routes.post("app", "boards", ":boardID", "templates", ":templateID", "delete", use: deleteTemplate)
 
         routes.post("app", "tasks", use: createTask)
         routes.post("app", "tasks", ":taskID", "update", use: updateTask)
+        routes.post("app", "tasks", ":taskID", "properties", use: updateTaskProperties)
+        routes.post("app", "tasks", ":taskID", "archive", use: toggleTaskArchive)
         routes.post("app", "tasks", ":taskID", "delete", use: deleteTask)
         routes.post("app", "tasks", ":taskID", "comments", use: createComment)
+        routes.post("app", "comments", ":commentID", "delete", use: deleteComment)
         routes.post("app", "tasks", ":taskID", "follow", use: toggleFollow)
         routes.post("app", "tasks", ":taskID", "checklist", use: createChecklistItem)
         routes.post("app", "checklist", ":itemID", "toggle", use: toggleChecklistItem)
@@ -332,6 +338,49 @@ struct WorkspaceActionController: RouteCollection {
         return req.redirect(to: "/app/boards/\(try access.board.requireID())/settings")
     }
 
+    func useTemplate(req: Request) async throws -> Response {
+        let access = try await requiredBoard(for: req, permission: .edit)
+        let boardID = try access.board.requireID()
+        let template = try await requiredTemplate(for: req, boardID: boardID)
+        let count = try await Task.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .filter(\.$status == template.status)
+            .count()
+        let task = Task(
+            boardID: boardID,
+            title: template.title,
+            description: template.description,
+            status: template.status,
+            priority: template.priority,
+            position: (count + 1) * 1_000,
+            labels: template.labels
+        )
+        try await task.create(on: req.db)
+        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+    }
+
+    func setDefaultTemplate(req: Request) async throws -> Response {
+        let access = try await requiredBoard(for: req, permission: .admin)
+        let boardID = try access.board.requireID()
+        let selected = try await requiredTemplate(for: req, boardID: boardID)
+        let templates = try await TaskTemplate.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .all()
+        for template in templates {
+            template.isDefault = template.id == selected.id
+            try await template.update(on: req.db)
+        }
+        return req.redirect(to: "/app/boards/\(boardID)/settings")
+    }
+
+    func deleteTemplate(req: Request) async throws -> Response {
+        let access = try await requiredBoard(for: req, permission: .admin)
+        let boardID = try access.board.requireID()
+        let template = try await requiredTemplate(for: req, boardID: boardID)
+        try await template.delete(on: req.db)
+        return req.redirect(to: "/app/boards/\(boardID)/settings")
+    }
+
     func createTask(req: Request) async throws -> Response {
         let input = try req.content.decode(CreateTaskForm.self)
         let userID = try req.auth.require(User.self).requireID()
@@ -401,6 +450,37 @@ struct WorkspaceActionController: RouteCollection {
         return req.redirect(to: "/app/tasks/\(try task.requireID())")
     }
 
+    func updateTaskProperties(req: Request) async throws -> Response {
+        let task = try await requiredTask(for: req, permission: .edit)
+        guard let board = try await Board.find(task.$board.id, on: req.db) else {
+            throw Abort(.notFound, reason: "The board does not exist.")
+        }
+        var values = task.properties ?? [:]
+        for definition in board.propertyDefinitions ?? [] {
+            let value = (try? req.content.get(String.self, at: "property-\(definition.id)")) ?? ""
+            let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleaned.isEmpty {
+                values.removeValue(forKey: definition.id)
+            } else {
+                values[definition.id] = String(cleaned.prefix(2_000))
+            }
+        }
+        task.properties = values
+        try await task.update(on: req.db)
+        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+    }
+
+    func toggleTaskArchive(req: Request) async throws -> Response {
+        let task = try await requiredTask(for: req, permission: .edit)
+        task.isArchived.toggle()
+        try await task.update(on: req.db)
+        return req.redirect(
+            to: task.isArchived
+                ? "/app/boards/\(task.$board.id)"
+                : "/app/tasks/\(try task.requireID())"
+        )
+    }
+
     func deleteTask(req: Request) async throws -> Response {
         let task = try await requiredTask(for: req, permission: .edit)
         let boardID = task.$board.id
@@ -424,6 +504,27 @@ struct WorkspaceActionController: RouteCollection {
             authorID: req.auth.require(User.self).requireID(),
             body: body
         ).create(on: req.db)
+        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+    }
+
+    func deleteComment(req: Request) async throws -> Response {
+        guard
+            let commentID = req.parameters.get("commentID", as: UUID.self),
+            let comment = try await TaskComment.find(commentID, on: req.db),
+            let task = try await Task.find(comment.$task.id, on: req.db)
+        else {
+            throw Abort(.notFound, reason: "The comment does not exist.")
+        }
+        let access = try await requireAccess(
+            boardID: task.$board.id,
+            permission: .comment,
+            for: req
+        )
+        let userID = try req.auth.require(User.self).requireID()
+        guard access.isOwner || access.role == .admin || comment.$author.id == userID else {
+            throw Abort(.forbidden, reason: "You cannot delete this comment.")
+        }
+        try await comment.delete(on: req.db)
         return req.redirect(to: "/app/tasks/\(try task.requireID())")
     }
 
@@ -659,6 +760,22 @@ struct WorkspaceActionController: RouteCollection {
         }
         _ = try await requireAccess(boardID: task.$board.id, permission: permission, for: req)
         return task
+    }
+
+    private func requiredTemplate(
+        for req: Request,
+        boardID: UUID
+    ) async throws -> TaskTemplate {
+        guard
+            let templateID = req.parameters.get("templateID", as: UUID.self),
+            let template = try await TaskTemplate.query(on: req.db)
+                .filter(\.$id == templateID)
+                .filter(\.$board.$id == boardID)
+                .first()
+        else {
+            throw Abort(.notFound, reason: "The template does not exist.")
+        }
+        return template
     }
 
     private func requireAccess(

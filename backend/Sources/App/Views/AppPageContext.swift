@@ -131,6 +131,23 @@ struct BoardPageContext: Encodable {
     let canDrag: Bool
     let columns: [TaskColumnContext]
     let calendarDays: [CalendarDayContext]
+    let hasDefaultTemplate: Bool
+    let defaultTemplateName: String
+    let newTaskTitle: String
+    let newTaskDescription: String
+    let newTaskStatus: String
+    let newTaskStatusName: String
+    let newTaskPriority: String
+    let newTaskPriorityName: String
+    let newTaskLabels: String
+    let newTaskIsBacklog: Bool
+    let newTaskIsInProgress: Bool
+    let newTaskIsReview: Bool
+    let newTaskIsDone: Bool
+    let newTaskIsLowPriority: Bool
+    let newTaskIsMediumPriority: Bool
+    let newTaskIsHighPriority: Bool
+    let newTaskIsUrgentPriority: Bool
 
     init(
         board: Board,
@@ -138,7 +155,8 @@ struct BoardPageContext: Encodable {
         views: [BoardView],
         activeView: BoardView,
         tasks: [TaskCardContext],
-        calendarDays: [CalendarDayContext]
+        calendarDays: [CalendarDayContext],
+        defaultTemplate: TaskTemplate?
     ) throws {
         self.id = try board.requireID()
         self.name = board.name
@@ -188,6 +206,25 @@ struct BoardPageContext: Encodable {
             }
         }
         self.calendarDays = calendarDays
+        self.hasDefaultTemplate = defaultTemplate != nil
+        self.defaultTemplateName = defaultTemplate?.name ?? ""
+        self.newTaskTitle = defaultTemplate?.title ?? ""
+        self.newTaskDescription = defaultTemplate?.description ?? ""
+        let defaultStatus = defaultTemplate?.status ?? .backlog
+        self.newTaskStatus = defaultStatus.rawValue
+        self.newTaskStatusName = defaultStatus.displayName
+        let defaultPriority = defaultTemplate?.priority ?? .medium
+        self.newTaskPriority = defaultPriority.rawValue
+        self.newTaskPriorityName = defaultPriority.rawValue.capitalized
+        self.newTaskLabels = defaultTemplate?.labels.joined(separator: ", ") ?? ""
+        self.newTaskIsBacklog = defaultStatus == .backlog
+        self.newTaskIsInProgress = defaultStatus == .inProgress
+        self.newTaskIsReview = defaultStatus == .review
+        self.newTaskIsDone = defaultStatus == .done
+        self.newTaskIsLowPriority = defaultPriority == .low
+        self.newTaskIsMediumPriority = defaultPriority == .medium
+        self.newTaskIsHighPriority = defaultPriority == .high
+        self.newTaskIsUrgentPriority = defaultPriority == .urgent
     }
 }
 
@@ -266,6 +303,7 @@ struct TaskCardContext: Encodable {
     let dueInput: String
     let dueDisplay: String
     let hasDueDate: Bool
+    let assigneeID: String
     let assigneeName: String
     let hasAssignee: Bool
     let commentCount: Int
@@ -273,6 +311,7 @@ struct TaskCardContext: Encodable {
     let completedChecklistCount: Int
     let attachmentCount: Int
     let updatedDisplay: String
+    let isArchived: Bool
 
     init(task: Task, assignee: User?) throws {
         self.id = try task.requireID()
@@ -306,6 +345,7 @@ struct TaskCardContext: Encodable {
         self.dueInput = task.dueAt.map(inputDate) ?? ""
         self.dueDisplay = task.dueAt.map(displayDateOnly) ?? "No due date"
         self.hasDueDate = task.dueAt != nil
+        self.assigneeID = assignee?.id?.uuidString ?? ""
         self.assigneeName = assignee?.name ?? "Unassigned"
         self.hasAssignee = assignee != nil
         self.commentCount = task.$comments.value?.count ?? 0
@@ -313,6 +353,7 @@ struct TaskCardContext: Encodable {
         self.completedChecklistCount = task.$checklistItems.value?.filter(\.isCompleted).count ?? 0
         self.attachmentCount = task.$attachments.value?.count ?? 0
         self.updatedDisplay = task.updatedAt.map(displayDate) ?? "Recently"
+        self.isArchived = task.isArchived
     }
 }
 
@@ -349,6 +390,7 @@ struct TaskDetailPageContext: Encodable {
     let attachments: [AttachmentContext]
     let members: [MemberOptionContext]
     let properties: [TaskPropertyContext]
+    let hasProperties: Bool
 
     init(
         task: Task,
@@ -371,17 +413,26 @@ struct TaskDetailPageContext: Encodable {
         self.canComment = access.isOwner || access.role.canComment
         self.isFollowing = followers.contains { $0.$user.id == currentUserID }
         self.followerCount = followers.count
-        self.comments = try comments.map(CommentContext.init)
+        self.comments = try comments.map {
+            try CommentContext(
+                comment: $0,
+                canDelete: access.isOwner || access.role == .admin || $0.$author.id == currentUserID
+            )
+        }
         self.checklist = try checklist.map(ChecklistContext.init)
         self.attachments = try attachments.map(AttachmentContext.init)
-        self.members = try members.map(MemberOptionContext.init)
+        self.members = try members.map {
+            try MemberOptionContext(user: $0, selectedID: task.$assignee.id)
+        }
         self.properties = (board.propertyDefinitions ?? []).map { definition in
             TaskPropertyContext(
                 id: definition.id,
                 name: definition.name,
-                value: task.properties?[definition.id] ?? "—"
+                value: task.properties?[definition.id] ?? "—",
+                inputValue: task.properties?[definition.id] ?? ""
             )
         }
+        self.hasProperties = !(board.propertyDefinitions ?? []).isEmpty
     }
 }
 
@@ -391,13 +442,15 @@ struct CommentContext: Encodable {
     let authorInitials: String
     let body: String
     let createdDisplay: String
+    let canDelete: Bool
 
-    init(comment: TaskComment) throws {
+    init(comment: TaskComment, canDelete: Bool) throws {
         self.id = try comment.requireID()
         self.authorName = comment.author.name
-        self.authorInitials = initials(for: comment.author.name)
+        self.authorInitials = makeInitials(for: comment.author.name)
         self.body = comment.body
         self.createdDisplay = comment.createdAt.map(displayDate) ?? "Recently"
+        self.canDelete = canDelete
     }
 }
 
@@ -431,11 +484,13 @@ struct MemberOptionContext: Encodable {
     let id: UUID
     let name: String
     let email: String
+    let isSelected: Bool
 
-    init(user: User) throws {
+    init(user: User, selectedID: UUID?) throws {
         self.id = try user.requireID()
         self.name = user.name
         self.email = user.email
+        self.isSelected = id == selectedID
     }
 }
 
@@ -443,6 +498,7 @@ struct TaskPropertyContext: Encodable {
     let id: String
     let name: String
     let value: String
+    let inputValue: String
 }
 
 struct BoardSettingsPageContext: Encodable {
@@ -452,6 +508,9 @@ struct BoardSettingsPageContext: Encodable {
     let firstViewHref: String
     let isOwner: Bool
     let isArchived: Bool
+    let ownerName: String
+    let ownerEmail: String
+    let ownerInitials: String
     let views: [BoardSettingsViewContext]
     let members: [BoardMemberContext]
     let templates: [TemplateContext]
@@ -462,6 +521,7 @@ struct BoardSettingsPageContext: Encodable {
         views: [BoardView],
         members: [BoardMember],
         templates: [TaskTemplate],
+        owner: User,
         firstViewID: UUID?,
         isOwner: Bool
     ) throws {
@@ -476,6 +536,9 @@ struct BoardSettingsPageContext: Encodable {
         }
         self.isOwner = isOwner
         self.isArchived = board.isArchived
+        self.ownerName = owner.name
+        self.ownerEmail = owner.email
+        self.ownerInitials = makeInitials(for: owner.name)
         self.views = try views.map(BoardSettingsViewContext.init)
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
@@ -520,12 +583,14 @@ struct BoardMemberContext: Encodable {
     let name: String
     let email: String
     let role: String
+    let initials: String
 
     init(member: BoardMember) throws {
         self.id = try member.requireID()
         self.name = member.user.name
         self.email = member.user.email
         self.role = member.role.rawValue.capitalized
+        self.initials = makeInitials(for: member.user.name)
     }
 }
 
@@ -555,7 +620,7 @@ struct PropertyDefinitionContext: Encodable {
     }
 }
 
-func initials(for name: String) -> String {
+func makeInitials(for name: String) -> String {
     String(name.split(separator: " ").prefix(2).compactMap(\.first)).uppercased()
 }
 
