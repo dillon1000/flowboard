@@ -1,35 +1,49 @@
 @testable import App
+import Fluent
 import Testing
 import VaporTesting
 
-@Suite("Flowboard API")
+@Suite("Flowboard web application")
 struct AppTests {
     @Test("Health endpoint reports the service state")
     func healthCheck() async throws {
         try await withApp(configure: configure) { app in
-            try await app.testing().test(.GET, "health") { response in
-                #expect(response.status == .ok)
-                expectContains(response.body.string, "\"status\":\"ok\"")
-            }
+            let response = try await app.testing().sendRequest(.GET, "health")
+            #expect(response.status == .ok)
+            expectContains(response.body.string, "\"status\":\"ok\"")
         }
     }
 
-    @Test("Default board includes seeded work")
-    func defaultBoardIncludesSeededTasks() async throws {
+    @Test("Board data requires an authenticated session")
+    func boardDataRequiresAuthentication() async throws {
         try await withApp(configure: configure) { app in
-            try await app.testing().test(.GET, "api/v1/boards/default") { response in
-                #expect(response.status == .ok)
-                expectContains(response.body.string, "\"slug\":\"launch-week\"")
-                expectContains(response.body.string, "\"tasks\"")
-            }
+            let response = try await app.testing().sendRequest(.GET, "api/v1/boards")
+            #expect(response.status == .unauthorized)
         }
     }
 
-    @Test("Task creation persists through the API")
+    @Test("Registration creates a persistent session and first board")
+    func registrationCreatesWorkspace() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let boards = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/boards",
+                headers: [.cookie: session.cookie]
+            )
+
+            #expect(boards.status == .ok)
+            expectContains(boards.body.string, "\"name\":\"My board\"")
+            expectContains(boards.body.string, session.boardID.uuidString)
+        }
+    }
+
+    @Test("An authenticated user can create and list tasks")
     func taskLifecycle() async throws {
         try await withApp(configure: configure) { app in
-            let request = CreateTaskRequest(
-                boardID: SeedWorkspace.boardID,
+            let session = try await register(on: app)
+            let input = CreateTaskRequest(
+                boardID: session.boardID,
                 title: "Test the release notes",
                 description: nil,
                 status: .backlog,
@@ -38,17 +52,52 @@ struct AppTests {
                 dueAt: nil
             )
 
-            try await app.testing().test(
+            let created = try await app.testing().sendRequest(
                 .POST,
                 "api/v1/tasks",
-                beforeRequest: { requestMessage in
-                    try requestMessage.content.encode(request)
-                },
-                afterResponse: { response in
-                    #expect(response.status == .created)
-                    expectContains(response.body.string, "Test the release notes")
+                headers: [.cookie: session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(input)
                 }
             )
+            #expect(created.status == .created)
+            expectContains(created.body.string, "Test the release notes")
+
+            let listed = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/tasks?page=1&per=25",
+                headers: [.cookie: session.cookie]
+            )
+            #expect(listed.status == .ok)
+            expectContains(listed.body.string, "\"boardName\":\"My board\"")
         }
+    }
+
+    /// Registers through the public API and returns the cookie plus the board that
+    /// the registration transaction creates. Tests then exercise the real guard.
+    private func register(on app: Application) async throws -> (cookie: String, boardID: UUID) {
+        let input = RegisterRequest(
+            name: "Test User",
+            email: "\(UUID().uuidString.lowercased())@example.com",
+            password: "correct-horse-battery"
+        )
+        let response = try await app.testing().sendRequest(
+            .POST,
+            "api/v1/auth/register",
+            beforeRequest: { request in
+                try request.content.encode(input)
+            }
+        )
+        #expect(response.status == .created)
+
+        let setCookie = try #require(response.headers[.setCookie].first)
+        let cookie = String(try #require(setCookie.split(separator: ";").first))
+        let user = try response.content.decode(UserResponse.self)
+        let board = try #require(
+            try await Board.query(on: app.db)
+                .filter(\.$owner.$id == user.id)
+                .first()
+        )
+        return (cookie, try board.requireID())
     }
 }
