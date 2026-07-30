@@ -283,16 +283,104 @@ export class ChecklistController extends Controller {
   }
 }
 
-// Shows the chosen filename next to a file button, which is otherwise silent.
-export class FileFieldController extends Controller {
-  static targets = ['input', 'name'];
+// MAX_ATTACHMENT_BYTES matches the server limit. Changing either value changes
+// which files the browser accepts before it starts the network request.
+const MAX_ATTACHMENT_BYTES = 10_000_000;
+
+// Shows the selected file and reports browser-to-server upload progress. The
+// saving state covers the later server-to-bucket write, which has no browser
+// progress events.
+export class FileFieldController extends Controller<HTMLFormElement> {
+  static targets = ['input', 'name', 'button', 'panel', 'bar', 'status', 'percent', 'error'];
 
   declare readonly inputTarget: HTMLInputElement;
   declare readonly nameTarget: HTMLElement;
+  declare readonly buttonTarget: HTMLButtonElement;
+  declare readonly panelTarget: HTMLElement;
+  declare readonly barTarget: HTMLProgressElement;
+  declare readonly statusTarget: HTMLElement;
+  declare readonly percentTarget: HTMLElement;
+  declare readonly errorTarget: HTMLElement;
 
   choose(): void {
     const file = this.inputTarget.files?.[0];
     this.nameTarget.textContent = file ? file.name : 'No file chosen';
+    this.resetFeedback();
+  }
+
+  upload(event: SubmitEvent): void {
+    const file = this.inputTarget.files?.[0];
+    if (!file || !this.element.reportValidity()) {
+      return;
+    }
+
+    event.preventDefault();
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      this.showError('Choose a file that is 10 MB or smaller.');
+      return;
+    }
+
+    const request = new XMLHttpRequest();
+    const formData = new FormData(this.element);
+    request.open(this.element.method || 'post', this.element.action);
+    request.setRequestHeader('Accept', 'text/html');
+    request.upload.addEventListener('progress', (progressEvent) => {
+      if (!progressEvent.lengthComputable) {
+        this.barTarget.removeAttribute('value');
+        this.percentTarget.textContent = '';
+        return;
+      }
+
+      const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+      this.barTarget.value = percent;
+      this.percentTarget.textContent = `${percent}%`;
+    });
+    request.upload.addEventListener('load', () => {
+      this.barTarget.value = 100;
+      this.statusTarget.textContent = 'Saving…';
+      this.percentTarget.textContent = '100%';
+    });
+    request.addEventListener('load', () => {
+      if (request.status >= 200 && request.status < 400) {
+        window.location.assign(request.responseURL || this.element.action);
+        return;
+      }
+
+      this.finishWithError(
+        request.status === 413
+          ? 'Choose a file that is 10 MB or smaller.'
+          : 'The upload failed. Refresh the page and try again.',
+      );
+    });
+    request.addEventListener('error', () => {
+      this.finishWithError('The network connection stopped the upload. Try again.');
+    });
+
+    this.element.setAttribute('aria-busy', 'true');
+    this.buttonTarget.disabled = true;
+    this.panelTarget.hidden = false;
+    this.errorTarget.hidden = true;
+    this.barTarget.value = 0;
+    this.statusTarget.textContent = 'Uploading…';
+    this.percentTarget.textContent = '0%';
+    request.send(formData);
+  }
+
+  private resetFeedback(): void {
+    this.panelTarget.hidden = true;
+    this.errorTarget.hidden = true;
+  }
+
+  private showError(message: string): void {
+    this.errorTarget.textContent = message;
+    this.errorTarget.hidden = false;
+  }
+
+  private finishWithError(message: string): void {
+    this.element.removeAttribute('aria-busy');
+    this.buttonTarget.disabled = false;
+    this.statusTarget.textContent = 'Upload stopped';
+    this.showError(message);
   }
 }
 

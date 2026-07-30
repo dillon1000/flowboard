@@ -250,10 +250,12 @@
                   #if(taskDetail.canEdit):
                     <div class="card-footer">
                       <form
+                        class="attachment-upload-form"
                         method="post"
                         action="/app/tasks/#(taskDetail.task.id)/attachments"
                         enctype="multipart/form-data"
                         data-controller="file-field"
+                        data-action="submit->file-field#upload"
                       >
                         <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                         <span class="file-field">
@@ -265,12 +267,26 @@
                               name="file"
                               required
                               data-file-field-target="input"
-                              data-action="file-field#choose"
+                              data-action="change->file-field#choose"
                             />
                           </label>
                           <span class="file-name" data-file-field-target="name">No file chosen</span>
-                          <button class="button small primary" type="submit">Upload</button>
+                          <button class="button small primary" type="submit" data-file-field-target="button">Upload</button>
                         </span>
+                        <div class="upload-progress" data-file-field-target="panel" hidden>
+                          <span class="upload-progress-meta">
+                            <span data-file-field-target="status" role="status" aria-live="polite">Uploading…</span>
+                            <span class="tabular" data-file-field-target="percent" aria-hidden="true">0%</span>
+                          </span>
+                          <progress
+                            class="progress upload-progress-bar"
+                            data-file-field-target="bar"
+                            value="0"
+                            max="100"
+                            aria-label="Attachment upload progress"
+                          ></progress>
+                        </div>
+                        <p class="upload-error" data-file-field-target="error" role="alert" hidden></p>
                       </form>
                     </div>
                   #endif
