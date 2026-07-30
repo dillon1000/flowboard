@@ -62,6 +62,9 @@ final class Task: Model, @unchecked Sendable {
     @OptionalParent(key: "assignee_id")
     var assignee: User?
 
+    @OptionalParent(key: "created_by_id")
+    var creator: User?
+
     /// Values are keyed by a definition ID from the parent board. A string
     /// representation keeps form handling predictable for all supported field types.
     @OptionalField(key: "properties")
@@ -100,7 +103,8 @@ final class Task: Model, @unchecked Sendable {
         position: Int,
         labels: [String] = [],
         startAt: Date? = nil,
-        dueAt: Date? = nil
+        dueAt: Date? = nil,
+        creatorID: UUID? = nil
     ) {
         self.id = id
         self.$board.id = boardID
@@ -112,6 +116,7 @@ final class Task: Model, @unchecked Sendable {
         self.labels = labels
         self.startAt = startAt
         self.dueAt = dueAt
+        self.$creator.id = creatorID
         self.properties = [:]
         self.isArchived = false
     }

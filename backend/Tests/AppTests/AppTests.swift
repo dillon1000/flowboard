@@ -91,6 +91,22 @@ struct AppTests {
             )
             #expect(created.status == .created)
             expectContains(created.body.string, "Test the release notes")
+            let createdTask = try created.content.decode(TaskResponse.self)
+            let storedTask = try #require(try await Task.find(createdTask.id, on: app.db))
+            #expect(storedTask.$creator.id == session.userID)
+
+            let taskPage = try await app.testing().sendRequest(
+                .GET,
+                "app/tasks/\(createdTask.id)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(taskPage.status == .ok)
+            expectContains(
+                taskPage.body.string,
+                #"<a href="/app/boards/\#(session.boardID)">My board</a>"#
+            )
+            expectContains(taskPage.body.string, "<dt>Creator</dt>")
+            expectContains(taskPage.body.string, "<dd>Test User</dd>")
 
             let listed = try await app.testing().sendRequest(
                 .GET,
@@ -225,7 +241,9 @@ struct AppTests {
 
     /// Registers through the public API and returns the cookie plus the board that
     /// the registration transaction creates. Tests then exercise the real guard.
-    private func register(on app: Application) async throws -> (cookie: String, boardID: UUID) {
+    private func register(
+        on app: Application
+    ) async throws -> (cookie: String, boardID: UUID, userID: UUID) {
         let input = RegisterRequest(
             name: "Test User",
             email: "\(UUID().uuidString.lowercased())@example.com",
@@ -248,7 +266,7 @@ struct AppTests {
                 .filter(\.$owner.$id == user.id)
                 .first()
         )
-        return (cookie, try board.requireID())
+        return (cookie, try board.requireID(), user.id)
     }
 
     private func oauthConfiguration() throws -> OAuthConfiguration {

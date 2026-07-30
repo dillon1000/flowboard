@@ -11,7 +11,11 @@
           <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="/app">Workspace</a>
             <span class="separator" aria-hidden="true">/</span>
-            <span>#(pageTitle)</span>
+            #if(isTaskDetail):
+              <a href="#(taskDetail.boardHref)">#(taskDetail.boardName)</a>
+              <span class="separator" aria-hidden="true">/</span>
+            #endif
+            <span aria-current="page">#(pageTitle)</span>
           </nav>
           <div class="topbar-actions">
             <form

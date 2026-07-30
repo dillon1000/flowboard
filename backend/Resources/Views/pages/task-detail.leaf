@@ -2,9 +2,6 @@
           <div class="page">
             <header class="page-header detail-header">
               <div class="page-title">
-                <a class="page-eyebrow" href="#(taskDetail.boardHref)">
-                  <i data-lucide="chevron-left"></i>#(taskDetail.boardName)
-                </a>
                 <h1>#(taskDetail.task.title)</h1>
                 <div class="task-facts">
                   <span class="badge status status-#(taskDetail.task.statusValue)">#(taskDetail.task.statusName)</span>
@@ -317,6 +314,10 @@
                     <div class="property-row">
                       <dt>Assignee</dt>
                       <dd#if(!taskDetail.task.hasAssignee): class="muted"#endif>#(taskDetail.task.assigneeName)</dd>
+                    </div>
+                    <div class="property-row">
+                      <dt>Creator</dt>
+                      <dd>#(taskDetail.creatorName)</dd>
                     </div>
                     <div class="property-row">
                       <dt>Start</dt>

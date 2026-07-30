@@ -216,9 +216,15 @@ struct AppPageController: RouteCollection {
             .filter(\.$task.$id == task.requireID())
             .all()
         let members = try await boardUsers(board: access.board, on: req.db)
+        let creator: User? = if let creatorID = task.$creator.id {
+            try await User.find(creatorID, on: req.db)
+        } else {
+            nil
+        }
         let context = try TaskDetailPageContext(
             task: task,
             board: access.board,
+            creator: creator,
             access: access,
             comments: comments,
             checklist: checklist,

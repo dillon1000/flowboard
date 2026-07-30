@@ -410,6 +410,7 @@ struct TaskDetailPageContext: Encodable {
     let task: TaskCardContext
     let boardName: String
     let boardHref: String
+    let creatorName: String
     let canEdit: Bool
     let canComment: Bool
     let isFollowing: Bool
@@ -427,6 +428,7 @@ struct TaskDetailPageContext: Encodable {
     init(
         task: Task,
         board: Board,
+        creator: User?,
         access: BoardAccess,
         comments: [TaskComment],
         checklist: [ChecklistItem],
@@ -441,6 +443,7 @@ struct TaskDetailPageContext: Encodable {
         )
         self.boardName = board.name
         self.boardHref = "/app/boards/\(try board.requireID())"
+        self.creatorName = creator?.name ?? "Unknown"
         self.canEdit = access.isOwner || access.role.canEdit
         self.canComment = access.isOwner || access.role.canComment
         self.isFollowing = followers.contains { $0.$user.id == currentUserID }

@@ -70,6 +70,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateWorkspaceFeatures())
     app.migrations.add(BackfillBoardViews())
     app.migrations.add(CreateTaskFollowers())
+    app.migrations.add(AddTaskCreator())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

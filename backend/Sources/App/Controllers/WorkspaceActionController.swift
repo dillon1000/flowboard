@@ -133,7 +133,8 @@ struct WorkspaceActionController: RouteCollection {
                     position: source.position,
                     labels: source.labels,
                     startAt: source.startAt,
-                    dueAt: source.dueAt
+                    dueAt: source.dueAt,
+                    creatorID: userID
                 )
                 task.properties = source.properties
                 try await task.create(on: database)
@@ -340,6 +341,7 @@ struct WorkspaceActionController: RouteCollection {
 
     func useTemplate(req: Request) async throws -> Response {
         let access = try await requiredBoard(for: req, permission: .edit)
+        let userID = try req.auth.require(User.self).requireID()
         let boardID = try access.board.requireID()
         let template = try await requiredTemplate(for: req, boardID: boardID)
         let count = try await Task.query(on: req.db)
@@ -353,7 +355,8 @@ struct WorkspaceActionController: RouteCollection {
             status: template.status,
             priority: template.priority,
             position: (count + 1) * 1_000,
-            labels: template.labels
+            labels: template.labels,
+            creatorID: userID
         )
         try await task.create(on: req.db)
         return req.redirect(to: "/app/tasks/\(try task.requireID())")
@@ -409,7 +412,8 @@ struct WorkspaceActionController: RouteCollection {
             position: (count + 1) * 1_000,
             labels: labels(input.labels),
             startAt: parseDate(input.startAt),
-            dueAt: parseDate(input.dueAt)
+            dueAt: parseDate(input.dueAt),
+            creatorID: userID
         )
         try await task.create(on: req.db)
         return req.redirect(to: safeReturn(input.returnTo, fallback: "/app/tasks/\(try task.requireID())"))
@@ -701,6 +705,7 @@ struct WorkspaceActionController: RouteCollection {
 
     func importBoard(req: Request) async throws -> Response {
         let access = try await requiredBoard(for: req, permission: .admin)
+        let userID = try req.auth.require(User.self).requireID()
         let input = try req.content.decode(ImportForm.self)
         guard input.file.data.readableBytes <= 2_000_000 else {
             throw Abort(.payloadTooLarge, reason: "Board imports must be 2 MB or smaller.")
@@ -729,7 +734,8 @@ struct WorkspaceActionController: RouteCollection {
                     position: exported.position,
                     labels: Array(exported.labels.prefix(6)),
                     startAt: exported.startAt,
-                    dueAt: exported.dueAt
+                    dueAt: exported.dueAt,
+                    creatorID: userID
                 )
                 task.properties = exported.properties
                 try await task.create(on: database)
