@@ -27,14 +27,27 @@ public func configure(_ app: Application) async throws {
         ?? "http://localhost:5173,http://127.0.0.1:5173")
         .split(separator: ",")
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    // These values identify the service in response headers. Deployments can
+    // override either value without rebuilding the application.
+    let serverName = Environment.get("SERVER_NAME") ?? "flowboard-server"
+    let serverVersion = Environment.get("SERVER_VERSION") ?? "0.1.0"
     let corsConfiguration = CORSMiddleware.Configuration(
         allowedOrigin: .any(allowedOrigins),
         allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],
         allowedHeaders: [.accept, .authorization, .contentType, .origin],
-        allowCredentials: true
+        allowCredentials: true,
+        exposedHeaders: [
+            .flowboardServerName,
+            .flowboardServerTime,
+            .flowboardServerVersion,
+        ]
     )
     app.middleware.use(CORSMiddleware(configuration: corsConfiguration), at: .beginning)
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))
+    app.middleware.use(
+        ServerHeadersMiddleware(serverName: serverName, serverVersion: serverVersion),
+        at: .beginning
+    )
 
     // Leaf renders every browser page. File middleware serves the Hotwire,
     // Stimulus, and design assets created by `pnpm build`.

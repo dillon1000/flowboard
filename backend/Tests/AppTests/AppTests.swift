@@ -13,6 +13,10 @@ struct AppTests {
             let response = try await app.testing().sendRequest(.GET, "health")
             #expect(response.status == .ok)
             expectContains(response.body.string, "\"status\":\"ok\"")
+            #expect(response.headers.first(name: .flowboardServerName) == "flowboard-server")
+            #expect(response.headers.first(name: .flowboardServerVersion) == "0.1.0")
+            let serverTime = try #require(response.headers.first(name: .flowboardServerTime))
+            #expect(ISO8601DateFormatter().date(from: serverTime) != nil)
         }
     }
 
@@ -107,6 +111,33 @@ struct AppTests {
             )
             expectContains(taskPage.body.string, "<dt>Creator</dt>")
             expectContains(taskPage.body.string, "<dd>Test User</dd>")
+            expectContains(taskPage.body.string, ">Promote</span>")
+            expectContains(
+                taskPage.body.string,
+                #"/app/tasks/\#(createdTask.id)/status"#
+            )
+
+            let csrfMarker = #"name="csrf-token" content=""#
+            let csrfStart = try #require(taskPage.body.string.range(of: csrfMarker)?.upperBound)
+            let csrfEnd = try #require(
+                taskPage.body.string[csrfStart...].firstIndex(of: "\"")
+            )
+            let csrfToken = String(taskPage.body.string[csrfStart..<csrfEnd])
+            let promoted = try await app.testing().sendRequest(
+                .POST,
+                "app/tasks/\(createdTask.id)/status",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ],
+                beforeRequest: { request in
+                    try request.content.encode(["status": "done"], as: .urlEncodedForm)
+                }
+            )
+            #expect(promoted.status == .seeOther)
+            #expect(promoted.headers.first(name: .location) == "/app/tasks/\(createdTask.id)")
+            let promotedTask = try #require(try await Task.find(createdTask.id, on: app.db))
+            #expect(promotedTask.status == .done)
 
             let listed = try await app.testing().sendRequest(
                 .GET,

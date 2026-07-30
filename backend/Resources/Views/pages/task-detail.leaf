@@ -21,6 +21,46 @@
                 </div>
               </div>
               <div class="page-actions">
+                #if(taskDetail.canEdit):
+                  <form
+                    class="menu"
+                    method="post"
+                    action="/app/tasks/#(taskDetail.task.id)/status"
+                    data-controller="menu"
+                    data-action="click@window->menu#outside keydown.esc@window->menu#close"
+                    data-submit-on-choose="true"
+                    data-completion-status="#(taskDetail.task.statusValue)"
+                  >
+                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                    <input data-menu-target="input" type="hidden" name="status" value="#(taskDetail.task.statusValue)" />
+                    <button
+                      class="button primary"
+                      type="button"
+                      data-menu-target="trigger"
+                      data-action="menu#toggle"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                    >
+                      <i data-lucide="arrow-up-right"></i>
+                      <span>Promote</span>
+                      <i data-lucide="chevron-down"></i>
+                    </button>
+                    <div class="menu-panel right" data-menu-target="panel" role="listbox" aria-label="Change task status" hidden>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(taskDetail.task.isBacklog)">
+                        <span class="badge status status-backlog">Backlog</span>
+                      </button>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(taskDetail.task.isInProgress)">
+                        <span class="badge status status-in_progress">In progress</span>
+                      </button>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(taskDetail.task.isReview)">
+                        <span class="badge status status-review">Review</span>
+                      </button>
+                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(taskDetail.task.isDone)">
+                        <span class="badge status status-done">Done</span>
+                      </button>
+                    </div>
+                  </form>
+                #endif
                 <form method="post" action="/app/tasks/#(taskDetail.task.id)/follow">
                   <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                   <button class="button" type="submit">

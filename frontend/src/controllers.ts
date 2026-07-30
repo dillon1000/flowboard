@@ -543,6 +543,7 @@ export class MenuController extends Controller {
   declare readonly panelTarget: HTMLElement;
   declare readonly inputTarget: HTMLInputElement;
   declare readonly valueTarget: HTMLElement;
+  declare readonly hasValueTarget: boolean;
   declare readonly optionTargets: HTMLElement[];
 
   connect(): void {
@@ -563,12 +564,19 @@ export class MenuController extends Controller {
     const value = option.dataset.value ?? '';
     const label = option.dataset.label ?? option.textContent?.trim() ?? '';
     this.inputTarget.value = value;
-    this.valueTarget.textContent = label;
+    if (this.hasValueTarget) {
+      this.valueTarget.textContent = label;
+    }
     this.optionTargets.forEach((item) => {
       item.setAttribute('aria-selected', String(item === option));
     });
     this.inputTarget.dispatchEvent(new Event('change', { bubbles: true }));
     this.close();
+    // Status popovers opt in to immediate submission. Other menus keep their
+    // current behavior and only update the surrounding form field.
+    if (this.element instanceof HTMLFormElement && this.element.dataset.submitOnChoose === 'true') {
+      this.element.requestSubmit();
+    }
   }
 
   outside(event: Event): void {

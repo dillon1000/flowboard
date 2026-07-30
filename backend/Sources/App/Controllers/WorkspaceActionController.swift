@@ -27,6 +27,7 @@ struct WorkspaceActionController: RouteCollection {
 
         routes.post("app", "tasks", use: createTask)
         routes.post("app", "tasks", ":taskID", "update", use: updateTask)
+        routes.post("app", "tasks", ":taskID", "status", use: changeTaskStatus)
         routes.post("app", "tasks", ":taskID", "properties", use: updateTaskProperties)
         routes.post("app", "tasks", ":taskID", "archive", use: toggleTaskArchive)
         routes.post("app", "tasks", ":taskID", "delete", use: deleteTask)
@@ -451,6 +452,27 @@ struct WorkspaceActionController: RouteCollection {
             task.$assignee.id = nil
         }
         try await task.update(on: req.db)
+        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+    }
+
+    /// Accepts a status-only browser form, moves the task to the end of the
+    /// selected column, and redirects to the task page. Permission and value
+    /// failures occur before the task changes.
+    func changeTaskStatus(req: Request) async throws -> Response {
+        let task = try await requiredTask(for: req, permission: .edit)
+        let input = try req.content.decode(ChangeTaskStatusForm.self)
+        guard let status = TaskStatus(rawValue: input.status) else {
+            throw Abort(.unprocessableEntity, reason: "Select a valid task status.")
+        }
+        if task.status != status {
+            let count = try await Task.query(on: req.db)
+                .filter(\.$board.$id == task.$board.id)
+                .filter(\.$status == status)
+                .count()
+            task.status = status
+            task.position = (count + 1) * 1_000
+            try await task.update(on: req.db)
+        }
         return req.redirect(to: "/app/tasks/\(try task.requireID())")
     }
 
@@ -928,6 +950,10 @@ private struct UpdateTaskForm: Content {
     let startAt: String?
     let dueAt: String?
     let assigneeID: String?
+}
+
+private struct ChangeTaskStatusForm: Content {
+    let status: String
 }
 
 private struct CommentForm: Content {
