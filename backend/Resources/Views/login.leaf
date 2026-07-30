@@ -30,11 +30,10 @@
       </button>
     </header>
 
-    <main class="auth-main">
+    <main class="auth-main auth-main-single">
       <div class="auth-form-pane">
-      <section class="auth-card" aria-labelledby="page-title">
-        <h1 id="page-title">Welcome back</h1>
-        <p>Log in to continue to your boards and tasks.</p>
+      <section class="auth-card auth-card-minimal" aria-labelledby="page-title">
+        <h1 id="page-title">Log in</h1>
 
         #if(error):
           <p class="error-message" role="alert">#(error)</p>
@@ -80,19 +79,9 @@
           <button class="button primary" type="submit">Log in</button>
         </form>
 
-        <p class="auth-switch">New to Flowboard? <a href="/register">Create an account</a></p>
+        <p class="auth-switch"><a href="/register">Create account</a></p>
       </section>
       </div>
-
-      <aside class="auth-aside">
-        <blockquote>A focused place for product work.</blockquote>
-        <ul class="auth-points">
-          <li><i data-lucide="columns-3"></i>Board, table, calendar, and gallery views</li>
-          <li><i data-lucide="users"></i>Shared boards with per-role access</li>
-          <li><i data-lucide="copy"></i>Templates, custom fields, and JSON export</li>
-        </ul>
-        <p class="auth-footer">Your work stays private until you share it.</p>
-      </aside>
     </main>
   </body>
 </html>

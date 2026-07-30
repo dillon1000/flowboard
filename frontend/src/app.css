@@ -2846,6 +2846,10 @@ progress.progress::-moz-progress-bar {
   min-height: 0;
 }
 
+.auth-main-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .auth-form-pane {
   display: grid;
   align-content: center;
@@ -2865,7 +2869,11 @@ progress.progress::-moz-progress-bar {
   letter-spacing: -0.03em;
 }
 
-.auth-card > p {
+.auth-card-minimal h1 {
+  margin-bottom: 32px;
+}
+
+.auth-card > p:not(.error-message) {
   margin: 8px 0 32px;
   color: var(--text-secondary);
   font-size: 14px;
