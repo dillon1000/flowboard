@@ -36,8 +36,8 @@ final class User: Model, @unchecked Sendable {
 }
 
 extension User: ModelCredentialsAuthenticatable {
-    static let usernameKey = \User.$email
-    static let passwordHashKey = \User.$passwordHash
+    static var usernameKey: KeyPath<User, Field<String>> { \.$email }
+    static var passwordHashKey: KeyPath<User, Field<String>> { \.$passwordHash }
 
     func verify(password: String) throws -> Bool {
         try Bcrypt.verify(password, created: passwordHash)

@@ -49,7 +49,7 @@ struct BoardResponse: Content {
         self.slug = board.slug
         self.tasks = try tasks
             .sorted { ($0.status.sortOrder, $0.position) < ($1.status.sortOrder, $1.position) }
-            .map(TaskResponse.init)
+            .map { try TaskResponse(task: $0) }
         self.createdAt = board.createdAt
         self.updatedAt = board.updatedAt
     }
