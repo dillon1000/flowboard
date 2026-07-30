@@ -13,6 +13,9 @@ final class Board: Model, @unchecked Sendable {
     @Field(key: "slug")
     var slug: String
 
+    @OptionalParent(key: "owner_id")
+    var owner: User?
+
     @Children(for: \.$board)
     var tasks: [Task]
 
@@ -24,10 +27,11 @@ final class Board: Model, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, name: String, slug: String) {
+    init(id: UUID? = nil, name: String, slug: String, ownerID: UUID? = nil) {
         self.id = id
         self.name = name
         self.slug = slug
+        self.$owner.id = ownerID
     }
 }
 
@@ -53,14 +57,42 @@ struct BoardResponse: Content {
 
 struct CreateBoardRequest: Content, Validatable {
     let name: String
-    let slug: String
+    let slug: String?
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))
         validations.add(
             "slug",
-            as: String.self,
-            is: .count(2...48) && .characterSet(.alphanumerics + CharacterSet(charactersIn: "-"))
+            as: String?.self,
+            is: .nil || (.count(2...48) && .characterSet(.alphanumerics + CharacterSet(charactersIn: "-")))
         )
+    }
+}
+
+struct UpdateBoardRequest: Content, Validatable {
+    let name: String
+
+    static func validations(_ validations: inout Validations) {
+        validations.add("name", as: String.self, is: .count(2...80))
+    }
+}
+
+struct BoardSummaryResponse: Content {
+    let id: UUID
+    let name: String
+    let slug: String
+    let taskCount: Int
+    let completedCount: Int
+    let createdAt: Date?
+    let updatedAt: Date?
+
+    init(board: Board, tasks: [Task]) throws {
+        self.id = try board.requireID()
+        self.name = board.name
+        self.slug = board.slug
+        self.taskCount = tasks.count
+        self.completedCount = tasks.filter { $0.status == .done }.count
+        self.createdAt = board.createdAt
+        self.updatedAt = board.updatedAt
     }
 }
