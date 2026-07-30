@@ -7,7 +7,7 @@ import Vapor
 /// The database is in memory during tests. Other environments use `DATABASE_PATH`, or
 /// `db.sqlite` when the variable is absent. Development and test processes migrate on
 /// startup so a new checkout is immediately usable. Production migrations stay explicit.
-public func configure(_ app: Application) throws {
+public func configure(_ app: Application) async throws {
     if app.environment == .testing {
         app.databases.use(.sqlite(.memory), as: .sqlite)
     } else {
@@ -29,7 +29,7 @@ public func configure(_ app: Application) throws {
     app.migrations.add(SeedWorkspace())
 
     if app.environment == .development || app.environment == .testing {
-        try app.autoMigrate().wait()
+        try await app.autoMigrate()
     }
 
     try routes(app)

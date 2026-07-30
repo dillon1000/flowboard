@@ -132,17 +132,17 @@ struct CreateTaskRequest: Content, Validatable {
 }
 
 struct UpdateTaskRequest: Content, Validatable {
-    let title: String?
+    let title: String
     let description: String?
-    let status: TaskStatus?
-    let priority: TaskPriority?
-    let labels: [String]?
+    let status: TaskStatus
+    let priority: TaskPriority
+    let labels: [String]
     let dueAt: Date?
 
     static func validations(_ validations: inout Validations) {
-        validations.add("title", as: String?.self, is: .nil || .count(1...120))
+        validations.add("title", as: String.self, is: .count(1...120))
         validations.add("description", as: String?.self, is: .nil || .count(...2_000))
-        validations.add("labels", as: [String]?.self, is: .nil || .count(...6))
+        validations.add("labels", as: [String].self, is: .count(...6))
     }
 }
 

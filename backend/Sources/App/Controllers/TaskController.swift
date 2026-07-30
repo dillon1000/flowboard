@@ -11,7 +11,7 @@ struct TaskController: RouteCollection {
         tasks.delete(":taskID", use: delete)
     }
 
-    func index(req: Request) async throws -> [TaskResponse] {
+    func index(req: Request) async throws -> Page<TaskResponse> {
         guard let boardID: UUID = req.query["boardID"] else {
             throw Abort(.badRequest, reason: "The boardID query value is required.")
         }
@@ -21,8 +21,8 @@ struct TaskController: RouteCollection {
             query = query.filter(\.$status == status)
         }
 
-        let tasks = try await query.sort(\.$position, .ascending).all()
-        return try tasks.map(TaskResponse.init)
+        let page = try await query.sort(\.$position, .ascending).paginate(for: req)
+        return try page.map(TaskResponse.init)
     }
 
     /// Creates a task at the end of its requested column. The server owns position
@@ -56,34 +56,24 @@ struct TaskController: RouteCollection {
         return try await response.encodeResponse(status: .created, for: req)
     }
 
-    /// Applies partial task changes. Moving between columns also assigns the task to
-    /// the end of the destination column, which keeps ordering valid for API clients.
+    /// Replaces the editable task fields. Moving between columns also assigns the task
+    /// to the end of the destination column, which keeps ordering valid for API clients.
     func update(req: Request) async throws -> TaskResponse {
         try UpdateTaskRequest.validate(content: req)
         let input = try req.content.decode(UpdateTaskRequest.self)
         let task = try await findTask(req)
 
-        if let title = input.title {
-            task.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        if let description = input.description {
-            task.description = description
-        }
-        if let priority = input.priority {
-            task.priority = priority
-        }
-        if let labels = input.labels {
-            task.labels = sanitize(labels: labels)
-        }
-        if let dueAt = input.dueAt {
-            task.dueAt = dueAt
-        }
-        if let status = input.status, status != task.status {
+        task.title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        task.description = input.description
+        task.priority = input.priority
+        task.labels = sanitize(labels: input.labels)
+        task.dueAt = input.dueAt
+        if input.status != task.status {
             let count = try await Task.query(on: req.db)
                 .filter(\.$board.$id == task.$board.id)
-                .filter(\.$status == status)
+                .filter(\.$status == input.status)
                 .count()
-            task.status = status
+            task.status = input.status
             task.position = (count + 1) * 1_000
         }
 
