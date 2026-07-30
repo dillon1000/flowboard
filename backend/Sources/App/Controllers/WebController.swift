@@ -13,6 +13,10 @@ struct WebController: RouteCollection {
         let protected = routes.grouped(User.redirectMiddleware(path: "/login"))
         try protected.register(collection: AppPageController())
         try protected.register(collection: WorkspaceActionController())
+
+        // The catch-all has the lowest route priority, so known pages and assets
+        // resolve first. Unknown API paths keep Vapor's JSON error contract.
+        routes.get(.catchall, use: notFoundPage)
     }
 
     func home(req: Request) -> Response {
@@ -25,6 +29,14 @@ struct WebController: RouteCollection {
 
     func registerPage(req: Request) async throws -> View {
         try await req.view.render("register", AuthPageContext(request: req))
+    }
+
+    func notFoundPage(req: Request) async throws -> Response {
+        guard !req.url.path.hasPrefix("/api/") else {
+            throw Abort(.notFound)
+        }
+        let page = try await req.view.render("not-found", NotFoundPageContext(request: req))
+        return try await page.encodeResponse(status: .notFound, for: req)
     }
 
     func login(req: Request) async throws -> Response {
@@ -98,5 +110,16 @@ struct AuthPageContext: Encodable {
         self.email = email
         self.oauthEnabled = request.application.oauthConfiguration != nil
         self.oauthProviderName = request.application.oauthConfiguration?.providerName ?? "OAuth"
+    }
+}
+
+struct NotFoundPageContext: Encodable {
+    let destination: String
+    let actionLabel: String
+
+    init(request: Request) {
+        let isAuthenticated = request.auth.has(User.self)
+        self.destination = isAuthenticated ? "/app" : "/login"
+        self.actionLabel = isAuthenticated ? "Return to workspace" : "Go to sign in"
     }
 }

@@ -16,6 +16,29 @@ struct AppTests {
         }
     }
 
+    @Test("Unknown browser routes render the not found page")
+    func unknownBrowserRouteRendersNotFoundPage() async throws {
+        try await withApp(configure: configure) { app in
+            let response = try await app.testing().sendRequest(.GET, "missing-page")
+
+            #expect(response.status == .notFound)
+            #expect(response.headers.contentType == .html)
+            expectContains(response.body.string, "This card isn’t on the board.")
+            expectContains(response.body.string, "focalboard-wordmark.webp")
+        }
+    }
+
+    @Test("Unknown API routes keep the JSON error contract")
+    func unknownAPIRouteReturnsJSON() async throws {
+        try await withApp(configure: configure) { app in
+            let response = try await app.testing().sendRequest(.GET, "api/v1/missing")
+
+            #expect(response.status == .notFound)
+            #expect(response.headers.contentType == .json)
+            expectContains(response.body.string, "\"error\":true")
+        }
+    }
+
     @Test("Board data requires an authenticated session")
     func boardDataRequiresAuthentication() async throws {
         try await withApp(configure: configure) { app in

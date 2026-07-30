@@ -159,11 +159,12 @@ export class ThemeController extends Controller {
 const SIDEBAR_STORAGE_KEY = 'flowboard-sidebar';
 
 export class SidebarController extends Controller {
-  static targets = ['panel', 'scrim', 'collapseLabel'];
+  static targets = ['panel', 'scrim', 'collapseLabel', 'brandLogo'];
 
   declare readonly panelTarget: HTMLElement;
   declare readonly scrimTarget: HTMLElement;
   declare readonly collapseLabelTargets: HTMLElement[];
+  declare readonly brandLogoTargets: HTMLImageElement[];
 
   connect(): void {
     document.addEventListener('turbo:render', this.handleTurboRender);
@@ -220,6 +221,20 @@ export class SidebarController extends Controller {
     this.collapseLabelTargets.forEach((element) => {
       element.textContent = this.collapseLabel(collapsed);
     });
+    this.brandLogoTargets.forEach((element) => {
+      this.updateBrandLogo(element, collapsed);
+    });
+  }
+
+  // One image owns both brand states, so a stale stylesheet cannot expose two
+  // logos. Missing data keeps the current source instead of breaking the mark.
+  private updateBrandLogo(element: HTMLImageElement, collapsed: boolean): void {
+    const source = collapsed ? element.dataset.abbreviationSrc : element.dataset.wordmarkSrc;
+    if (source) {
+      element.setAttribute('src', source);
+    }
+    element.width = collapsed ? 24 : 104;
+    element.height = 14;
   }
 
   private collapseLabel(collapsed: boolean): string {

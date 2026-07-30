@@ -1,8 +1,16 @@
       <aside class="sidebar" data-sidebar-target="panel">
         <div class="brand-row">
           <a class="brand" href="/app" aria-label="Focalboard home">
-            <img class="brand-wordmark" src="/focalboard-wordmark.webp" alt="" width="104" height="14" />
-            <img class="brand-abbreviation" src="/focalboard-fb-abbreviation-tp.webp" alt="" width="24" height="14" />
+            <img
+              class="brand-logo"
+              src="/focalboard-wordmark.webp"
+              data-sidebar-target="brandLogo"
+              data-wordmark-src="/focalboard-wordmark.webp"
+              data-abbreviation-src="/focalboard-fb-abbreviation-tp.webp"
+              alt=""
+              width="104"
+              height="14"
+            />
           </a>
         </div>
 
