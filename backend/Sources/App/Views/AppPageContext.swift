@@ -123,6 +123,12 @@ struct BoardPageContext: Encodable {
     let activeView: BoardViewTabContext
     let tasks: [TaskCardContext]
     let hasTasks: Bool
+    let groupByName: String
+    let hasFilters: Bool
+    let filterSummary: String
+    let hasSorts: Bool
+    let sortSummary: String
+    let canDrag: Bool
     let columns: [TaskColumnContext]
     let calendarDays: [CalendarDayContext]
 
@@ -150,8 +156,36 @@ struct BoardPageContext: Encodable {
         )
         self.tasks = tasks
         self.hasTasks = !tasks.isEmpty
-        self.columns = TaskStatus.allCases.map { status in
-            TaskColumnContext(status: status, tasks: tasks.filter { $0.statusValue == status.rawValue })
+        let configuration = activeView.configuration
+        let groupBy = configuration?.groupBy ?? "status"
+        self.groupByName = groupBy == "priority" ? "Priority" : "Status"
+        self.hasFilters = !(configuration?.filters.isEmpty ?? true)
+        self.filterSummary = configuration?.filters.first.map {
+            "\($0.field.replacingOccurrences(of: "_", with: " ").capitalized): \($0.value)"
+        } ?? ""
+        self.hasSorts = !(configuration?.sorts.isEmpty ?? true)
+        self.sortSummary = configuration?.sorts.first.map {
+            "\($0.field.replacingOccurrences(of: "_", with: " ").capitalized) \($0.direction)"
+        } ?? ""
+        self.canDrag = canEdit && activeView.type == .board && groupBy == "status"
+        self.columns = if groupBy == "priority" {
+            TaskPriority.allCases.map { priority in
+                TaskColumnContext(
+                    value: priority.rawValue,
+                    name: priority.rawValue.capitalized,
+                    dotClass: priority.rawValue,
+                    tasks: tasks.filter { $0.priorityValue == priority.rawValue }
+                )
+            }
+        } else {
+            TaskStatus.allCases.map { status in
+                TaskColumnContext(
+                    value: status.rawValue,
+                    name: status.displayName,
+                    dotClass: status.dotClass,
+                    tasks: tasks.filter { $0.statusValue == status.rawValue }
+                )
+            }
         }
         self.calendarDays = calendarDays
     }
@@ -190,26 +224,16 @@ struct BoardViewTabContext: Encodable {
 }
 
 struct TaskColumnContext: Encodable {
-    let statusValue: String
+    let value: String
     let name: String
     let dotClass: String
     let tasks: [TaskCardContext]
     let count: Int
 
-    init(status: TaskStatus, tasks: [TaskCardContext]) {
-        self.statusValue = status.rawValue
-        self.name = switch status {
-        case .backlog: "Backlog"
-        case .inProgress: "In progress"
-        case .review: "Review"
-        case .done: "Done"
-        }
-        self.dotClass = switch status {
-        case .backlog: ""
-        case .inProgress: "progress"
-        case .review: "review"
-        case .done: "done"
-        }
+    init(value: String, name: String, dotClass: String, tasks: [TaskCardContext]) {
+        self.value = value
+        self.name = name
+        self.dotClass = dotClass
         self.tasks = tasks
         self.count = tasks.count
     }
@@ -463,11 +487,31 @@ struct BoardSettingsViewContext: Encodable {
     let id: UUID
     let name: String
     let typeName: String
+    let groupBy: String
+    let groupByName: String
+    let isGroupedByStatus: Bool
+    let isGroupedByPriority: Bool
+    let filterField: String
+    let filterValue: String
+    let sortField: String
+    let sortDirection: String
+    let isAscending: Bool
+    let isDescending: Bool
 
     init(view: BoardView) throws {
         self.id = try view.requireID()
         self.name = view.name
         self.typeName = view.type.rawValue.capitalized
+        self.groupBy = view.configuration?.groupBy ?? "status"
+        self.groupByName = self.groupBy == "priority" ? "Priority" : "Status"
+        self.isGroupedByStatus = self.groupBy == "status"
+        self.isGroupedByPriority = self.groupBy == "priority"
+        self.filterField = view.configuration?.filters.first?.field ?? ""
+        self.filterValue = view.configuration?.filters.first?.value ?? ""
+        self.sortField = view.configuration?.sorts.first?.field ?? ""
+        self.sortDirection = view.configuration?.sorts.first?.direction ?? "ascending"
+        self.isAscending = self.sortDirection == "ascending"
+        self.isDescending = self.sortDirection == "descending"
     }
 }
 
@@ -537,4 +581,24 @@ func displayDateOnly(_ date: Date) -> String {
 
 func displayDate(_ date: Date) -> String {
     date.formatted(.dateTime.month(.abbreviated).day().year())
+}
+
+private extension TaskStatus {
+    var displayName: String {
+        switch self {
+        case .backlog: "Backlog"
+        case .inProgress: "In progress"
+        case .review: "Review"
+        case .done: "Done"
+        }
+    }
+
+    var dotClass: String {
+        switch self {
+        case .backlog: ""
+        case .inProgress: "progress"
+        case .review: "review"
+        case .done: "done"
+        }
+    }
 }

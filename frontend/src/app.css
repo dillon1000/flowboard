@@ -773,6 +773,22 @@ button {
   background: var(--success);
 }
 
+.column-dot.low {
+  background: var(--text-tertiary);
+}
+
+.column-dot.medium {
+  background: #d99a16;
+}
+
+.column-dot.high {
+  background: #e05b42;
+}
+
+.column-dot.urgent {
+  background: var(--danger);
+}
+
 .column-header strong {
   font-size: 12px;
   font-weight: 550;

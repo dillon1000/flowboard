@@ -360,11 +360,14 @@
                 </a>
               #endfor
               <span class="toolbar-spacer"></span>
-              <a class="button ghost small" href="/app/boards/#(board.id)/settings"><i data-lucide="filter"></i>Filter and sort</a>
+              <span class="badge">Group: #(board.groupByName)</span>
+              #if(board.hasFilters):<span class="badge"><i data-lucide="filter"></i>#(board.filterSummary)</span>#endif
+              #if(board.hasSorts):<span class="badge"><i data-lucide="arrow-down-up"></i>#(board.sortSummary)</span>#endif
+              <a class="button ghost small" href="/app/boards/#(board.id)/settings"><i data-lucide="settings"></i>Configure</a>
             </nav>
 
             #if(board.activeView.isBoard):
-              <div class="kanban" data-controller="board" data-board-editable-value="#(board.canEdit)">
+              <div class="kanban" data-controller="board" data-board-editable-value="#(board.canDrag)">
                 #for(column in board.columns):
                   <section class="kanban-column">
                     <header class="column-header">
@@ -372,7 +375,7 @@
                       <strong>#(column.name)</strong>
                       <span>#(column.count)</span>
                     </header>
-                    <div class="column-tasks" data-board-target="column" data-status="#(column.statusValue)">
+                    <div class="column-tasks" data-board-target="column" data-status="#(column.value)">
                       #for(task in column.tasks):
                         #extend("partials/task-card", task)
                       #endfor
@@ -711,7 +714,78 @@
                 #for(view in boardSettings.views):
                   <div class="panel-row">
                     <i data-lucide="columns-3"></i>
-                    <span class="panel-row-main"><strong>#(view.name)</strong><span>#(view.typeName)</span></span>
+                    <span class="panel-row-main"><strong>#(view.name)</strong><span>#(view.typeName) · Grouped by #(view.groupByName)</span></span>
+                    <div data-controller="dialog">
+                      <button class="button small" type="button" data-action="dialog#open">Configure</button>
+                      <div
+                        class="dialog-layer"
+                        data-dialog-target="panel"
+                        data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="configure-view-#(view.id)"
+                        tabindex="-1"
+                        hidden
+                      >
+                        <form class="dialog" method="post" action="/app/boards/#(boardSettings.id)/views/#(view.id)/configure">
+                          <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                          <div class="dialog-header">
+                            <div><h2 id="configure-view-#(view.id)">Configure #(view.name)</h2><p>Set grouping, one filter, and one sort rule.</p></div>
+                            <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close"><i data-lucide="x"></i></button>
+                          </div>
+                          <div class="dialog-body">
+                            <div class="field">
+                              <span class="field-label">Group board cards by</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="groupBy" value="#(view.groupBy)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(view.groupByName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="status" data-label="Status" aria-selected="#(view.isGroupedByStatus)">Status</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="priority" data-label="Priority" aria-selected="#(view.isGroupedByPriority)">Priority</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="form-grid">
+                              <div class="field">
+                                <label for="filter-field-#(view.id)">Filter field</label>
+                                <input class="input" id="filter-field-#(view.id)" name="filterField" value="#(view.filterField)" placeholder="status, priority, or label" />
+                              </div>
+                              <div class="field">
+                                <label for="filter-value-#(view.id)">Filter value</label>
+                                <input class="input" id="filter-value-#(view.id)" name="filterValue" value="#(view.filterValue)" placeholder="review" />
+                              </div>
+                              <div class="field">
+                                <label for="sort-field-#(view.id)">Sort field</label>
+                                <input class="input" id="sort-field-#(view.id)" name="sortField" value="#(view.sortField)" placeholder="title, due_at, or priority" />
+                              </div>
+                              <div class="field">
+                                <span class="field-label">Sort direction</span>
+                                <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                  <input data-menu-target="input" type="hidden" name="sortDirection" value="#(view.sortDirection)" />
+                                  <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                    <span data-menu-target="value">#(view.sortDirection)</span><i data-lucide="chevron-down"></i>
+                                  </button>
+                                  <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="ascending" data-label="Ascending" aria-selected="#(view.isAscending)">Ascending</button>
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="descending" data-label="Descending" aria-selected="#(view.isDescending)">Descending</button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="dialog-footer">
+                            <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                            <button class="button primary" type="submit">Save view</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                    <form method="post" action="/app/boards/#(boardSettings.id)/views/#(view.id)/delete">
+                      <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                      <button class="icon-button" type="submit" aria-label="Delete #(view.name)" title="Delete view"><i data-lucide="x"></i></button>
+                    </form>
                   </div>
                 #endfor
                 <form class="panel-row" method="post" action="/app/boards/#(boardSettings.id)/views">

@@ -16,6 +16,7 @@ struct WorkspaceActionController: RouteCollection {
 
         routes.post("app", "boards", ":boardID", "views", use: createView)
         routes.post("app", "boards", ":boardID", "views", ":viewID", "configure", use: configureView)
+        routes.post("app", "boards", ":boardID", "views", ":viewID", "delete", use: deleteView)
         routes.post("app", "boards", ":boardID", "properties", use: createProperty)
         routes.post("app", "boards", ":boardID", "members", use: addMember)
         routes.post("app", "boards", ":boardID", "members", ":memberID", "remove", use: removeMember)
@@ -208,13 +209,39 @@ struct WorkspaceActionController: RouteCollection {
         } else {
             []
         }
+        let groupBy = ["status", "priority"].contains(input.groupBy ?? "")
+            ? input.groupBy
+            : "status"
+        let sortDirection = input.sortDirection == "descending" ? "descending" : "ascending"
         view.configuration = BoardViewConfiguration(
-            groupBy: clean(input.groupBy),
+            groupBy: groupBy,
             filters: filters,
-            sorts: sorts
+            sorts: sorts.map { BoardViewSort(field: $0.field, direction: sortDirection) }
         )
         try await view.update(on: req.db)
         return req.redirect(to: "/app/boards/\(boardID)/views/\(viewID)")
+    }
+
+    func deleteView(req: Request) async throws -> Response {
+        let access = try await requiredBoard(for: req, permission: .admin)
+        let boardID = try access.board.requireID()
+        guard
+            let viewID = req.parameters.get("viewID", as: UUID.self),
+            let view = try await BoardView.query(on: req.db)
+                .filter(\.$id == viewID)
+                .filter(\.$board.$id == boardID)
+                .first()
+        else {
+            throw Abort(.notFound, reason: "The view does not exist.")
+        }
+        let count = try await BoardView.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .count()
+        guard count > 1 else {
+            throw Abort(.unprocessableEntity, reason: "A board must keep at least one view.")
+        }
+        try await view.delete(on: req.db)
+        return req.redirect(to: "/app/boards/\(boardID)/settings")
     }
 
     func createProperty(req: Request) async throws -> Response {

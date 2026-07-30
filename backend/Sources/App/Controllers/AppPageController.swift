@@ -356,18 +356,25 @@ struct AppPageController: RouteCollection {
         }
         return configuration.sorts.reversed().reduce(filtered) { current, sort in
             current.sorted { left, right in
-                let ascending: Bool
+                let comparison: ComparisonResult
                 switch sort.field {
                 case "title":
-                    ascending = left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
+                    comparison = left.title.localizedCaseInsensitiveCompare(right.title)
                 case "due_at":
-                    ascending = (left.dueAt ?? .distantFuture) < (right.dueAt ?? .distantFuture)
+                    comparison = (left.dueAt ?? .distantFuture).compare(right.dueAt ?? .distantFuture)
                 case "priority":
-                    ascending = left.priority.sortOrder < right.priority.sortOrder
+                    comparison = left.priority.sortOrder == right.priority.sortOrder
+                        ? .orderedSame
+                        : left.priority.sortOrder < right.priority.sortOrder ? .orderedAscending : .orderedDescending
                 default:
-                    ascending = left.position < right.position
+                    comparison = left.position == right.position
+                        ? .orderedSame
+                        : left.position < right.position ? .orderedAscending : .orderedDescending
                 }
-                return sort.direction == "descending" ? !ascending : ascending
+                guard comparison != .orderedSame else { return false }
+                return sort.direction == "descending"
+                    ? comparison == .orderedDescending
+                    : comparison == .orderedAscending
             }
         }
     }
