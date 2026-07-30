@@ -23,12 +23,12 @@ enum AuthService {
         return try await database.transaction { transaction in
             try await user.create(on: transaction)
 
-            let board = Board(
+            _ = try await WorkspaceService.createBoard(
                 name: "My board",
                 slug: "my-board-\(userID.uuidString.prefix(8).lowercased())",
-                ownerID: userID
+                ownerID: userID,
+                on: transaction
             )
-            try await board.create(on: transaction)
 
             return user
         }

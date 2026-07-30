@@ -13,10 +13,7 @@ struct TaskController: RouteCollection {
 
     func index(req: Request) async throws -> Page<TaskResponse> {
         let userID = try req.auth.require(User.self).requireID()
-        let boards = try await Board.query(on: req.db)
-            .filter(\.$owner.$id == userID)
-            .all()
-        let boardIDs = try boards.map { try $0.requireID() }
+        let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: req.db)
 
         var query = Task.query(on: req.db)
             .filter(\.$board.$id ~~ boardIDs)
@@ -42,13 +39,12 @@ struct TaskController: RouteCollection {
         let input = try req.content.decode(CreateTaskRequest.self)
 
         let userID = try req.auth.require(User.self).requireID()
-        guard try await Board.query(on: req.db)
-            .filter(\.$id == input.boardID)
-            .filter(\.$owner.$id == userID)
-            .first() != nil
-        else {
-            throw Abort(.notFound, reason: "The board does not exist.")
-        }
+        _ = try await BoardAccessService.require(
+            boardID: input.boardID,
+            userID: userID,
+            permission: .edit,
+            on: req.db
+        )
 
         let status = input.status ?? .backlog
         let count = try await Task.query(on: req.db)
@@ -141,14 +137,16 @@ struct TaskController: RouteCollection {
         let userID = try req.auth.require(User.self).requireID()
         guard
             let taskID = req.parameters.get("taskID", as: UUID.self),
-            let task = try await Task.find(taskID, on: req.db),
-            try await Board.query(on: req.db)
-                .filter(\.$id == task.$board.id)
-                .filter(\.$owner.$id == userID)
-                .first() != nil
+            let task = try await Task.find(taskID, on: req.db)
         else {
             throw Abort(.notFound, reason: "The task does not exist.")
         }
+        _ = try await BoardAccessService.require(
+            boardID: task.$board.id,
+            userID: userID,
+            permission: .edit,
+            on: req.db
+        )
         return task
     }
 

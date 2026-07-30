@@ -15,8 +15,9 @@ struct BoardController: RouteCollection {
 
     func index(req: Request) async throws -> [BoardSummaryResponse] {
         let userID = try req.auth.require(User.self).requireID()
+        let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: req.db)
         let boards = try await Board.query(on: req.db)
-            .filter(\.$owner.$id == userID)
+            .filter(\.$id ~~ boardIDs)
             .with(\.$tasks)
             .sort(\.$createdAt, .ascending)
             .all()
@@ -25,8 +26,10 @@ struct BoardController: RouteCollection {
 
     func showDefault(req: Request) async throws -> BoardResponse {
         let userID = try req.auth.require(User.self).requireID()
+        let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: req.db)
         guard let board = try await Board.query(on: req.db)
-            .filter(\.$owner.$id == userID)
+            .filter(\.$id ~~ boardIDs)
+            .filter(\.$isArchived == false)
             .sort(\.$createdAt, .ascending)
             .first()
         else {
@@ -49,12 +52,14 @@ struct BoardController: RouteCollection {
         let requestedSlug = slugify(input.slug ?? input.name)
         let slug = try await uniqueSlug(requestedSlug, on: req.db)
 
-        let board = Board(
-            name: input.name.trimmingCharacters(in: .whitespacesAndNewlines),
-            slug: slug,
-            ownerID: userID
-        )
-        try await board.create(on: req.db)
+        let board = try await req.db.transaction { database in
+            try await WorkspaceService.createBoard(
+                name: input.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                slug: slug,
+                ownerID: userID,
+                on: database
+            )
+        }
 
         return try await BoardResponse(board: board)
             .encodeResponse(status: .created, for: req)
@@ -63,30 +68,43 @@ struct BoardController: RouteCollection {
     func update(req: Request) async throws -> BoardResponse {
         try UpdateBoardRequest.validate(content: req)
         let input = try req.content.decode(UpdateBoardRequest.self)
-        let board = try await findBoard(req)
+        let board = try await findBoard(req, permission: .edit)
         board.name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
         try await board.update(on: req.db)
         return try await response(for: board, on: req.db)
     }
 
     func delete(req: Request) async throws -> HTTPStatus {
-        let board = try await findBoard(req)
+        let access = try await findAccess(req, permission: .admin)
+        guard access.isOwner else {
+            throw Abort(.forbidden, reason: "Only the board owner can delete this board.")
+        }
+        let board = access.board
         try await board.delete(on: req.db)
         return .noContent
     }
 
-    private func findBoard(_ req: Request) async throws -> Board {
+    private func findBoard(
+        _ req: Request,
+        permission: BoardPermission = .view
+    ) async throws -> Board {
+        try await findAccess(req, permission: permission).board
+    }
+
+    private func findAccess(
+        _ req: Request,
+        permission: BoardPermission
+    ) async throws -> BoardAccess {
         let userID = try req.auth.require(User.self).requireID()
-        guard
-            let boardID = req.parameters.get("boardID", as: UUID.self),
-            let board = try await Board.query(on: req.db)
-                .filter(\.$id == boardID)
-                .filter(\.$owner.$id == userID)
-                .first()
-        else {
+        guard let boardID = req.parameters.get("boardID", as: UUID.self) else {
             throw Abort(.notFound, reason: "The board does not exist.")
         }
-        return board
+        return try await BoardAccessService.require(
+            boardID: boardID,
+            userID: userID,
+            permission: permission,
+            on: req.db
+        )
     }
 
     private func response(for board: Board, on database: any Database) async throws -> BoardResponse {
