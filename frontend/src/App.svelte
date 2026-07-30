@@ -270,19 +270,20 @@
     if (!confirmState) {
       return;
     }
+    const target = confirmState;
     saving = true;
     try {
-      if (confirmState.kind === 'task') {
-        await api.deleteTask(confirmState.task.id);
+      if (target.kind === 'task') {
+        await api.deleteTask(target.task.id);
         if (activeBoard) {
           activeBoard = {
             ...activeBoard,
-            tasks: activeBoard.tasks.filter((task) => task.id !== confirmState?.task.id)
+            tasks: activeBoard.tasks.filter((task) => task.id !== target.task.id)
           };
         }
         showToast('Task deleted');
       } else {
-        await api.deleteBoard(confirmState.board.id);
+        await api.deleteBoard(target.board.id);
         showToast('Board deleted');
         await navigate('/app');
       }

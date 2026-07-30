@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Check, ChevronDown } from '@lucide/svelte';
 
-  export interface SelectOption<T extends string> {
+  interface SelectOption<T extends string> {
     value: T;
     label: string;
   }
