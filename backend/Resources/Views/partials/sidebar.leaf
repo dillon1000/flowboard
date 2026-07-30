@@ -1,0 +1,112 @@
+      <aside class="sidebar" data-sidebar-target="panel">
+        <div class="brand-row">
+          <a class="brand" href="/app">
+            <span class="brand-symbol" aria-hidden="true"></span>
+            <span class="brand-name">Flowboard</span>
+          </a>
+        </div>
+
+        <div class="sidebar-section">
+          <nav class="main-nav" aria-label="Primary navigation">
+            <a class="nav-link#if(isOverview): active#endif" href="/app"#if(isOverview): aria-current="page"#endif title="Overview">
+              <i data-lucide="layout-dashboard"></i><span>Overview</span>
+            </a>
+            <a class="nav-link#if(isTasks): active#endif" href="/app/tasks"#if(isTasks): aria-current="page"#endif title="All tasks">
+              <i data-lucide="check-square"></i><span>All tasks</span>
+            </a>
+          </nav>
+        </div>
+
+        <div class="boards-nav">
+          <div class="nav-section-header" data-controller="dialog">
+            <span>Boards</span>
+            <button
+              class="icon-button"
+              type="button"
+              aria-label="Create board"
+              title="Create board"
+              data-action="dialog#open"
+            ><i data-lucide="plus"></i></button>
+
+            <div
+              class="dialog-layer"
+              data-dialog-target="panel"
+              data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="new-board-title"
+              tabindex="-1"
+              hidden
+            >
+              <form class="dialog" method="post" action="/app/boards">
+                <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                <div class="dialog-header">
+                  <div>
+                    <h2 id="new-board-title">Create board</h2>
+                    <p>Start with Board, Table, Calendar, and Gallery views.</p>
+                  </div>
+                  <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="dialog-body">
+                  <div class="field">
+                    <label for="board-name">Name</label>
+                    <input
+                      class="input"
+                      id="board-name"
+                      name="name"
+                      minlength="2"
+                      maxlength="80"
+                      required
+                      data-dialog-target="initial"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="board-description">Description</label>
+                    <textarea class="textarea" id="board-description" name="description" maxlength="500"></textarea>
+                  </div>
+                </div>
+                <div class="dialog-footer">
+                  <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                  <button class="button primary" type="submit">Create board</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          <nav aria-label="Boards">
+            #for(navBoard in common.boards):
+              #if(!navBoard.isArchived):
+                <a class="nav-link" href="#(navBoard.href)" title="#(navBoard.name)">
+                  <i data-lucide="folder"></i>
+                  <span>#(navBoard.name)</span>
+                  <small>#(navBoard.taskCount)</small>
+                </a>
+              #endif
+            #endfor
+          </nav>
+        </div>
+
+        <div class="sidebar-spacer"></div>
+        <nav class="settings-nav">
+          <a class="nav-link#if(isSettings): active#endif" href="/app/settings"#if(isSettings): aria-current="page"#endif title="Settings">
+            <i data-lucide="settings"></i><span>Settings</span>
+          </a>
+        </nav>
+        <a class="user-row" href="/app/settings" title="#(common.userName)">
+          <span class="avatar">#(common.userInitials)</span>
+          <span>
+            <strong>#(common.userName)</strong>
+            <small>#(common.userEmail)</small>
+          </span>
+        </a>
+      </aside>
+
+      <button
+        class="sidebar-scrim"
+        type="button"
+        aria-label="Close navigation"
+        data-sidebar-target="scrim"
+        data-action="sidebar#close"
+        hidden
+      ></button>

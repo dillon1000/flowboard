@@ -1,0 +1,47 @@
+        #if(isTasks):
+          <div class="page">
+            <header class="page-header">
+              <div class="page-title">
+                <h1>#if(tasks.query):Search results#else:All tasks#endif</h1>
+                <p>#if(tasks.query):Tasks matching “#(tasks.query)”.#else:Every active task you can access.#endif</p>
+              </div>
+            </header>
+            #if(tasks.hasTasks):
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>Task</th><th>Board</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Due</th></tr></thead>
+                  <tbody>
+                    #for(task in tasks.tasks):
+                      <tr
+                        data-preview-title="#(task.title)"
+                        data-preview-board="#(task.boardName)"
+                        data-preview-status="#(task.statusName)"
+                        data-preview-status-value="#(task.statusValue)"
+                        data-preview-priority="#(task.priorityName)"
+                        data-preview-priority-value="#(task.priorityValue)"
+                        data-preview-assignee="#(task.assigneeName)"
+                        data-preview-due="#(task.dueDisplay)"
+                        data-preview-body="#(task.description)"
+                      >
+                        <td><a href="#(task.href)">#(task.title)</a></td>
+                        <td>#(task.boardName)</td>
+                        <td><span class="badge status status-#(task.statusValue)">#(task.statusName)</span></td>
+                        <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
+                        <td#if(!task.hasAssignee): class="muted"#endif>#(task.assigneeName)</td>
+                        <td#if(!task.hasDueDate): class="muted"#endif>#(task.dueDisplay)</td>
+                      </tr>
+                    #endfor
+                  </tbody>
+                </table>
+              </div>
+            #else:
+              <div class="empty-state">
+                <div>
+                  <span class="empty-state-icon" aria-hidden="true"><i data-lucide="search"></i></span>
+                  <h2>No tasks found</h2>
+                  <p>Try a different search, or create a task from one of your boards.</p>
+                </div>
+              </div>
+            #endif
+          </div>
+        #endif

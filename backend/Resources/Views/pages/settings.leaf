@@ -1,0 +1,42 @@
+        #if(isSettings):
+          <div class="page narrow">
+            <header class="page-header">
+              <div class="page-title"><h1>Settings</h1><p>Manage your account and workspace preferences.</p></div>
+            </header>
+            <div class="settings-grid">
+              <nav class="settings-menu">
+                <a class="nav-link active" href="/app/settings" aria-current="page"><i data-lucide="user"></i><span>Profile</span></a>
+              </nav>
+              <div class="settings-content">
+                <section class="section">
+                  <div class="section-heading"><h2>Profile</h2></div>
+                  <form class="panel panel-form" method="post" action="/app/settings/profile">
+                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                    <div class="field">
+                      <label for="profile-name">Name</label>
+                      <input class="input" id="profile-name" name="name" value="#(common.userName)" minlength="2" maxlength="80" required />
+                    </div>
+                    <div class="field">
+                      <label for="profile-email">Email</label>
+                      <input class="input" id="profile-email" value="#(common.userEmail)" disabled />
+                      <span class="field-help">Email changes are not available in this build.</span>
+                    </div>
+                    <div class="form-actions"><button class="button primary" type="submit">Save profile</button></div>
+                  </form>
+                </section>
+                <section class="section">
+                  <div class="section-heading"><h2>Session</h2></div>
+                  <div class="panel">
+                    <div class="panel-row">
+                      <span class="panel-row-main"><strong>Log out</strong><span>End this browser session.</span></span>
+                      <form method="post" action="/logout">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <button class="button" type="submit"><i data-lucide="log-out"></i>Log out</button>
+                      </form>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        #endif

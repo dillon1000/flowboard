@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-controller="theme">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="csrf-token" content="#(csrfToken)" />
+    <title>Log in · Flowboard</title>
+    <link rel="icon" href="/favicon.svg" />
+    <script>try{const t=localStorage.getItem('flowboard-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch{}</script>
+    <link rel="stylesheet" href="/assets/index.css" />
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body class="auth-page">
+    <header class="auth-header">
+      <a class="brand" href="/" aria-label="Flowboard home">
+        <span class="brand-symbol" aria-hidden="true"></span>
+        <span class="brand-name">Flowboard</span>
+      </a>
+      <button
+        class="icon-button"
+        type="button"
+        data-action="theme#toggle"
+        aria-label="Change color theme"
+        title="Change color theme"
+      >
+        <i class="theme-icon-dark" data-lucide="moon"></i>
+        <i class="theme-icon-light" data-lucide="sun"></i>
+        <span class="sr-only" data-theme-target="label">Use dark theme</span>
+      </button>
+    </header>
+
+    <main class="auth-main">
+      <div class="auth-form-pane">
+      <section class="auth-card" aria-labelledby="page-title">
+        <h1 id="page-title">Welcome back</h1>
+        <p>Log in to continue to your boards and tasks.</p>
+
+        #if(error):
+          <p class="error-message" role="alert">#(error)</p>
+        #endif
+
+        <form method="post" action="/login">
+          <input type="hidden" name="_csrf" value="#(csrfToken)" />
+          <div class="field">
+            <label for="email">Email</label>
+            <input
+              class="input"
+              id="email"
+              type="email"
+              name="email"
+              value="#(email)"
+              autocomplete="email"
+              spellcheck="false"
+              placeholder="you@example.com"
+              required
+              autofocus
+            />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input
+              class="input"
+              id="password"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+          <button class="button primary" type="submit">Log in</button>
+        </form>
+
+        <p class="auth-switch">New to Flowboard? <a href="/register">Create an account</a></p>
+      </section>
+      </div>
+
+      <aside class="auth-aside">
+        <blockquote>A focused place for product work.</blockquote>
+        <ul class="auth-points">
+          <li><i data-lucide="columns-3"></i>Board, table, calendar, and gallery views</li>
+          <li><i data-lucide="users"></i>Shared boards with per-role access</li>
+          <li><i data-lucide="copy"></i>Templates, custom fields, and JSON export</li>
+        </ul>
+        <p class="auth-footer">Your work stays private until you share it.</p>
+      </aside>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,375 @@
+        #if(isTaskDetail):
+          <div class="page">
+            <header class="page-header detail-header">
+              <div class="page-title">
+                <a class="page-eyebrow" href="#(taskDetail.boardHref)">
+                  <i data-lucide="chevron-left"></i>#(taskDetail.boardName)
+                </a>
+                <h1>#(taskDetail.task.title)</h1>
+                <div class="task-facts">
+                  <span class="badge status status-#(taskDetail.task.statusValue)">#(taskDetail.task.statusName)</span>
+                  <span class="badge priority-#(taskDetail.task.priorityValue)">#(taskDetail.task.priorityName)</span>
+                  #for(label in taskDetail.task.labels):
+                    <span class="badge subtle">#(label)</span>
+                  #endfor
+                  <span class="fact-divider" aria-hidden="true"></span>
+                  #if(taskDetail.task.hasAssignee):
+                    <span class="fact"><i data-lucide="user"></i>#(taskDetail.task.assigneeName)</span>
+                  #else:
+                    <span class="fact muted"><i data-lucide="user"></i>Unassigned</span>
+                  #endif
+                  <span class="fact#if(!taskDetail.task.hasDueDate): muted#endif">
+                    <i data-lucide="calendar-days"></i>#(taskDetail.task.dueDisplay)
+                  </span>
+                </div>
+              </div>
+              <div class="page-actions">
+                <form method="post" action="/app/tasks/#(taskDetail.task.id)/follow">
+                  <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                  <button class="button" type="submit">
+                    <i data-lucide="bell"></i>
+                    #if(taskDetail.isFollowing):Unfollow#else:Follow#endif
+                    <span class="badge count tabular">#(taskDetail.followerCount)</span>
+                  </button>
+                </form>
+                #if(taskDetail.canEdit):
+                  <div data-controller="dialog">
+                    <button class="button" type="button" data-action="dialog#open">Edit task</button>
+                    <div
+                      class="dialog-layer"
+                      data-dialog-target="panel"
+                      data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="edit-task-title"
+                      tabindex="-1"
+                      hidden
+                    >
+                      <form class="dialog wide" method="post" action="/app/tasks/#(taskDetail.task.id)/update">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <div class="dialog-header">
+                          <div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div>
+                          <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="dialog-body">
+                          <div class="form-grid">
+                            <div class="field wide">
+                              <label for="edit-task-name">Title</label>
+                              <input class="input" id="edit-task-name" name="title" value="#(taskDetail.task.title)" maxlength="120" required data-dialog-target="initial" />
+                            </div>
+                            <div class="field wide">
+                              <label for="edit-task-description">Description</label>
+                              <textarea class="textarea" id="edit-task-description" name="description" maxlength="5000">#(taskDetail.task.description)</textarea>
+                              <span class="field-help">Markdown supported: **bold**, `code`, lists, and links.</span>
+                            </div>
+                            <div class="field">
+                              <span class="field-label">Status</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="status" value="#(taskDetail.task.statusValue)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(taskDetail.task.statusName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(taskDetail.task.isBacklog)">Backlog</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(taskDetail.task.isInProgress)">In progress</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(taskDetail.task.isReview)">Review</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(taskDetail.task.isDone)">Done</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field">
+                              <span class="field-label">Priority</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="priority" value="#(taskDetail.task.priorityValue)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(taskDetail.task.priorityName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="low" data-label="Low" aria-selected="#(taskDetail.task.isLowPriority)">Low</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="medium" data-label="Medium" aria-selected="#(taskDetail.task.isMediumPriority)">Medium</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="high" data-label="High" aria-selected="#(taskDetail.task.isHighPriority)">High</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="urgent" data-label="Urgent" aria-selected="#(taskDetail.task.isUrgentPriority)">Urgent</button>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field wide">
+                              <span class="field-label">Assignee</span>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="assigneeID" value="#(taskDetail.task.assigneeID)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                  <span data-menu-target="value">#(taskDetail.task.assigneeName)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="" data-label="Unassigned" aria-selected="#if(taskDetail.task.hasAssignee):false#else:true#endif">Unassigned</button>
+                                  #for(member in taskDetail.members):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(member.id)" data-label="#(member.name)" aria-selected="#(member.isSelected)">#(member.name) · #(member.email)</button>
+                                  #endfor
+                                </div>
+                              </div>
+                            </div>
+                            <div class="field" data-controller="date-picker">
+                              <label for="edit-task-start">Start date</label>
+                              <input class="input" id="edit-task-start" name="startAt" value="#(taskDetail.task.startInput)" data-date-picker-target="input" />
+                            </div>
+                            <div class="field" data-controller="date-picker">
+                              <label for="edit-task-due">Due date</label>
+                              <input class="input" id="edit-task-due" name="dueAt" value="#(taskDetail.task.dueInput)" data-date-picker-target="input" />
+                            </div>
+                            <div class="field wide">
+                              <label for="edit-task-labels">Labels</label>
+                              <input class="input" id="edit-task-labels" name="labels" value="#(taskDetail.task.labelsJoined)" />
+                            </div>
+                          </div>
+                        </div>
+                        <div class="dialog-footer">
+                          <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                          <button class="button primary" type="submit">Save changes</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                #endif
+              </div>
+            </header>
+
+            <div class="split-layout">
+              <article class="task-main">
+                <section class="card">
+                  <div class="card-header"><h2>Description</h2></div>
+                  <div class="card-body">
+                    #if(taskDetail.task.hasDescription):
+                      <div class="task-description markdown" data-controller="markdown">#(taskDetail.task.description)</div>
+                    #else:
+                      <div class="task-description empty">No description yet.</div>
+                    #endif
+                  </div>
+                </section>
+
+                <section class="card" data-controller="checklist">
+                  <div class="card-header">
+                    <h2>Checklist</h2>
+                    <span class="checklist-progress">
+                      <span data-checklist-target="label">No items</span>
+                      <progress class="progress" data-checklist-target="bar" value="0" max="1"></progress>
+                    </span>
+                  </div>
+                  #if(taskDetail.hasChecklist):
+                    <div class="card-body">
+                      <div class="checklist">
+                        #for(item in taskDetail.checklist):
+                          <form
+                            class="checklist-item#if(item.isCompleted): completed#endif"
+                            method="post"
+                            action="/app/checklist/#(item.id)/toggle"
+                            data-checklist-target="item"
+                          >
+                            <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                            <button class="custom-checkbox#if(item.isCompleted): checked#endif" type="submit" aria-label="Toggle “#(item.title)”">
+                              <i data-lucide="check"></i>
+                            </button>
+                            <span>#(item.title)</span>
+                          </form>
+                        #endfor
+                      </div>
+                    </div>
+                  #else:
+                    <p class="card-empty">Nothing to check off yet.</p>
+                  #endif
+                  #if(taskDetail.canEdit):
+                    <div class="card-footer">
+                      <form class="checklist-add" method="post" action="/app/tasks/#(taskDetail.task.id)/checklist">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <input class="input" name="title" placeholder="Add checklist item" maxlength="200" required aria-label="New checklist item" />
+                        <button class="button" type="submit"><i data-lucide="plus"></i>Add</button>
+                      </form>
+                    </div>
+                  #endif
+                </section>
+
+                <section class="card">
+                  <div class="card-header"><h2>Attachments</h2></div>
+                  #if(taskDetail.hasAttachments):
+                    <div class="card-body">
+                      <div class="attachment-grid">
+                        #for(attachment in taskDetail.attachments):
+                          <div class="attachment">
+                            <i data-lucide="paperclip"></i>
+                            <span>
+                              <a href="#(attachment.href)">#(attachment.fileName)</a>
+                              <small>#(attachment.sizeDisplay)</small>
+                            </span>
+                          </div>
+                        #endfor
+                      </div>
+                    </div>
+                  #else:
+                    <p class="card-empty">No files attached.</p>
+                  #endif
+                  #if(taskDetail.canEdit):
+                    <div class="card-footer">
+                      <form
+                        method="post"
+                        action="/app/tasks/#(taskDetail.task.id)/attachments"
+                        enctype="multipart/form-data"
+                        data-controller="file-field"
+                      >
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <span class="file-field">
+                          <label class="button small">
+                            <i data-lucide="upload"></i>Choose file
+                            <input
+                              class="sr-only"
+                              type="file"
+                              name="file"
+                              required
+                              data-file-field-target="input"
+                              data-action="file-field#choose"
+                            />
+                          </label>
+                          <span class="file-name" data-file-field-target="name">No file chosen</span>
+                          <button class="button small primary" type="submit">Upload</button>
+                        </span>
+                      </form>
+                    </div>
+                  #endif
+                </section>
+
+                <section class="card">
+                  <div class="card-header">
+                    <h2>Comments</h2>
+                    <span class="badge count tabular">#count(taskDetail.comments)</span>
+                  </div>
+                  #if(!taskDetail.hasComments):
+                    <p class="card-empty">No comments yet.</p>
+                  #endif
+                  <div class="comment-thread">
+                    #for(comment in taskDetail.comments):
+                      <div class="comment">
+                        <span class="avatar">#(comment.authorInitials)</span>
+                        <div>
+                          <div class="comment-meta">
+                            <strong>#(comment.authorName)</strong>
+                            <span>#(comment.createdDisplay)</span>
+                          </div>
+                          <div class="comment-body">#(comment.body)</div>
+                          #if(comment.canDelete):
+                            <form class="comment-actions" method="post" action="/app/comments/#(comment.id)/delete">
+                              <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                              <button class="button ghost small" type="submit">Delete</button>
+                            </form>
+                          #endif
+                        </div>
+                      </div>
+                    #endfor
+                  </div>
+                  #if(taskDetail.canComment):
+                    <form class="comment-composer" method="post" action="/app/tasks/#(taskDetail.task.id)/comments">
+                      <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                      <span class="avatar">#(common.userInitials)</span>
+                      <div>
+                        <label class="sr-only" for="new-comment">Add a comment</label>
+                        <textarea
+                          class="textarea"
+                          id="new-comment"
+                          name="body"
+                          maxlength="4000"
+                          placeholder="Leave a comment…"
+                          required
+                        ></textarea>
+                        <div class="form-actions">
+                          <button class="button primary" type="submit">Comment</button>
+                        </div>
+                      </div>
+                    </form>
+                  #endif
+                </section>
+              </article>
+
+              <aside class="task-sidebar">
+                <div class="card">
+                  <div class="card-header"><h2>Properties</h2></div>
+                  <dl class="property-list">
+                    <div class="property-row">
+                      <dt>Status</dt>
+                      <dd><span class="badge status status-#(taskDetail.task.statusValue)">#(taskDetail.task.statusName)</span></dd>
+                    </div>
+                    <div class="property-row">
+                      <dt>Priority</dt>
+                      <dd><span class="badge priority-#(taskDetail.task.priorityValue)">#(taskDetail.task.priorityName)</span></dd>
+                    </div>
+                    <div class="property-row">
+                      <dt>Assignee</dt>
+                      <dd#if(!taskDetail.task.hasAssignee): class="muted"#endif>#(taskDetail.task.assigneeName)</dd>
+                    </div>
+                    <div class="property-row">
+                      <dt>Start</dt>
+                      <dd class="muted">#(taskDetail.task.startDisplay)</dd>
+                    </div>
+                    <div class="property-row">
+                      <dt>Due</dt>
+                      <dd#if(!taskDetail.task.hasDueDate): class="muted"#endif>#(taskDetail.task.dueDisplay)</dd>
+                    </div>
+                    #for(property in taskDetail.properties):
+                      <div class="property-row">
+                        <dt>#(property.name)</dt>
+                        <dd>#(property.value)</dd>
+                      </div>
+                    #endfor
+                  </dl>
+                </div>
+                #if(taskDetail.canEdit):
+                  #if(taskDetail.hasProperties):
+                    <section class="card">
+                      <div class="card-header"><h2>Custom fields</h2></div>
+                      <form class="card-body" method="post" action="/app/tasks/#(taskDetail.task.id)/properties">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        #for(property in taskDetail.properties):
+                          <div class="field">
+                            <label for="property-#(property.id)">#(property.name)</label>
+                            <input class="input" id="property-#(property.id)" name="property-#(property.id)" value="#(property.inputValue)" />
+                          </div>
+                        #endfor
+                        <div class="form-actions"><button class="button small" type="submit">Save fields</button></div>
+                      </form>
+                    </section>
+                  #endif
+                  <section class="card danger-zone">
+                    <div class="card-header"><h2>Danger zone</h2></div>
+                    <div class="card-rows">
+                      <div class="panel-row">
+                        <span class="panel-row-main"><strong>#if(taskDetail.task.isArchived):Restore task#else:Archive task#endif</strong><span>Archived tasks leave active views.</span></span>
+                        <form method="post" action="/app/tasks/#(taskDetail.task.id)/archive">
+                          <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                          <button class="button small" type="submit">#if(taskDetail.task.isArchived):Restore#else:Archive#endif</button>
+                        </form>
+                      </div>
+                      <div class="panel-row" data-controller="dialog">
+                        <span class="panel-row-main"><strong>Delete task</strong><span>Permanently remove this task.</span></span>
+                        <button class="button danger small" type="button" data-action="dialog#open">Delete</button>
+                        <div
+                          class="dialog-layer"
+                          data-dialog-target="panel"
+                          data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-labelledby="delete-task-title"
+                          tabindex="-1"
+                          hidden
+                        >
+                          <form class="dialog" method="post" action="/app/tasks/#(taskDetail.task.id)/delete">
+                            <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                            <div class="dialog-header"><div><h2 id="delete-task-title">Delete this task?</h2><p>This action cannot be undone.</p></div></div>
+                            <div class="dialog-footer">
+                              <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                              <button class="button danger" type="submit">Delete task</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                #endif
+              </aside>
+            </div>
+          </div>
+        #endif
