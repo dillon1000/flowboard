@@ -11,8 +11,8 @@ struct WebController: RouteCollection {
         routes.post("logout", use: logout)
 
         let protected = routes.grouped(User.redirectMiddleware(path: "/login"))
-        protected.get("app", use: appShell)
-        protected.get("app", "**", use: appShell)
+        try protected.register(collection: AppPageController())
+        try protected.register(collection: WorkspaceActionController())
     }
 
     func home(req: Request) -> Response {
@@ -20,11 +20,11 @@ struct WebController: RouteCollection {
     }
 
     func loginPage(req: Request) async throws -> View {
-        try await req.view.render("login", AuthPageContext())
+        try await req.view.render("login", AuthPageContext(csrfToken: req.csrfToken))
     }
 
     func registerPage(req: Request) async throws -> View {
-        try await req.view.render("register", AuthPageContext())
+        try await req.view.render("register", AuthPageContext(csrfToken: req.csrfToken))
     }
 
     func login(req: Request) async throws -> Response {
@@ -67,25 +67,16 @@ struct WebController: RouteCollection {
         return req.redirect(to: "/login")
     }
 
-    func appShell(req: Request) async throws -> View {
-        let user = try req.auth.require(User.self)
-        return try await req.view.render(
-            "app",
-            AppPageContext(
-                userName: user.name,
-                userEmail: user.email,
-                userInitials: initials(for: user.name)
-            )
-        )
-    }
-
     private func renderAuthError(
         _ view: String,
         message: String,
         email: String,
         for req: Request
     ) async throws -> Response {
-        let page = try await req.view.render(view, AuthPageContext(error: message, email: email))
+        let page = try await req.view.render(
+            view,
+            AuthPageContext(csrfToken: req.csrfToken, error: message, email: email)
+        )
         return try await page.encodeResponse(status: .unprocessableEntity, for: req)
     }
 
@@ -93,24 +84,16 @@ struct WebController: RouteCollection {
         (error as? any AbortError)?.reason ?? "Check the form and try again."
     }
 
-    private func initials(for name: String) -> String {
-        let letters = name.split(separator: " ").prefix(2).compactMap(\.first)
-        return String(letters).uppercased()
-    }
 }
 
 private struct AuthPageContext: Encodable {
+    let csrfToken: String
     let error: String?
     let email: String
 
-    init(error: String? = nil, email: String = "") {
+    init(csrfToken: String, error: String? = nil, email: String = "") {
+        self.csrfToken = csrfToken
         self.error = error
         self.email = email
     }
-}
-
-private struct AppPageContext: Encodable {
-    let userName: String
-    let userEmail: String
-    let userInitials: String
 }

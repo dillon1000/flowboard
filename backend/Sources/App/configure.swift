@@ -9,6 +9,10 @@ import Vapor
 /// `db.sqlite` when the variable is absent. Development and test processes migrate on
 /// startup so a new checkout is immediately usable. Production migrations stay explicit.
 public func configure(_ app: Application) async throws {
+    // Browser forms can carry an attachment or board export. Route handlers apply
+    // their own smaller file limits after Vapor rejects bodies above 10 MB.
+    app.routes.defaultMaxBodySize = "10mb"
+
     if app.environment == .testing {
         app.databases.use(.sqlite(.memory), as: .sqlite)
     } else {
@@ -60,6 +64,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateTask())
     app.migrations.add(ExpandWorkspace())
     app.migrations.add(CreateWorkspaceFeatures())
+    app.migrations.add(BackfillBoardViews())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

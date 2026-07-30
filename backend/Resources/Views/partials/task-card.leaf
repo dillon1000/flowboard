@@ -1,0 +1,26 @@
+<a class="task-card" href="#(href)" data-task-id="#(id)">
+  <h3>#(title)</h3>
+  #if(hasDescription):
+    <p>#(description)</p>
+  #endif
+  <div class="task-meta">
+    <span class="badge priority-#(priorityValue)">#(priorityName)</span>
+    #for(label in labels):
+      <span class="badge">#(label)</span>
+    #endfor
+    #if(hasDueDate):
+      <span class="badge"><i data-lucide="calendar-days"></i>#(dueDisplay)</span>
+    #endif
+    <span class="task-badges">
+      #if(commentCount):
+        <span class="task-badge"><i data-lucide="message-square"></i>#(commentCount)</span>
+      #endif
+      #if(checklistCount):
+        <span class="task-badge"><i data-lucide="list-checks"></i>#(completedChecklistCount)/#(checklistCount)</span>
+      #endif
+      #if(attachmentCount):
+        <span class="task-badge"><i data-lucide="paperclip"></i>#(attachmentCount)</span>
+      #endif
+    </span>
+  </div>
+</a>

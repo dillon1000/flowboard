@@ -1,34 +1,50 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-controller="theme">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#ffffff" />
-    <title>Create Account · Flowboard</title>
+    <meta name="csrf-token" content="#(csrfToken)" />
+    <title>Create account · Flowboard</title>
     <link rel="icon" href="/favicon.svg" />
-    <link rel="stylesheet" href="/auth.css" />
+    <script>try{const t=localStorage.getItem('flowboard-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch{}</script>
+    <link rel="stylesheet" href="/assets/index.css" />
+    <script type="module" src="/assets/app.js"></script>
   </head>
-  <body>
-    <main class="auth-shell">
-      <a class="auth-brand" href="/" aria-label="Flowboard home">
+  <body class="auth-page">
+    <header class="auth-header">
+      <a class="brand" href="/" aria-label="Flowboard home">
         <span class="brand-symbol" aria-hidden="true"></span>
         Flowboard
       </a>
+      <button
+        class="icon-button"
+        type="button"
+        data-action="theme#toggle"
+        aria-label="Change color theme"
+        title="Change color theme"
+      >
+        <i data-lucide="moon"></i>
+        <span class="sr-only" data-theme-target="label">Use dark theme</span>
+      </button>
+    </header>
 
+    <main class="auth-main">
       <section class="auth-card" aria-labelledby="page-title">
-        <header>
-          <h1 id="page-title">Create your account</h1>
-          <p>Your first board is ready when you sign up.</p>
-        </header>
+        <h1 id="page-title">Create your account</h1>
+        <p>Your workspace and first board are ready after sign-up.</p>
 
         #if(error):
-          <p class="form-message">#(error)</p>
+          <p class="error-message" role="alert">#(error)</p>
         #endif
 
         <form method="post" action="/register">
-          <label>
-            Name
+          <input type="hidden" name="_csrf" value="#(csrfToken)" />
+          <div class="field">
+            <label for="name">Name</label>
             <input
+              class="input"
+              id="name"
               type="text"
               name="name"
               autocomplete="name"
@@ -38,10 +54,12 @@
               required
               autofocus
             />
-          </label>
-          <label>
-            Email
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
             <input
+              class="input"
+              id="email"
               type="email"
               name="email"
               value="#(email)"
@@ -50,10 +68,12 @@
               placeholder="you@example.com"
               required
             />
-          </label>
-          <label>
-            Password
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
             <input
+              class="input"
+              id="password"
               type="password"
               name="password"
               autocomplete="new-password"
@@ -62,12 +82,14 @@
               maxlength="72"
               required
             />
-          </label>
-          <button type="submit">Create Account</button>
+            <span class="field-help">Use 8 to 72 characters.</span>
+          </div>
+          <button class="button primary" type="submit">Create account</button>
         </form>
 
         <p class="auth-switch">Already have an account? <a href="/login">Log in</a></p>
       </section>
     </main>
+    <footer class="auth-footer">Your work stays private until you share it.</footer>
   </body>
 </html>
