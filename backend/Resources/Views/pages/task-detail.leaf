@@ -235,11 +235,59 @@
                       <div class="attachment-grid">
                         #for(attachment in taskDetail.attachments):
                           <div class="attachment">
-                            <i data-lucide="paperclip"></i>
-                            <span>
-                              <a href="#(attachment.href)">#(attachment.fileName)</a>
-                              <small>#(attachment.sizeDisplay)</small>
-                            </span>
+                            #if(attachment.isImage):
+                              <a
+                                class="attachment-media attachment-image"
+                                href="#(attachment.previewHref)"
+                                target="_blank"
+                                rel="noopener"
+                                aria-label="Open preview of #(attachment.fileName)"
+                              >
+                                <img src="#(attachment.previewHref)" alt="" loading="lazy" />
+                              </a>
+                            #elseif(attachment.isAudio):
+                              <div class="attachment-media attachment-audio">
+                                <audio
+                                  controls
+                                  preload="metadata"
+                                  src="#(attachment.previewHref)"
+                                  aria-label="Preview #(attachment.fileName)"
+                                ></audio>
+                              </div>
+                            #elseif(attachment.isVideo):
+                              <div class="attachment-media attachment-video">
+                                <video
+                                  controls
+                                  preload="metadata"
+                                  src="#(attachment.previewHref)"
+                                  aria-label="Preview #(attachment.fileName)"
+                                  playsinline
+                                ></video>
+                              </div>
+                            #else:
+                              <span class="attachment-file-icon"><i data-lucide="paperclip"></i></span>
+                            #endif
+                            <div class="attachment-details">
+                              <span class="attachment-copy">
+                                <strong title="#(attachment.fileName)">#(attachment.fileName)</strong>
+                                <small>#(attachment.sizeDisplay)</small>
+                              </span>
+                              <span class="attachment-actions">
+                                <a class="button ghost small" href="#(attachment.href)">
+                                  <i data-lucide="download"></i>Download
+                                </a>
+                                #if(taskDetail.canEdit):
+                                  <form
+                                    method="post"
+                                    action="/app/attachments/#(attachment.id)/delete"
+                                    data-turbo-confirm="Delete this attachment?"
+                                  >
+                                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                                    <button class="button ghost small attachment-delete" type="submit">Delete</button>
+                                  </form>
+                                #endif
+                              </span>
+                            </div>
                           </div>
                         #endfor
                       </div>

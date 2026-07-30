@@ -38,6 +38,8 @@ struct WorkspaceActionController: RouteCollection {
         routes.post("app", "checklist", ":itemID", "toggle", use: toggleChecklistItem)
         routes.post("app", "tasks", ":taskID", "attachments", use: createAttachment)
         routes.get("app", "attachments", ":attachmentID", use: downloadAttachment)
+        routes.get("app", "attachments", ":attachmentID", "preview", use: previewAttachment)
+        routes.post("app", "attachments", ":attachmentID", "delete", use: deleteAttachment)
 
         routes.post("app", "settings", "profile", use: updateProfile)
     }
@@ -653,26 +655,8 @@ struct WorkspaceActionController: RouteCollection {
     }
 
     func downloadAttachment(req: Request) async throws -> Response {
-        guard
-            let attachmentID = req.parameters.get("attachmentID", as: UUID.self),
-            let attachment = try await TaskAttachment.find(attachmentID, on: req.db),
-            let task = try await Task.find(attachment.$task.id, on: req.db)
-        else {
-            throw Abort(.notFound, reason: "The attachment does not exist.")
-        }
-        _ = try await requireAccess(boardID: task.$board.id, permission: .view, for: req)
-        let response: Response
-        if AttachmentStorage.isObjectKey(attachment.storageName) {
-            response = try await objectResponse(key: attachment.storageName, for: req)
-        } else {
-            // Legacy rows contain only the generated name and still live under
-            // the old board/task directory on the persistent volume.
-            let path = attachmentRoot(req: req)
-                + task.$board.id.uuidString + "/"
-                + (try task.requireID()).uuidString + "/"
-                + attachment.storageName
-            response = try await req.fileio.asyncStreamFile(at: path)
-        }
+        let (attachment, task) = try await requiredAttachment(for: req, permission: .view)
+        let response = try await storedAttachmentResponse(attachment, task: task, for: req)
         response.headers.contentDisposition = .init(.attachment, filename: attachment.fileName)
         if let mediaType = attachment.fileName
             .split(separator: ".")
@@ -681,7 +665,38 @@ struct WorkspaceActionController: RouteCollection {
         {
             response.headers.contentType = mediaType
         }
+        response.headers.replaceOrAdd(name: .xContentTypeOptions, value: "nosniff")
         return response
+    }
+
+    /// Serves only allowlisted passive media inline. Other uploads stay
+    /// download-only even when a client requests the preview route directly.
+    func previewAttachment(req: Request) async throws -> Response {
+        let (attachment, task) = try await requiredAttachment(for: req, permission: .view)
+        guard let preview = attachment.preview else {
+            throw Abort(.unsupportedMediaType, reason: "This attachment cannot be previewed.")
+        }
+        let response = try await storedAttachmentResponse(attachment, task: task, for: req)
+        response.headers.contentDisposition = .init(.inline, filename: attachment.fileName)
+        response.headers.contentType = preview.mediaType
+        response.headers.replaceOrAdd(name: .xContentTypeOptions, value: "nosniff")
+        return response
+    }
+
+    /// Removes file bytes before metadata so a storage failure leaves a record
+    /// that the user can retry. Missing local files count as already removed.
+    func deleteAttachment(req: Request) async throws -> Response {
+        let (attachment, task) = try await requiredAttachment(for: req, permission: .edit)
+        if AttachmentStorage.isObjectKey(attachment.storageName) {
+            try await deleteStoredAttachment(key: attachment.storageName, for: req)
+        } else {
+            let path = try legacyAttachmentPath(attachment, task: task, req: req)
+            if FileManager.default.fileExists(atPath: path) {
+                try FileManager.default.removeItem(atPath: path)
+            }
+        }
+        try await attachment.delete(on: req.db)
+        return req.redirect(to: "/app/tasks/\(try task.requireID())")
     }
 
     func updateProfile(req: Request) async throws -> Response {
@@ -813,6 +828,21 @@ struct WorkspaceActionController: RouteCollection {
         return task
     }
 
+    private func requiredAttachment(
+        for req: Request,
+        permission: BoardPermission
+    ) async throws -> (TaskAttachment, Task) {
+        guard
+            let attachmentID = req.parameters.get("attachmentID", as: UUID.self),
+            let attachment = try await TaskAttachment.find(attachmentID, on: req.db),
+            let task = try await Task.find(attachment.$task.id, on: req.db)
+        else {
+            throw Abort(.notFound, reason: "The attachment does not exist.")
+        }
+        _ = try await requireAccess(boardID: task.$board.id, permission: permission, for: req)
+        return (attachment, task)
+    }
+
     private func requiredTemplate(
         for req: Request,
         boardID: UUID
@@ -912,6 +942,30 @@ struct WorkspaceActionController: RouteCollection {
             req.logger.error("Attachment download failed: \(error)")
             throw Abort(.badGateway, reason: "Attachment storage is unavailable.")
         }
+    }
+
+    private func storedAttachmentResponse(
+        _ attachment: TaskAttachment,
+        task: Task,
+        for req: Request
+    ) async throws -> Response {
+        if AttachmentStorage.isObjectKey(attachment.storageName) {
+            return try await objectResponse(key: attachment.storageName, for: req)
+        }
+        return try await req.fileio.asyncStreamFile(
+            at: legacyAttachmentPath(attachment, task: task, req: req)
+        )
+    }
+
+    private func legacyAttachmentPath(
+        _ attachment: TaskAttachment,
+        task: Task,
+        req: Request
+    ) throws -> String {
+        attachmentRoot(req: req)
+            + task.$board.id.uuidString + "/"
+            + (try task.requireID()).uuidString + "/"
+            + attachment.storageName
     }
 
     /// Deletes bucket objects before Fluent cascades their metadata. A failed S3

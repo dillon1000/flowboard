@@ -508,13 +508,23 @@ struct AttachmentContext: Encodable {
     let id: UUID
     let fileName: String
     let href: String
+    let previewHref: String
     let sizeDisplay: String
+    let isImage: Bool
+    let isAudio: Bool
+    let isVideo: Bool
 
     init(attachment: TaskAttachment) throws {
-        self.id = try attachment.requireID()
+        let attachmentID = try attachment.requireID()
+        let preview = attachment.preview
+        self.id = attachmentID
         self.fileName = attachment.fileName
-        self.href = "/app/attachments/\(try attachment.requireID())"
+        self.href = "/app/attachments/\(attachmentID)"
+        self.previewHref = "/app/attachments/\(attachmentID)/preview"
         self.sizeDisplay = ByteCountFormatter.string(fromByteCount: Int64(attachment.byteCount), countStyle: .file)
+        self.isImage = preview?.kind == .image
+        self.isAudio = preview?.kind == .audio
+        self.isVideo = preview?.kind == .video
     }
 }
 

@@ -324,6 +324,10 @@ export class FileFieldController extends Controller<HTMLFormElement> {
     const formData = new FormData(this.element);
     request.open(this.element.method || 'post', this.element.action);
     request.setRequestHeader('Accept', 'text/html');
+    request.setRequestHeader(
+      'X-CSRF-TOKEN',
+      document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
+    );
     request.upload.addEventListener('progress', (progressEvent) => {
       if (!progressEvent.lengthComputable) {
         this.barTarget.removeAttribute('value');

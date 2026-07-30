@@ -2713,16 +2713,15 @@ progress.progress::-moz-progress-bar {
 
 .attachment-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
 }
 
 .attachment {
-  display: flex;
+  display: grid;
   min-width: 0;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  overflow: hidden;
+  align-content: start;
   border-radius: var(--radius-medium);
   background: var(--surface-sunken);
   box-shadow: var(--shadow-border);
@@ -2733,36 +2732,98 @@ progress.progress::-moz-progress-bar {
   box-shadow: 0 0 0 1px var(--ds-gray-alpha-500);
 }
 
-.attachment svg {
-  flex: 0 0 auto;
-  color: var(--text-tertiary);
+.attachment-media {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  background: var(--surface-active);
 }
 
-.attachment > span {
+.attachment-image,
+.attachment-video {
+  height: 148px;
+}
+
+.attachment-image img,
+.attachment-video video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-video video {
+  object-fit: contain;
+  background: #000;
+}
+
+.attachment-audio {
+  min-height: 76px;
+  padding: 14px;
+  place-items: center;
+}
+
+.attachment-audio audio {
+  width: 100%;
   min-width: 0;
 }
 
-.attachment a {
+.attachment-file-icon {
+  display: grid;
+  height: 76px;
+  place-items: center;
+  color: var(--text-tertiary);
+  background: var(--surface-active);
+}
+
+.attachment-file-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.attachment-details {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 12px 12px;
+}
+
+.attachment-copy {
+  min-width: 0;
+}
+
+.attachment-copy strong {
   display: block;
   overflow: hidden;
-  color: var(--text);
   font-size: 13px;
   font-weight: 500;
-  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.attachment a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.attachment small {
+.attachment-copy small {
   display: block;
   margin-top: 1px;
   color: var(--text-tertiary);
   font-size: 11px;
+}
+
+.attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.attachment-actions form {
+  margin: 0;
+}
+
+.attachment-actions .button {
+  padding-inline: 7px;
+}
+
+.attachment-actions .attachment-delete {
+  color: var(--ds-red-900);
 }
 
 /* A file input styled as a single control: label reports the chosen name. */
