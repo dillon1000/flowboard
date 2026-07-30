@@ -56,6 +56,7 @@
     : 0;
 
   onMount(() => {
+    sidebarOpen = window.innerWidth > 820;
     void loadBoard();
   });
 
