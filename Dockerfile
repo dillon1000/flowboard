@@ -9,7 +9,7 @@ RUN corepack enable \
 WORKDIR /workspace/frontend
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 COPY frontend/ ./
@@ -28,7 +28,7 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
 WORKDIR /build
 
 COPY backend/Package.* ./
-RUN --mount=type=cache,target=/root/.cache/org.swift.swiftpm \
+RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swiftpm,target=/root/.cache/org.swift.swiftpm \
     swift package resolve --force-resolved-versions
 
 COPY backend/Sources ./Sources
@@ -36,7 +36,7 @@ COPY backend/Tests ./Tests
 COPY backend/Resources ./Resources
 COPY --from=frontend /workspace/backend/Public ./Public
 
-RUN --mount=type=cache,target=/build/.build \
+RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swift-build,target=/build/.build \
     swift build -c release \
         --product App \
         --static-swift-stdlib \
@@ -82,7 +82,6 @@ RUN mkdir -p /data/uploads \
 ENV DATABASE_PATH=/data/flowboard.sqlite
 ENV SWIFT_BACKTRACE=enable=yes,sanitize=yes,threads=all,images=all,interactive=no,swift-backtrace=./swift-backtrace-static
 
-VOLUME ["/data"]
 EXPOSE 8080
 
 # The entrypoint starts as root because Railway mounts new volumes as root.
