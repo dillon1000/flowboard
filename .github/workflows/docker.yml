@@ -28,7 +28,31 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          load: true
           push: false
           tags: flowboard:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Development mode uses an HTTP-compatible session cookie and applies
+      # migrations at startup. The loop gives a cold Vapor process time to bind.
+      - name: Smoke test container
+        shell: bash
+        run: |
+          docker run --detach --name flowboard-smoke \
+            --publish 18080:8080 \
+            flowboard:test \
+            serve --env development --hostname 0.0.0.0 --port 8080
+
+          trap 'docker logs flowboard-smoke; docker rm --force flowboard-smoke' EXIT
+
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:18080/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl --fail --silent http://127.0.0.1:18080/health > /dev/null
+          curl --fail --silent http://127.0.0.1:18080/register \
+            | grep --quiet '<title>Create account · Flowboard</title>'
