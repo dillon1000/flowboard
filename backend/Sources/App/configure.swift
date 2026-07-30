@@ -12,6 +12,7 @@ public func configure(_ app: Application) async throws {
     // Browser forms can carry an attachment or board export. Route handlers apply
     // their own smaller file limits after Vapor rejects bodies above 10 MB.
     app.routes.defaultMaxBodySize = "10mb"
+    app.oauthConfiguration = try OAuthConfiguration.fromEnvironment()
 
     if app.environment == .testing {
         app.databases.use(.sqlite(.memory), as: .sqlite)
@@ -26,14 +27,27 @@ public func configure(_ app: Application) async throws {
         ?? "http://localhost:5173,http://127.0.0.1:5173")
         .split(separator: ",")
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    // These values identify the service in response headers. Deployments can
+    // override either value without rebuilding the application.
+    let serverName = Environment.get("SERVER_NAME") ?? "flowboard-server"
+    let serverVersion = Environment.get("SERVER_VERSION") ?? "0.1.0"
     let corsConfiguration = CORSMiddleware.Configuration(
         allowedOrigin: .any(allowedOrigins),
         allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],
         allowedHeaders: [.accept, .authorization, .contentType, .origin],
-        allowCredentials: true
+        allowCredentials: true,
+        exposedHeaders: [
+            .flowboardServerName,
+            .flowboardServerTime,
+            .flowboardServerVersion,
+        ]
     )
     app.middleware.use(CORSMiddleware(configuration: corsConfiguration), at: .beginning)
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))
+    app.middleware.use(
+        ServerHeadersMiddleware(serverName: serverName, serverVersion: serverVersion),
+        at: .beginning
+    )
 
     // Leaf renders every browser page. File middleware serves the Hotwire,
     // Stimulus, and design assets created by `pnpm build`.
@@ -41,7 +55,8 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
     // Sessions use Fluent so login survives server restarts and works across
-    // multiple application processes that share the same database.
+    // multiple application processes that share the same database. SameSite=Lax
+    // sends the session on the provider's top-level OAuth callback.
     app.sessions.use(.fluent)
     app.sessions.configuration.cookieName = "flowboard-session"
     app.sessions.configuration.cookieFactory = { sessionID in
@@ -51,7 +66,7 @@ public func configure(_ app: Application) async throws {
             path: "/",
             isSecure: app.environment == .production,
             isHTTPOnly: true,
-            sameSite: .strict
+            sameSite: .lax
         )
     }
     app.middleware.use(app.sessions.middleware)
@@ -59,6 +74,8 @@ public func configure(_ app: Application) async throws {
     app.middleware.use(CSRFMiddleware())
 
     app.migrations.add(CreateUser())
+    app.migrations.add(CreateOAuthAccount())
+    app.migrations.add(AddUserProfilePicture())
     app.migrations.add(CreateBoard())
     app.migrations.add(AddBoardOwner())
     app.migrations.add(CreateTask())
@@ -66,6 +83,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateWorkspaceFeatures())
     app.migrations.add(BackfillBoardViews())
     app.migrations.add(CreateTaskFollowers())
+    app.migrations.add(AddTaskCreator())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

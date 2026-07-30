@@ -13,6 +13,10 @@ struct WebController: RouteCollection {
         let protected = routes.grouped(User.redirectMiddleware(path: "/login"))
         try protected.register(collection: AppPageController())
         try protected.register(collection: WorkspaceActionController())
+
+        // The catch-all has the lowest route priority, so known pages and assets
+        // resolve first. Unknown API paths keep Vapor's JSON error contract.
+        routes.get(.catchall, use: notFoundPage)
     }
 
     func home(req: Request) -> Response {
@@ -20,11 +24,19 @@ struct WebController: RouteCollection {
     }
 
     func loginPage(req: Request) async throws -> View {
-        try await req.view.render("login", AuthPageContext(csrfToken: req.csrfToken))
+        try await req.view.render("login", AuthPageContext(request: req))
     }
 
     func registerPage(req: Request) async throws -> View {
-        try await req.view.render("register", AuthPageContext(csrfToken: req.csrfToken))
+        try await req.view.render("register", AuthPageContext(request: req))
+    }
+
+    func notFoundPage(req: Request) async throws -> Response {
+        guard !req.url.path.hasPrefix("/api/") else {
+            throw Abort(.notFound)
+        }
+        let page = try await req.view.render("not-found", NotFoundPageContext(request: req))
+        return try await page.encodeResponse(status: .notFound, for: req)
     }
 
     func login(req: Request) async throws -> Response {
@@ -75,7 +87,7 @@ struct WebController: RouteCollection {
     ) async throws -> Response {
         let page = try await req.view.render(
             view,
-            AuthPageContext(csrfToken: req.csrfToken, error: message, email: email)
+            AuthPageContext(request: req, error: message, email: email)
         )
         return try await page.encodeResponse(status: .unprocessableEntity, for: req)
     }
@@ -83,17 +95,31 @@ struct WebController: RouteCollection {
     private func errorMessage(_ error: any Error) -> String {
         (error as? any AbortError)?.reason ?? "Check the form and try again."
     }
-
 }
 
-private struct AuthPageContext: Encodable {
+struct AuthPageContext: Encodable {
     let csrfToken: String
     let error: String?
     let email: String
+    let oauthEnabled: Bool
+    let oauthProviderName: String
 
-    init(csrfToken: String, error: String? = nil, email: String = "") {
-        self.csrfToken = csrfToken
+    init(request: Request, error: String? = nil, email: String = "") {
+        self.csrfToken = request.csrfToken
         self.error = error
         self.email = email
+        self.oauthEnabled = request.application.oauthConfiguration != nil
+        self.oauthProviderName = request.application.oauthConfiguration?.providerName ?? "OAuth"
+    }
+}
+
+struct NotFoundPageContext: Encodable {
+    let destination: String
+    let actionLabel: String
+
+    init(request: Request) {
+        let isAuthenticated = request.auth.has(User.self)
+        self.destination = isAuthenticated ? "/app" : "/login"
+        self.actionLabel = isAuthenticated ? "Return to workspace" : "Go to sign in"
     }
 }

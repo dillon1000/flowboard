@@ -16,6 +16,9 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "password_hash")
     var passwordHash: String
 
+    @OptionalField(key: "profile_picture_url")
+    var profilePictureURL: String?
+
     @Children(for: \.$owner)
     var boards: [Board]
 
@@ -27,11 +30,18 @@ final class User: Model, @unchecked Sendable {
 
     init() {}
 
-    init(id: UUID? = nil, name: String, email: String, passwordHash: String) {
+    init(
+        id: UUID? = nil,
+        name: String,
+        email: String,
+        passwordHash: String,
+        profilePictureURL: String? = nil
+    ) {
         self.id = id
         self.name = name
         self.email = email
         self.passwordHash = passwordHash
+        self.profilePictureURL = profilePictureURL
     }
 }
 
@@ -50,12 +60,14 @@ struct UserResponse: Content {
     let id: UUID
     let name: String
     let email: String
+    let profilePictureURL: String?
     let createdAt: Date?
 
     init(user: User) throws {
         self.id = try user.requireID()
         self.name = user.name
         self.email = user.email
+        self.profilePictureURL = user.profilePictureURL
         self.createdAt = user.createdAt
     }
 }

@@ -4,6 +4,7 @@ enum AppPageKind {
     case overview
     case board
     case tasks
+    case archivedTasks
     case taskDetail
     case settings
     case boardSettings
@@ -16,6 +17,8 @@ struct AppPageContext: Encodable {
     let isOverview: Bool
     let isBoard: Bool
     let isTasks: Bool
+    let isActiveTasks: Bool
+    let isArchivedTasks: Bool
     let isTaskDetail: Bool
     let isSettings: Bool
     let isBoardSettings: Bool
@@ -42,7 +45,9 @@ struct AppPageContext: Encodable {
         self.documentTitle = "\(pageTitle) · Flowboard"
         self.isOverview = pageKind == .overview
         self.isBoard = pageKind == .board
-        self.isTasks = pageKind == .tasks
+        self.isTasks = pageKind == .tasks || pageKind == .archivedTasks
+        self.isActiveTasks = pageKind == .tasks
+        self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
         self.isSettings = pageKind == .settings
         self.isBoardSettings = pageKind == .boardSettings
@@ -59,8 +64,22 @@ struct CommonPageContext: Encodable {
     let csrfToken: String
     let userName: String
     let userEmail: String
-    let userInitials: String
+    let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
+}
+
+/// Supplies one image-or-initials choice to Leaf wherever a user identity appears.
+/// OAuth URLs are validated before storage, so templates only select the display.
+struct AvatarContext: Encodable {
+    let initials: String
+    let profilePictureURL: String
+    let hasProfilePicture: Bool
+
+    init(user: User) {
+        self.initials = makeInitials(for: user.name)
+        self.profilePictureURL = user.profilePictureURL ?? ""
+        self.hasProfilePicture = user.profilePictureURL != nil
+    }
 }
 
 struct BoardNavigationContext: Encodable {
@@ -325,8 +344,9 @@ struct TaskCardContext: Encodable {
     let attachmentCount: Int
     let updatedDisplay: String
     let isArchived: Bool
+    let canEdit: Bool
 
-    init(task: Task, assignee: User?) throws {
+    init(task: Task, assignee: User?, canEdit: Bool = false) throws {
         self.id = try task.requireID()
         self.boardID = task.$board.id
         self.boardName = task.$board.value?.name ?? ""
@@ -368,12 +388,14 @@ struct TaskCardContext: Encodable {
         self.attachmentCount = task.$attachments.value?.count ?? 0
         self.updatedDisplay = task.updatedAt.map(displayDate) ?? "Recently"
         self.isArchived = task.isArchived
+        self.canEdit = canEdit
     }
 }
 
 struct CalendarDayContext: Encodable {
     let day: String
     let isMuted: Bool
+    let isToday: Bool
     let tasks: [TaskCardContext]
 }
 
@@ -395,13 +417,17 @@ struct TaskDetailPageContext: Encodable {
     let task: TaskCardContext
     let boardName: String
     let boardHref: String
+    let creatorName: String
     let canEdit: Bool
     let canComment: Bool
     let isFollowing: Bool
     let followerCount: Int
     let comments: [CommentContext]
+    let hasComments: Bool
     let checklist: [ChecklistContext]
+    let hasChecklist: Bool
     let attachments: [AttachmentContext]
+    let hasAttachments: Bool
     let members: [MemberOptionContext]
     let properties: [TaskPropertyContext]
     let hasProperties: Bool
@@ -409,6 +435,7 @@ struct TaskDetailPageContext: Encodable {
     init(
         task: Task,
         board: Board,
+        creator: User?,
         access: BoardAccess,
         comments: [TaskComment],
         checklist: [ChecklistItem],
@@ -423,6 +450,7 @@ struct TaskDetailPageContext: Encodable {
         )
         self.boardName = board.name
         self.boardHref = "/app/boards/\(try board.requireID())"
+        self.creatorName = creator?.name ?? "Unknown"
         self.canEdit = access.isOwner || access.role.canEdit
         self.canComment = access.isOwner || access.role.canComment
         self.isFollowing = followers.contains { $0.$user.id == currentUserID }
@@ -433,8 +461,11 @@ struct TaskDetailPageContext: Encodable {
                 canDelete: access.isOwner || access.role == .admin || $0.$author.id == currentUserID
             )
         }
+        self.hasComments = !comments.isEmpty
         self.checklist = try checklist.map(ChecklistContext.init)
+        self.hasChecklist = !checklist.isEmpty
         self.attachments = try attachments.map(AttachmentContext.init)
+        self.hasAttachments = !attachments.isEmpty
         self.members = try members.map {
             try MemberOptionContext(user: $0, selectedID: task.$assignee.id)
         }
@@ -453,7 +484,7 @@ struct TaskDetailPageContext: Encodable {
 struct CommentContext: Encodable {
     let id: UUID
     let authorName: String
-    let authorInitials: String
+    let authorAvatar: AvatarContext
     let body: String
     let createdDisplay: String
     let canDelete: Bool
@@ -461,7 +492,7 @@ struct CommentContext: Encodable {
     init(comment: TaskComment, canDelete: Bool) throws {
         self.id = try comment.requireID()
         self.authorName = comment.author.name
-        self.authorInitials = makeInitials(for: comment.author.name)
+        self.authorAvatar = AvatarContext(user: comment.author)
         self.body = comment.body
         self.createdDisplay = comment.createdAt.map(displayDate) ?? "Recently"
         self.canDelete = canDelete
@@ -484,13 +515,23 @@ struct AttachmentContext: Encodable {
     let id: UUID
     let fileName: String
     let href: String
+    let previewHref: String
     let sizeDisplay: String
+    let isImage: Bool
+    let isAudio: Bool
+    let isVideo: Bool
 
     init(attachment: TaskAttachment) throws {
-        self.id = try attachment.requireID()
+        let attachmentID = try attachment.requireID()
+        let preview = attachment.preview
+        self.id = attachmentID
         self.fileName = attachment.fileName
-        self.href = "/app/attachments/\(try attachment.requireID())"
+        self.href = "/app/attachments/\(attachmentID)"
+        self.previewHref = "/app/attachments/\(attachmentID)/preview"
         self.sizeDisplay = ByteCountFormatter.string(fromByteCount: Int64(attachment.byteCount), countStyle: .file)
+        self.isImage = preview?.kind == .image
+        self.isAudio = preview?.kind == .audio
+        self.isVideo = preview?.kind == .video
     }
 }
 
@@ -524,7 +565,7 @@ struct BoardSettingsPageContext: Encodable {
     let isArchived: Bool
     let ownerName: String
     let ownerEmail: String
-    let ownerInitials: String
+    let ownerAvatar: AvatarContext
     let views: [BoardSettingsViewContext]
     let members: [BoardMemberContext]
     let templates: [TemplateContext]
@@ -552,7 +593,7 @@ struct BoardSettingsPageContext: Encodable {
         self.isArchived = board.isArchived
         self.ownerName = owner.name
         self.ownerEmail = owner.email
-        self.ownerInitials = makeInitials(for: owner.name)
+        self.ownerAvatar = AvatarContext(user: owner)
         self.views = try views.map(BoardSettingsViewContext.init)
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
@@ -597,14 +638,14 @@ struct BoardMemberContext: Encodable {
     let name: String
     let email: String
     let role: String
-    let initials: String
+    let avatar: AvatarContext
 
     init(member: BoardMember) throws {
         self.id = try member.requireID()
         self.name = member.user.name
         self.email = member.user.email
         self.role = member.role.rawValue.capitalized
-        self.initials = makeInitials(for: member.user.name)
+        self.avatar = AvatarContext(user: member.user)
     }
 }
 

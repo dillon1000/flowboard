@@ -1,16 +1,30 @@
         #if(isBoardSettings):
-          <div class="page narrow">
+          <div class="page">
             <header class="page-header">
               <div class="page-title">
-                <h1>#(boardSettings.name) settings</h1>
+                <a class="page-eyebrow" href="#(boardSettings.firstViewHref)">
+                  <i data-lucide="chevron-left"></i>#(boardSettings.name)
+                </a>
+                <h1>Board settings</h1>
                 <p>Configure views, fields, templates, sharing, and data.</p>
               </div>
-              <a class="button" href="#(boardSettings.firstViewHref)">Back to board</a>
             </header>
 
-            <section class="section">
+            <div class="settings-grid">
+              <nav class="settings-menu" aria-label="Board settings sections">
+                <a class="nav-link" href="#general"><i data-lucide="settings"></i><span>General</span></a>
+                <a class="nav-link" href="#views"><i data-lucide="columns-3"></i><span>Views</span></a>
+                <a class="nav-link" href="#fields"><i data-lucide="tag"></i><span>Custom fields</span></a>
+                <a class="nav-link" href="#members"><i data-lucide="users"></i><span>Members</span></a>
+                <a class="nav-link" href="#templates"><i data-lucide="copy"></i><span>Templates</span></a>
+                <a class="nav-link" href="#data"><i data-lucide="download"></i><span>Data</span></a>
+                <a class="nav-link" href="#danger"><i data-lucide="archive"></i><span>Board actions</span></a>
+              </nav>
+
+              <div class="settings-content">
+            <section class="section" id="general">
               <div class="section-heading"><h2>General</h2></div>
-              <form class="panel dialog-body" method="post" action="/app/boards/#(boardSettings.id)/update">
+              <form class="panel panel-form" method="post" action="/app/boards/#(boardSettings.id)/update">
                 <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                 <div class="field">
                   <label for="settings-board-name">Name</label>
@@ -24,7 +38,7 @@
               </form>
             </section>
 
-            <section class="section">
+            <section class="section" id="views">
               <div class="section-heading"><div><h2>Views</h2><p>Saved layouts can keep their own filters and sorting.</p></div></div>
               <div class="panel">
                 #for(view in boardSettings.views):
@@ -124,7 +138,7 @@
               </div>
             </section>
 
-            <section class="section">
+            <section class="section" id="fields">
               <div class="section-heading"><div><h2>Custom fields</h2><p>Add typed fields to every task on this board.</p></div></div>
               <div class="panel">
                 #for(property in boardSettings.properties):
@@ -158,17 +172,29 @@
               </div>
             </section>
 
-            <section class="section">
+            <section class="section" id="members">
               <div class="section-heading"><div><h2>Members</h2><p>Viewer, Commenter, Editor, and Admin roles control access.</p></div></div>
               <div class="panel">
                 <div class="panel-row">
-                  <span class="avatar">#(boardSettings.ownerInitials)</span>
+                  <span class="avatar">
+                    #if(boardSettings.ownerAvatar.hasProfilePicture):
+                      <img src="#(boardSettings.ownerAvatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                    #else:
+                      #(boardSettings.ownerAvatar.initials)
+                    #endif
+                  </span>
                   <span class="panel-row-main"><strong>#(boardSettings.ownerName)</strong><span>#(boardSettings.ownerEmail)</span></span>
                   <span class="badge">Owner</span>
                 </div>
                 #for(member in boardSettings.members):
                   <div class="panel-row">
-                    <span class="avatar">#(member.initials)</span>
+                    <span class="avatar">
+                      #if(member.avatar.hasProfilePicture):
+                        <img src="#(member.avatar.profilePictureURL)" alt="" referrerpolicy="no-referrer" />
+                      #else:
+                        #(member.avatar.initials)
+                      #endif
+                    </span>
                     <span class="panel-row-main"><strong>#(member.name)</strong><span>#(member.email)</span></span>
                     <span class="badge">#(member.role)</span>
                     <form method="post" action="/app/boards/#(boardSettings.id)/members/#(member.id)/remove">
@@ -197,7 +223,7 @@
               </div>
             </section>
 
-            <section class="section">
+            <section class="section" id="templates">
               <div class="section-heading"><div><h2>Task templates</h2><p>Reuse common task structure.</p></div></div>
               <div class="panel">
                 #for(template in boardSettings.templates):
@@ -228,7 +254,7 @@
               </div>
             </section>
 
-            <section class="section">
+            <section class="section" id="data">
               <div class="section-heading"><h2>Data</h2></div>
               <div class="panel">
                 <div class="panel-row">
@@ -244,7 +270,7 @@
               </div>
             </section>
 
-            <section class="section">
+            <section class="section" id="danger">
               <div class="section-heading"><h2>Board actions</h2></div>
               <div class="panel danger-zone">
                 <div class="panel-row">
@@ -292,5 +318,7 @@
                 #endif
               </div>
             </section>
+              </div>
+            </div>
           </div>
         #endif

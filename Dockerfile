@@ -9,7 +9,7 @@ RUN corepack enable \
 WORKDIR /workspace/frontend
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 COPY frontend/ ./
@@ -28,7 +28,7 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
 WORKDIR /build
 
 COPY backend/Package.* ./
-RUN --mount=type=cache,target=/root/.cache/org.swift.swiftpm \
+RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swiftpm,target=/root/.cache/org.swift.swiftpm \
     swift package resolve --force-resolved-versions
 
 COPY backend/Sources ./Sources
@@ -36,7 +36,7 @@ COPY backend/Tests ./Tests
 COPY backend/Resources ./Resources
 COPY --from=frontend /workspace/backend/Public ./Public
 
-RUN --mount=type=cache,target=/build/.build \
+RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swift-build,target=/build/.build \
     swift build -c release \
         --product App \
         --static-swift-stdlib \
@@ -56,6 +56,7 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q dist-upgrade -y \
     && apt-get -q install -y \
         ca-certificates \
+        gosu \
         libcurl4 \
         libjemalloc2 \
         libsqlite3-0 \
@@ -70,8 +71,8 @@ WORKDIR /app
 COPY --from=build --chown=vapor:vapor /staging /app
 COPY --chown=vapor:vapor docker-entrypoint.sh /app/docker-entrypoint.sh
 
-# SQLite and attachments share one mount so a container replacement keeps all
-# user data. The symlink matches the upload path used by the Vapor application.
+# SQLite and legacy attachments share one mount. New production attachments use
+# Railway object storage, while the symlink preserves old files and local use.
 RUN mkdir -p /data/uploads \
     && chown -R vapor:vapor /data \
     && ln -s /data/uploads /app/Uploads \
@@ -81,9 +82,8 @@ RUN mkdir -p /data/uploads \
 ENV DATABASE_PATH=/data/flowboard.sqlite
 ENV SWIFT_BACKTRACE=enable=yes,sanitize=yes,threads=all,images=all,interactive=no,swift-backtrace=./swift-backtrace-static
 
-VOLUME ["/data"]
 EXPOSE 8080
 
-USER vapor:vapor
-
+# The entrypoint starts as root because Railway mounts new volumes as root.
+# It fixes only the writable data paths and then uses gosu to run App as vapor.
 ENTRYPOINT ["./docker-entrypoint.sh"]
