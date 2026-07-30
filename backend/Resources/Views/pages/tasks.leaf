@@ -2,14 +2,21 @@
           <div class="page">
             <header class="page-header">
               <div class="page-title">
-                <h1>#if(tasks.query):Search results#else:All tasks#endif</h1>
-                <p>#if(tasks.query):Tasks matching “#(tasks.query)”.#else:Every active task you can access.#endif</p>
+                <h1>#if(isArchivedTasks):Archived tasks#else:#if(tasks.query):Search results#else:All tasks#endif#endif</h1>
+                <p>#if(isArchivedTasks):Restore tasks that you want to return to active views.#else:#if(tasks.query):Tasks matching “#(tasks.query)”.#else:Every active task you can access.#endif#endif</p>
+              </div>
+              <div class="page-actions">
+                #if(isArchivedTasks):
+                  <a class="button" href="/app/tasks"><i data-lucide="check-square"></i>All tasks</a>
+                #else:
+                  <a class="button" href="/app/tasks/archived"><i data-lucide="archive"></i>Archived tasks</a>
+                #endif
               </div>
             </header>
             #if(tasks.hasTasks):
               <div class="table-wrap">
                 <table class="data-table">
-                  <thead><tr><th>Task</th><th>Board</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Due</th></tr></thead>
+                  <thead><tr><th>Task</th><th>Board</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Due</th>#if(isArchivedTasks):<th>Action</th>#endif</tr></thead>
                   <tbody>
                     #for(task in tasks.tasks):
                       <tr
@@ -29,6 +36,18 @@
                         <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
                         <td#if(!task.hasAssignee): class="muted"#endif>#(task.assigneeName)</td>
                         <td#if(!task.hasDueDate): class="muted"#endif>#(task.dueDisplay)</td>
+                        #if(isArchivedTasks):
+                          <td>
+                            #if(task.canEdit):
+                              <form method="post" action="/app/tasks/#(task.id)/archive">
+                                <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                                <button class="button small" type="submit">Restore</button>
+                              </form>
+                            #else:
+                              <span class="muted">View only</span>
+                            #endif
+                          </td>
+                        #endif
                       </tr>
                     #endfor
                   </tbody>
@@ -37,9 +56,9 @@
             #else:
               <div class="empty-state">
                 <div>
-                  <span class="empty-state-icon" aria-hidden="true"><i data-lucide="search"></i></span>
-                  <h2>No tasks found</h2>
-                  <p>Try a different search, or create a task from one of your boards.</p>
+                  <span class="empty-state-icon" aria-hidden="true"><i data-lucide="#if(isArchivedTasks):archive#else:search#endif"></i></span>
+                  <h2>#if(isArchivedTasks):No archived tasks#else:No tasks found#endif</h2>
+                  <p>#if(isArchivedTasks):Tasks that you archive will appear here.#else:Try a different search, or create a task from one of your boards.#endif</p>
                 </div>
               </div>
             #endif

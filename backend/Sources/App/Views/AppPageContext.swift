@@ -4,6 +4,7 @@ enum AppPageKind {
     case overview
     case board
     case tasks
+    case archivedTasks
     case taskDetail
     case settings
     case boardSettings
@@ -16,6 +17,8 @@ struct AppPageContext: Encodable {
     let isOverview: Bool
     let isBoard: Bool
     let isTasks: Bool
+    let isActiveTasks: Bool
+    let isArchivedTasks: Bool
     let isTaskDetail: Bool
     let isSettings: Bool
     let isBoardSettings: Bool
@@ -42,7 +45,9 @@ struct AppPageContext: Encodable {
         self.documentTitle = "\(pageTitle) · Flowboard"
         self.isOverview = pageKind == .overview
         self.isBoard = pageKind == .board
-        self.isTasks = pageKind == .tasks
+        self.isTasks = pageKind == .tasks || pageKind == .archivedTasks
+        self.isActiveTasks = pageKind == .tasks
+        self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
         self.isSettings = pageKind == .settings
         self.isBoardSettings = pageKind == .boardSettings
@@ -339,8 +344,9 @@ struct TaskCardContext: Encodable {
     let attachmentCount: Int
     let updatedDisplay: String
     let isArchived: Bool
+    let canEdit: Bool
 
-    init(task: Task, assignee: User?) throws {
+    init(task: Task, assignee: User?, canEdit: Bool = false) throws {
         self.id = try task.requireID()
         self.boardID = task.$board.id
         self.boardName = task.$board.value?.name ?? ""
@@ -382,6 +388,7 @@ struct TaskCardContext: Encodable {
         self.attachmentCount = task.$attachments.value?.count ?? 0
         self.updatedDisplay = task.updatedAt.map(displayDate) ?? "Recently"
         self.isArchived = task.isArchived
+        self.canEdit = canEdit
     }
 }
 

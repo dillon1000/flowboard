@@ -7,6 +7,7 @@ struct AppPageController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         routes.get("app", use: overview)
         routes.get("app", "tasks", use: allTasks)
+        routes.get("app", "tasks", "archived", use: archivedTasks)
         routes.get("app", "settings", use: settings)
         routes.get("app", "boards", ":boardID", use: boardDefault)
         routes.get("app", "boards", ":boardID", "views", ":viewID", use: boardView)
@@ -60,6 +61,32 @@ struct AppPageController: RouteCollection {
             pageTitle: queryText.isEmpty ? "All tasks" : "Search",
             pageKind: .tasks,
             tasks: TasksPageContext(query: queryText, tasks: try await makeTaskContexts(tasks, on: req.db)),
+            for: req
+        )
+    }
+
+    /// Lists archived tasks separately from active search results so users can
+    /// find and restore work after it leaves all active board views.
+    func archivedTasks(req: Request) async throws -> View {
+        let common = try await commonContext(for: req)
+        let tasks = try await taskQuery(
+            boardIDs: common.boards.map(\.id),
+            on: req.db,
+            isArchived: true
+        )
+        .sort(\.$updatedAt, .descending)
+        .all()
+        let taskContexts = try await makeTaskContexts(
+            tasks,
+            on: req.db,
+            editPermissionUserID: req.auth.require(User.self).requireID()
+        )
+
+        return try await render(
+            common: common,
+            pageTitle: "Archived tasks",
+            pageKind: .archivedTasks,
+            tasks: TasksPageContext(query: "", tasks: taskContexts),
             for: req
         )
     }
@@ -338,11 +365,12 @@ struct AppPageController: RouteCollection {
 
     private func taskQuery(
         boardIDs: [UUID],
-        on database: any Database
+        on database: any Database,
+        isArchived: Bool = false
     ) -> QueryBuilder<Task> {
         Task.query(on: database)
             .filter(\.$board.$id ~~ boardIDs)
-            .filter(\.$isArchived == false)
+            .filter(\.$isArchived == isArchived)
             .with(\.$board)
             .with(\.$comments)
             .with(\.$checklistItems)
@@ -351,16 +379,35 @@ struct AppPageController: RouteCollection {
 
     private func makeTaskContexts(
         _ tasks: [Task],
-        on database: any Database
+        on database: any Database,
+        editPermissionUserID: UUID? = nil
     ) async throws -> [TaskCardContext] {
         var result: [TaskCardContext] = []
+        var editPermissions: [UUID: Bool] = [:]
         for task in tasks {
             let assignee: User? = if let assigneeID = task.$assignee.id {
                 try await User.find(assigneeID, on: database)
             } else {
                 nil
             }
-            result.append(try TaskCardContext(task: task, assignee: assignee))
+            let canEdit = if let userID = editPermissionUserID {
+                if let cachedPermission = editPermissions[task.$board.id] {
+                    cachedPermission
+                } else {
+                    (try? await BoardAccessService.require(
+                        boardID: task.$board.id,
+                        userID: userID,
+                        permission: .edit,
+                        on: database
+                    )) != nil
+                }
+            } else {
+                false
+            }
+            editPermissions[task.$board.id] = canEdit
+            result.append(
+                try TaskCardContext(task: task, assignee: assignee, canEdit: canEdit)
+            )
         }
         return result
     }

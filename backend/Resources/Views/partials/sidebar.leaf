@@ -19,8 +19,11 @@
             <a class="nav-link#if(isOverview): active#endif" href="/app"#if(isOverview): aria-current="page"#endif title="Overview">
               <i data-lucide="layout-dashboard"></i><span>Overview</span>
             </a>
-            <a class="nav-link#if(isTasks): active#endif" href="/app/tasks"#if(isTasks): aria-current="page"#endif title="All tasks">
+            <a class="nav-link#if(isActiveTasks): active#endif" href="/app/tasks"#if(isActiveTasks): aria-current="page"#endif title="All tasks">
               <i data-lucide="check-square"></i><span>All tasks</span>
+            </a>
+            <a class="nav-link#if(isArchivedTasks): active#endif" href="/app/tasks/archived"#if(isArchivedTasks): aria-current="page"#endif title="Archived tasks">
+              <i data-lucide="archive"></i><span>Archived tasks</span>
             </a>
           </nav>
         </div>

@@ -149,6 +149,73 @@ struct AppTests {
         }
     }
 
+    @Test("An archived task can be found and restored")
+    func archivedTaskRecovery() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let task = Task(
+                boardID: session.boardID,
+                title: "Recover the archived task",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+            let taskID = try task.requireID()
+
+            let detailPage = try await app.testing().sendRequest(
+                .GET,
+                "app/tasks/\(taskID)",
+                headers: ["Cookie": session.cookie]
+            )
+            let csrfMarker = #"name="csrf-token" content=""#
+            let csrfStart = try #require(detailPage.body.string.range(of: csrfMarker)?.upperBound)
+            let csrfEnd = try #require(
+                detailPage.body.string[csrfStart...].firstIndex(of: "\"")
+            )
+            let csrfToken = String(detailPage.body.string[csrfStart..<csrfEnd])
+
+            let archived = try await app.testing().sendRequest(
+                .POST,
+                "app/tasks/\(taskID)/archive",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ]
+            )
+            #expect(archived.status == .seeOther)
+            #expect(try #require(try await Task.find(taskID, on: app.db)).isArchived)
+
+            let activeTasks = try await app.testing().sendRequest(
+                .GET,
+                "app/tasks",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(!activeTasks.body.string.contains("Recover the archived task"))
+
+            let archivedTasks = try await app.testing().sendRequest(
+                .GET,
+                "app/tasks/archived",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(archivedTasks.status == .ok)
+            expectContains(archivedTasks.body.string, "Archived tasks")
+            expectContains(archivedTasks.body.string, "Recover the archived task")
+            expectContains(archivedTasks.body.string, ">Restore</button>")
+
+            let restored = try await app.testing().sendRequest(
+                .POST,
+                "app/tasks/\(taskID)/archive",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ]
+            )
+            #expect(restored.status == .seeOther)
+            #expect(restored.headers.first(name: .location) == "/app/tasks/\(taskID)")
+            #expect(!(try #require(try await Task.find(taskID, on: app.db))).isArchived)
+        }
+    }
+
     @Test("OAuth authorization creates a session, provider link, and workspace")
     func oauthAuthorizationCreatesWorkspace() async throws {
         try await withApp(configure: configure) { app in
