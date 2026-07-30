@@ -71,10 +71,11 @@
 
   <div class="column-rule"></div>
 
-  <div class:compact class="task-stack">
+  <div class:compact class="task-stack" role="list">
     {#each tasks as task, index (task.id)}
       <div
         class="card-drop-target"
+        role="listitem"
         on:dragover={(event) => event.preventDefault()}
         on:drop={(event) => dropAt(event, index)}
       >

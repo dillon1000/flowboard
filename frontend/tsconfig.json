@@ -7,7 +7,6 @@
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "esModuleInterop": true,
