@@ -12,17 +12,27 @@ struct TaskController: RouteCollection {
     }
 
     func index(req: Request) async throws -> Page<TaskResponse> {
-        guard let boardID: UUID = req.query["boardID"] else {
-            throw Abort(.badRequest, reason: "The boardID query value is required.")
-        }
+        let userID = try req.auth.require(User.self).requireID()
+        let boards = try await Board.query(on: req.db)
+            .filter(\.$owner.$id == userID)
+            .all()
+        let boardIDs = try boards.map { try $0.requireID() }
 
-        var query = Task.query(on: req.db).filter(\.$board.$id == boardID)
+        var query = Task.query(on: req.db)
+            .filter(\.$board.$id ~~ boardIDs)
+            .with(\.$board)
+        if let boardID: UUID = req.query["boardID"] {
+            guard boardIDs.contains(boardID) else {
+                throw Abort(.notFound, reason: "The board does not exist.")
+            }
+            query = query.filter(\.$board.$id == boardID)
+        }
         if let status: TaskStatus = req.query["status"] {
             query = query.filter(\.$status == status)
         }
 
         let page = try await query.sort(\.$position, .ascending).paginate(for: req)
-        return try page.map(TaskResponse.init)
+        return try page.map { try TaskResponse(task: $0, boardName: $0.board.name) }
     }
 
     /// Creates a task at the end of its requested column. The server owns position
@@ -31,7 +41,12 @@ struct TaskController: RouteCollection {
         try CreateTaskRequest.validate(content: req)
         let input = try req.content.decode(CreateTaskRequest.self)
 
-        guard try await Board.find(input.boardID, on: req.db) != nil else {
+        let userID = try req.auth.require(User.self).requireID()
+        guard try await Board.query(on: req.db)
+            .filter(\.$id == input.boardID)
+            .filter(\.$owner.$id == userID)
+            .first() != nil
+        else {
             throw Abort(.notFound, reason: "The board does not exist.")
         }
 
@@ -123,9 +138,14 @@ struct TaskController: RouteCollection {
     }
 
     private func findTask(_ req: Request) async throws -> Task {
+        let userID = try req.auth.require(User.self).requireID()
         guard
             let taskID = req.parameters.get("taskID", as: UUID.self),
-            let task = try await Task.find(taskID, on: req.db)
+            let task = try await Task.find(taskID, on: req.db),
+            try await Board.query(on: req.db)
+                .filter(\.$id == task.$board.id)
+                .filter(\.$owner.$id == userID)
+                .first() != nil
         else {
             throw Abort(.notFound, reason: "The task does not exist.")
         }

@@ -90,6 +90,7 @@ final class Task: Model, @unchecked Sendable {
 struct TaskResponse: Content {
     let id: UUID
     let boardID: UUID
+    let boardName: String?
     let title: String
     let description: String?
     let status: TaskStatus
@@ -100,9 +101,10 @@ struct TaskResponse: Content {
     let createdAt: Date?
     let updatedAt: Date?
 
-    init(task: Task) throws {
+    init(task: Task, boardName: String? = nil) throws {
         self.id = try task.requireID()
         self.boardID = task.$board.id
+        self.boardName = boardName
         self.title = task.title
         self.description = task.description
         self.status = task.status

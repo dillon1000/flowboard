@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Flowboard</title>
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="stylesheet" href="/assets/index.css" />
+  </head>
+  <body>
+    <div
+      id="app"
+      data-user-name="#(userName)"
+      data-user-email="#(userEmail)"
+      data-user-initials="#(userInitials)"
+    ></div>
+    <script type="module" src="/assets/app.js"></script>
+  </body>
+</html>

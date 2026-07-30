@@ -7,9 +7,14 @@ func routes(_ app: Application) throws {
         HealthResponse(status: "ok", service: "flowboard-server")
     }
 
+    try app.register(collection: WebController())
+
     let api = app.grouped("api", "v1")
-    try api.register(collection: BoardController())
-    try api.register(collection: TaskController())
+    try api.register(collection: AuthController())
+
+    let protectedAPI = api.grouped(User.guardMiddleware())
+    try protectedAPI.register(collection: BoardController())
+    try protectedAPI.register(collection: TaskController())
 }
 
 private struct HealthResponse: Content {
