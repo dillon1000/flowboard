@@ -1,13 +1,102 @@
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
+import 'flatpickr/dist/flatpickr.css';
 import './app.css';
-import { mount } from 'svelte';
-import App from './App.svelte';
+import '@hotwired/turbo';
+import { Application } from '@hotwired/stimulus';
+import {
+  Archive,
+  ArrowDownUp,
+  CalendarDays,
+  Check,
+  CheckSquare,
+  ChevronDown,
+  Circle,
+  Columns3,
+  Copy,
+  Download,
+  Filter,
+  Folder,
+  GalleryHorizontalEnd,
+  House,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  Menu,
+  MessageSquare,
+  Moon,
+  MoreHorizontal,
+  Paperclip,
+  Plus,
+  Search,
+  Settings,
+  Sun,
+  Table2,
+  Tag,
+  Upload,
+  User,
+  Users,
+  X,
+  createIcons,
+} from 'lucide';
+import {
+  BoardController,
+  DatePickerController,
+  DialogController,
+  MenuController,
+  SidebarController,
+  ThemeController,
+  ToastController,
+} from './controllers';
 
-const target = document.getElementById('app');
+const application = Application.start();
+application.register('board', BoardController);
+application.register('date-picker', DatePickerController);
+application.register('dialog', DialogController);
+application.register('menu', MenuController);
+application.register('sidebar', SidebarController);
+application.register('theme', ThemeController);
+application.register('toast', ToastController);
 
-if (!target) {
-  throw new Error('The application root was not found.');
+function renderIcons(): void {
+  createIcons({
+    icons: {
+      Archive,
+      ArrowDownUp,
+      CalendarDays,
+      Check,
+      CheckSquare,
+      ChevronDown,
+      Circle,
+      Columns3,
+      Copy,
+      Download,
+      Filter,
+      Folder,
+      GalleryHorizontalEnd,
+      House,
+      LayoutDashboard,
+      ListChecks,
+      LogOut,
+      Menu,
+      MessageSquare,
+      Moon,
+      MoreHorizontal,
+      Paperclip,
+      Plus,
+      Search,
+      Settings,
+      Sun,
+      Table2,
+      Tag,
+      Upload,
+      User,
+      Users,
+      X,
+    },
+  });
 }
 
-mount(App, { target });
+document.addEventListener('turbo:load', renderIcons);
+document.addEventListener('turbo:frame-load', renderIcons);
+renderIcons();
