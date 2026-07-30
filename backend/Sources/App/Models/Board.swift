@@ -124,10 +124,11 @@ struct CreateBoardRequest: Content, Validatable {
         validations.add("name", as: String.self, is: .count(2...80))
         validations.add(
             "slug",
-            as: String?.self,
-            is: .nil || (.count(2...48) && .characterSet(.alphanumerics + CharacterSet(charactersIn: "-")))
+            as: String.self,
+            is: .count(2...48) && .characterSet(.alphanumerics + CharacterSet(charactersIn: "-")),
+            required: false
         )
-        validations.add("description", as: String?.self, is: .nil || .count(...500))
+        validations.add("description", as: String.self, is: .count(...500), required: false)
     }
 }
 
@@ -137,7 +138,7 @@ struct UpdateBoardRequest: Content, Validatable {
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))
-        validations.add("description", as: String?.self, is: .nil || .count(...500))
+        validations.add("description", as: String.self, is: .count(...500), required: false)
     }
 }
 

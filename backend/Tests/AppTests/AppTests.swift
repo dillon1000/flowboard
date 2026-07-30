@@ -29,12 +29,16 @@ struct AppTests {
             let boards = try await app.testing().sendRequest(
                 .GET,
                 "api/v1/boards",
-                headers: [.cookie: session.cookie]
+                headers: ["Cookie": session.cookie]
             )
 
             #expect(boards.status == .ok)
             expectContains(boards.body.string, "\"name\":\"My board\"")
             expectContains(boards.body.string, session.boardID.uuidString)
+            let viewCount = try await BoardView.query(on: app.db)
+                .filter(\.$board.$id == session.boardID)
+                .count()
+            #expect(viewCount == 4)
         }
     }
 
@@ -55,7 +59,7 @@ struct AppTests {
             let created = try await app.testing().sendRequest(
                 .POST,
                 "api/v1/tasks",
-                headers: [.cookie: session.cookie],
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
                     try request.content.encode(input)
                 }
@@ -66,7 +70,7 @@ struct AppTests {
             let listed = try await app.testing().sendRequest(
                 .GET,
                 "api/v1/tasks?page=1&per=25",
-                headers: [.cookie: session.cookie]
+                headers: ["Cookie": session.cookie]
             )
             #expect(listed.status == .ok)
             expectContains(listed.body.string, "\"boardName\":\"My board\"")

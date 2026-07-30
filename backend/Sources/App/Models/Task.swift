@@ -193,8 +193,8 @@ struct CreateTaskRequest: Content, Validatable {
 
     static func validations(_ validations: inout Validations) {
         validations.add("title", as: String.self, is: .count(1...120))
-        validations.add("description", as: String?.self, is: .nil || .count(...2_000))
-        validations.add("labels", as: [String]?.self, is: .nil || .count(...6))
+        validations.add("description", as: String.self, is: .count(...2_000), required: false)
+        validations.add("labels", as: [String].self, is: .count(...6), required: false)
     }
 }
 
@@ -233,7 +233,7 @@ struct UpdateTaskRequest: Content, Validatable {
 
     static func validations(_ validations: inout Validations) {
         validations.add("title", as: String.self, is: .count(1...120))
-        validations.add("description", as: String?.self, is: .nil || .count(...2_000))
+        validations.add("description", as: String.self, is: .count(...2_000), required: false)
         validations.add("labels", as: [String].self, is: .count(...6))
     }
 }
