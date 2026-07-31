@@ -1,3 +1,3 @@
     <!-- Bundle names stay stable, so this release token must change when UI assets change. -->
-    <link rel="stylesheet" href="/assets/index.css?v=20260730-promote" />
-    <script type="module" src="/assets/app.js?v=20260730-promote"></script>
+    <link rel="stylesheet" href="/assets/index.css?v=20260731-mobx" />
+    <script type="module" src="/assets/app.js?v=20260731-mobx"></script>
