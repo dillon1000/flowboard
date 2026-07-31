@@ -97,6 +97,7 @@ extension WorkspaceActionController {
             try await access.board.update(on: database)
             for exported in payload.tasks {
                 let task = Task(
+                    publicID: try await Task.uniquePublicID(on: database),
                     boardID: boardID,
                     title: String(exported.title.prefix(120)),
                     description: exported.description,

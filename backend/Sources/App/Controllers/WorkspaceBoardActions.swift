@@ -89,6 +89,7 @@ extension WorkspaceActionController {
             }
             for source in tasks {
                 let task = Task(
+                    publicID: try await Task.uniquePublicID(on: database),
                     boardID: boardID,
                     title: source.title,
                     description: source.description,
@@ -404,6 +405,7 @@ extension WorkspaceActionController {
             .filter(\.$statusValue == template.status.rawValue)
             .count()
         let task = Task(
+            publicID: try await Task.uniquePublicID(on: req.db),
             boardID: boardID,
             title: template.title,
             description: template.description,
@@ -414,7 +416,7 @@ extension WorkspaceActionController {
             creatorID: userID
         )
         try await task.create(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     func setDefaultTemplate(req: Request) async throws -> Response {

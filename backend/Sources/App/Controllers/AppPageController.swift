@@ -221,9 +221,12 @@ struct AppPageController: RouteCollection {
         )
     }
 
-    func taskDetail(req: Request) async throws -> View {
-        let common = try await commonContext(for: req)
+    func taskDetail(req: Request) async throws -> Response {
         let task = try await requiredTask(for: req, permission: .view)
+        guard req.url.path == task.browserPath else {
+            return req.redirect(to: task.browserPath, redirectType: .permanent)
+        }
+        let common = try await commonContext(for: req)
         let boardID = task.$board.id
         let access = try await BoardAccessService.require(
             boardID: boardID,
@@ -265,12 +268,13 @@ struct AppPageController: RouteCollection {
             followers: followers,
             currentUserID: req.auth.require(User.self).requireID()
         )
-        return try await render(
+        let view = try await render(
             common: common,
             pageTitle: task.title,
             pageKind: .taskDetail,
             taskDetail: context,
             for: req
         )
+        return try await view.encodeResponse(for: req)
     }
 }

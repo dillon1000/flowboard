@@ -21,6 +21,7 @@ struct SeedWorkspace: AsyncMigration {
         let tasks = [
             Task(
                 id: taskIDs[0],
+                publicID: "seed01",
                 boardID: Self.boardID,
                 title: "Map the first-run experience",
                 description: "Reduce the path from empty account to the first useful board.",
@@ -31,6 +32,7 @@ struct SeedWorkspace: AsyncMigration {
             ),
             Task(
                 id: taskIDs[1],
+                publicID: "seed02",
                 boardID: Self.boardID,
                 title: "Write the launch checklist",
                 status: .backlog,
@@ -40,6 +42,7 @@ struct SeedWorkspace: AsyncMigration {
             ),
             Task(
                 id: taskIDs[2],
+                publicID: "seed03",
                 boardID: Self.boardID,
                 title: "Connect usage events",
                 description: "Track board created, task moved, and task completed.",
@@ -50,6 +53,7 @@ struct SeedWorkspace: AsyncMigration {
             ),
             Task(
                 id: taskIDs[3],
+                publicID: "seed04",
                 boardID: Self.boardID,
                 title: "Polish command menu states",
                 status: .inProgress,
@@ -59,6 +63,7 @@ struct SeedWorkspace: AsyncMigration {
             ),
             Task(
                 id: taskIDs[4],
+                publicID: "seed05",
                 boardID: Self.boardID,
                 title: "Review billing copy",
                 status: .review,
@@ -68,6 +73,7 @@ struct SeedWorkspace: AsyncMigration {
             ),
             Task(
                 id: taskIDs[5],
+                publicID: "seed06",
                 boardID: Self.boardID,
                 title: "Set the release branch rules",
                 status: .done,

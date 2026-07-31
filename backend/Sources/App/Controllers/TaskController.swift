@@ -55,6 +55,7 @@ struct TaskController: RouteCollection {
             .filter(\.$statusValue == status.rawValue)
             .count()
         let task = Task(
+            publicID: try await Task.uniquePublicID(on: req.db),
             boardID: input.boardID,
             title: input.title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: input.description,

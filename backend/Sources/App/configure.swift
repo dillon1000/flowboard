@@ -80,6 +80,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddBoardOwner())
     app.migrations.add(AddBoardTaskDefinitions())
     app.migrations.add(CreateTask())
+    app.migrations.add(AddTaskPublicID())
     app.migrations.add(ExpandWorkspace())
     app.migrations.add(CreateWorkspaceFeatures())
     app.migrations.add(BackfillBoardViews())

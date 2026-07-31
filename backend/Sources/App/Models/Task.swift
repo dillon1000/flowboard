@@ -52,8 +52,16 @@ struct TaskPriority: Codable, Content, Hashable, Sendable {
 final class Task: Model, @unchecked Sendable {
     static let schema = "tasks"
 
+    /// Six base-36 characters give 2.1 billion case-insensitive keys. The unique
+    /// database index is the final guard against a random collision.
+    private static let publicIDCharacters = Array("abcdefghijklmnopqrstuvwxyz0123456789")
+    private static let publicIDLength = 6
+
     @ID(key: .id)
     var id: UUID?
+
+    @Field(key: "public_id")
+    var publicID: String
 
     @Parent(key: "board_id")
     var board: Board
@@ -130,6 +138,7 @@ final class Task: Model, @unchecked Sendable {
 
     init(
         id: UUID? = nil,
+        publicID: String? = nil,
         boardID: UUID,
         title: String,
         description: String? = nil,
@@ -142,6 +151,7 @@ final class Task: Model, @unchecked Sendable {
         creatorID: UUID? = nil
     ) {
         self.id = id
+        self.publicID = publicID ?? Self.randomPublicID()
         self.$board.id = boardID
         self.title = title
         self.description = description
@@ -154,6 +164,58 @@ final class Task: Model, @unchecked Sendable {
         self.$creator.id = creatorID
         self.properties = [:]
         self.isArchived = false
+    }
+
+    /// Returns a URL-safe random key. Call uniquePublicID before normal task
+    /// creation so a collision is retried before the database insert.
+    static func randomPublicID() -> String {
+        String((0..<publicIDLength).map { _ in publicIDCharacters.randomElement()! })
+    }
+
+    /// Finds an unused key for a new task. The unique index still protects two
+    /// concurrent requests that happen to select the same candidate.
+    static func uniquePublicID(on database: any Database) async throws -> String {
+        for _ in 0..<20 {
+            let candidate = randomPublicID()
+            let exists = try await Task.query(on: database)
+                .filter(\.$publicID == candidate)
+                .first() != nil
+            if !exists {
+                return candidate
+            }
+        }
+        throw Abort(.internalServerError, reason: "A public task ID could not be generated.")
+    }
+
+    /// Extracts the case-insensitive key from either a full title slug or the key
+    /// alone. Invalid keys stop before a database query is made.
+    static func publicID(fromRouteSegment segment: String) -> String? {
+        guard let suffix = segment.split(separator: "-").last else {
+            return nil
+        }
+        let candidate = suffix.lowercased()
+        guard
+            candidate.count == publicIDLength,
+            candidate.allSatisfy({ publicIDCharacters.contains($0) })
+        else {
+            return nil
+        }
+        return candidate
+    }
+
+    /// Builds the canonical browser path from the current title and stable key.
+    /// Route lookup uses only the final key, so an older title slug keeps working.
+    var browserPath: String {
+        let normalizedTitle = title
+            .folding(
+                options: [.diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        let titleSlug = String((normalizedTitle.isEmpty ? "task" : normalizedTitle).prefix(72))
+        return "/app/tasks/\(titleSlug)-\(publicID.lowercased())"
     }
 }
 

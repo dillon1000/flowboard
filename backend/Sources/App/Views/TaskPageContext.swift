@@ -110,7 +110,7 @@ struct TaskCardContext: Encodable {
         self.id = try task.requireID()
         self.boardID = task.$board.id
         self.boardName = task.$board.value?.name ?? ""
-        self.href = "/app/tasks/\(try task.requireID())"
+        self.href = task.browserPath
         self.title = task.title
         self.description = task.description ?? ""
         self.hasDescription = !(task.description ?? "").isEmpty

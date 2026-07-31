@@ -83,10 +83,19 @@ extension AppPageController {
         for req: Request,
         permission: BoardPermission
     ) async throws -> Task {
-        guard
-            let taskID = req.parameters.get("taskID", as: UUID.self),
-            let task = try await Task.find(taskID, on: req.db)
-        else {
+        guard let routeID = req.parameters.get("taskID") else {
+            throw Abort(.notFound, reason: "The task does not exist.")
+        }
+        let task: Task? = if let taskID = UUID(uuidString: routeID) {
+            try await Task.find(taskID, on: req.db)
+        } else if let publicID = Task.publicID(fromRouteSegment: routeID) {
+            try await Task.query(on: req.db)
+                .filter(\.$publicID == publicID)
+                .first()
+        } else {
+            nil
+        }
+        guard let task else {
             throw Abort(.notFound, reason: "The task does not exist.")
         }
         _ = try await BoardAccessService.require(

@@ -42,7 +42,7 @@ extension WorkspaceActionController {
             try? await deleteStoredAttachment(key: storageName, for: req)
             throw error
         }
-        return req.redirect(to: "/app/tasks/\(taskID)")
+        return req.redirect(to: task.browserPath)
     }
 
     func downloadAttachment(req: Request) async throws -> Response {
@@ -87,7 +87,7 @@ extension WorkspaceActionController {
             }
         }
         try await attachment.delete(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     func updateProfile(req: Request) async throws -> Response {

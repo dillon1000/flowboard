@@ -26,6 +26,7 @@ extension WorkspaceActionController {
             .filter(\.$statusValue == status.rawValue)
             .count()
         let task = Task(
+            publicID: try await Task.uniquePublicID(on: req.db),
             boardID: input.boardID,
             title: title,
             description: clean(input.description),
@@ -38,7 +39,7 @@ extension WorkspaceActionController {
             creatorID: userID
         )
         try await task.create(on: req.db)
-        return req.redirect(to: safeReturn(input.returnTo, fallback: "/app/tasks/\(try task.requireID())"))
+        return req.redirect(to: safeReturn(input.returnTo, fallback: task.browserPath))
     }
 
     func updateTask(req: Request) async throws -> Response {
@@ -78,7 +79,7 @@ extension WorkspaceActionController {
             task.$assignee.id = nil
         }
         try await task.update(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     /// Accepts a status-only browser form, moves the task to the end of the
@@ -103,7 +104,7 @@ extension WorkspaceActionController {
             task.position = (count + 1) * 1_000
             try await task.update(on: req.db)
         }
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     func updateTaskProperties(req: Request) async throws -> Response {
@@ -135,7 +136,7 @@ extension WorkspaceActionController {
         }
         task.properties = values
         try await task.update(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     func toggleTaskArchive(req: Request) async throws -> Response {
@@ -145,7 +146,7 @@ extension WorkspaceActionController {
         return req.redirect(
             to: task.isArchived
                 ? "/app/boards/\(task.$board.id)"
-                : "/app/tasks/\(try task.requireID())"
+                : task.browserPath
         )
     }
 
@@ -178,7 +179,7 @@ extension WorkspaceActionController {
             authorID: req.auth.require(User.self).requireID(),
             body: body
         ).create(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     func deleteComment(req: Request) async throws -> Response {
@@ -199,7 +200,7 @@ extension WorkspaceActionController {
             throw Abort(.forbidden, reason: "You cannot delete this comment.")
         }
         try await comment.delete(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 
     func toggleFollow(req: Request) async throws -> Response {
@@ -215,7 +216,7 @@ extension WorkspaceActionController {
         } else {
             try await TaskFollower(taskID: taskID, userID: userID).create(on: req.db)
         }
-        return req.redirect(to: "/app/tasks/\(taskID)")
+        return req.redirect(to: task.browserPath)
     }
 
     func createChecklistItem(req: Request) async throws -> Response {
@@ -230,7 +231,7 @@ extension WorkspaceActionController {
             .filter(\.$task.$id == taskID)
             .count()
         try await ChecklistItem(taskID: taskID, title: title, position: count).create(on: req.db)
-        return req.redirect(to: "/app/tasks/\(taskID)")
+        return req.redirect(to: task.browserPath)
     }
 
     func toggleChecklistItem(req: Request) async throws -> Response {
@@ -244,6 +245,6 @@ extension WorkspaceActionController {
         _ = try await requireAccess(boardID: task.$board.id, permission: .edit, for: req)
         item.isCompleted.toggle()
         try await item.update(on: req.db)
-        return req.redirect(to: "/app/tasks/\(try task.requireID())")
+        return req.redirect(to: task.browserPath)
     }
 }

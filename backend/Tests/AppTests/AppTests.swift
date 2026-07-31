@@ -125,9 +125,17 @@ struct AppTests {
             let storedTask = try #require(try await Task.find(createdTask.id, on: app.db))
             #expect(storedTask.$creator.id == session.userID)
 
-            let taskPage = try await app.testing().sendRequest(
+            let legacyTaskPage = try await app.testing().sendRequest(
                 .GET,
                 "app/tasks/\(createdTask.id)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(legacyTaskPage.status == .movedPermanently)
+            #expect(legacyTaskPage.headers.first(name: .location) == storedTask.browserPath)
+
+            let taskPage = try await app.testing().sendRequest(
+                .GET,
+                String(storedTask.browserPath.dropFirst()),
                 headers: ["Cookie": session.cookie]
             )
             #expect(taskPage.status == .ok)
@@ -161,7 +169,7 @@ struct AppTests {
                 }
             )
             #expect(promoted.status == .seeOther)
-            #expect(promoted.headers.first(name: .location) == "/app/tasks/\(createdTask.id)")
+            #expect(promoted.headers.first(name: .location) == storedTask.browserPath)
             let promotedTask = try #require(try await Task.find(createdTask.id, on: app.db))
             #expect(promotedTask.status == .done)
 
@@ -190,7 +198,7 @@ struct AppTests {
 
             let detailPage = try await app.testing().sendRequest(
                 .GET,
-                "app/tasks/\(taskID)",
+                String(task.browserPath.dropFirst()),
                 headers: ["Cookie": session.cookie]
             )
             let csrfMarker = #"name="csrf-token" content=""#
@@ -237,8 +245,52 @@ struct AppTests {
                 ]
             )
             #expect(restored.status == .seeOther)
-            #expect(restored.headers.first(name: .location) == "/app/tasks/\(taskID)")
+            #expect(restored.headers.first(name: .location) == task.browserPath)
             #expect(!(try #require(try await Task.find(taskID, on: app.db))).isArchived)
+        }
+    }
+
+    @Test("Task pages use a title slug with a stable case-insensitive key")
+    func taskPagesUseFriendlySlugs() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let task = Task(
+                publicID: "a1b2c3",
+                boardID: session.boardID,
+                title: "Add 2 way Focalboard <--> Thinkspace Sync",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+            let originalPath = "/app/tasks/add-2-way-focalboard-thinkspace-sync-a1b2c3"
+            #expect(task.browserPath == originalPath)
+
+            let canonical = try await app.testing().sendRequest(
+                .GET,
+                String(originalPath.dropFirst()),
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(canonical.status == .ok)
+            expectContains(canonical.body.string, "Add 2 way Focalboard")
+
+            let uppercase = try await app.testing().sendRequest(
+                .GET,
+                "app/tasks/ADD-2-WAY-FOCALBOARD-THINKSPACE-SYNC-A1B2C3",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(uppercase.status == .movedPermanently)
+            #expect(uppercase.headers.first(name: .location) == originalPath)
+
+            task.title = "Finish Thinkspace sync"
+            try await task.update(on: app.db)
+            let renamedPath = "/app/tasks/finish-thinkspace-sync-a1b2c3"
+            let oldSlug = try await app.testing().sendRequest(
+                .GET,
+                String(originalPath.dropFirst()),
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(oldSlug.status == .movedPermanently)
+            #expect(oldSlug.headers.first(name: .location) == renamedPath)
         }
     }
 

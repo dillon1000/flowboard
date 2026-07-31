@@ -53,7 +53,7 @@ struct CustomFieldTests {
             try await task.create(on: app.db)
             let taskPage = try await app.testing().sendRequest(
                 .GET,
-                "app/tasks/\(try task.requireID())",
+                String(task.browserPath.dropFirst()),
                 headers: ["Cookie": session.cookie]
             )
             #expect(taskPage.status == .ok)
