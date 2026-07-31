@@ -244,6 +244,136 @@
   color: var(--ds-red-900);
 }
 
+/* The workflow palette uses semantic colors whose badge contrast is defined
+   for both themes. The hidden form value remains the color token. */
+.color-picker-trigger {
+  min-height: 40px;
+  justify-content: flex-start;
+}
+
+.color-picker-trigger > [data-menu-target='value'] {
+  flex: 1;
+}
+
+.color-picker-swatch {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--color-picker-value);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.color-picker [data-color='gray'] {
+  --color-picker-value: var(--ds-gray-800);
+}
+
+.color-picker [data-color='blue'] {
+  --color-picker-value: var(--ds-blue-800);
+}
+
+.color-picker [data-color='purple'] {
+  --color-picker-value: var(--ds-purple-800);
+}
+
+.color-picker [data-color='green'] {
+  --color-picker-value: var(--ds-green-800);
+}
+
+.color-picker [data-color='amber'] {
+  --color-picker-value: var(--ds-amber-600);
+}
+
+.color-picker [data-color='orange'] {
+  --color-picker-value: var(--ds-amber-800);
+}
+
+.color-picker [data-color='red'] {
+  --color-picker-value: var(--ds-red-800);
+}
+
+.color-picker-panel {
+  width: 224px;
+  max-height: none;
+  padding: 8px;
+  overflow: visible;
+}
+
+.color-picker-title {
+  display: block;
+  padding: 4px 6px 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.color-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.color-picker-option {
+  display: grid;
+  min-height: 40px;
+  grid-template-columns: 16px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease), scale var(--duration) var(--ease-out);
+}
+
+.color-picker-option:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.color-picker-option:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.color-picker-option:active {
+  scale: 0.96;
+}
+
+.color-picker-option[aria-selected='true'] {
+  color: var(--text);
+  background: var(--surface-active);
+  font-weight: 500;
+}
+
+.color-picker-option svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  filter: blur(4px);
+  scale: 0.25;
+  stroke-width: 2.5;
+  transition: opacity 200ms var(--ease-out), filter 200ms var(--ease-out), scale 200ms var(--ease-out);
+}
+
+.color-picker-option[aria-selected='true'] svg {
+  opacity: 1;
+  filter: blur(0);
+  scale: 1;
+}
+
+:root[data-theme='dark'] .color-picker-swatch {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 14%);
+}
+
 .menu-separator {
   height: 1px;
   margin: 6px -6px;
@@ -333,4 +463,3 @@
   background: var(--surface-sunken);
   border-radius: 0 0 var(--radius-large) var(--radius-large);
 }
-

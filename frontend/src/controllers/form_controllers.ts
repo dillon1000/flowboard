@@ -144,7 +144,7 @@ export class FileFieldController extends Controller<HTMLFormElement> {
 }
 
 export class MenuController extends Controller {
-  static targets = ['trigger', 'panel', 'input', 'value', 'option'];
+  static targets = ['trigger', 'panel', 'input', 'value', 'option', 'swatch'];
 
   declare readonly triggerTarget: HTMLButtonElement;
   declare readonly panelTarget: HTMLElement;
@@ -152,6 +152,8 @@ export class MenuController extends Controller {
   declare readonly valueTarget: HTMLElement;
   declare readonly hasValueTarget: boolean;
   declare readonly optionTargets: HTMLElement[];
+  declare readonly swatchTarget: HTMLElement;
+  declare readonly hasSwatchTarget: boolean;
 
   connect(): void {
     this.element.addEventListener('keydown', this.handleKeydown);
@@ -173,6 +175,11 @@ export class MenuController extends Controller {
     this.inputTarget.value = value;
     if (this.hasValueTarget) {
       this.valueTarget.textContent = label;
+    }
+    // Menus with a visual preview expose a swatch target whose color token
+    // follows the submitted input value.
+    if (this.hasSwatchTarget) {
+      this.swatchTarget.dataset.color = value;
     }
     this.optionTargets.forEach((item) => {
       item.setAttribute('aria-selected', String(item === option));

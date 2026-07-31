@@ -154,15 +154,7 @@
                     <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                     <input type="hidden" name="kind" value="status" />
                     <input class="input" name="name" placeholder="Status name" maxlength="40" required />
-                    <select class="input" name="color" aria-label="Status color">
-                      <option value="gray">Gray</option>
-                      <option value="blue">Blue</option>
-                      <option value="purple">Purple</option>
-                      <option value="green">Green</option>
-                      <option value="amber">Amber</option>
-                      <option value="orange">Orange</option>
-                      <option value="red">Red</option>
-                    </select>
+                    #extend("partials/workflow-color-picker")
                     <label class="checkbox-label">
                       <input class="checkbox-input" type="checkbox" name="isCompleted" value="true" />
                       <span class="checkbox-control" aria-hidden="true"><i data-lucide="check"></i></span>
@@ -183,15 +175,7 @@
                     <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                     <input type="hidden" name="kind" value="severity" />
                     <input class="input" name="name" placeholder="Severity name" maxlength="40" required />
-                    <select class="input" name="color" aria-label="Severity color">
-                      <option value="gray">Gray</option>
-                      <option value="blue">Blue</option>
-                      <option value="purple">Purple</option>
-                      <option value="green">Green</option>
-                      <option value="amber">Amber</option>
-                      <option value="orange">Orange</option>
-                      <option value="red">Red</option>
-                    </select>
+                    #extend("partials/workflow-color-picker")
                     <button class="button small" type="submit">Add severity</button>
                   </form>
                 </div>

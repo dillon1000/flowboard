@@ -17,6 +17,9 @@ struct WorkflowCustomizationTests {
                 headers: ["Cookie": session.cookie]
             )
             let csrfToken = try csrfToken(from: settings.body.string)
+            #expect(!settings.body.string.contains(#"type="color""#))
+            expectContains(settings.body.string, #"class="color-picker-grid" role="listbox""#)
+            expectContains(settings.body.string, #"data-menu-target="swatch" data-color="gray""#)
 
             let statusResponse = try await app.testing().sendRequest(
                 .POST,
