@@ -272,12 +272,76 @@ form.panel-row .button {
 }
 
 .workflow-option-form .checkbox-label {
+  position: relative;
   display: inline-flex;
+  min-height: 40px;
   align-items: center;
-  gap: 6px;
+  gap: 9px;
+  padding: 0 4px;
+  border-radius: var(--radius-medium);
   color: var(--text-secondary);
-  font-size: 12px;
+  cursor: pointer;
+  font-size: 13px;
   white-space: nowrap;
+}
+
+.checkbox-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.checkbox-control {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-small);
+  color: var(--surface);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border-strong), inset 0 1px 1px rgb(0 0 0 / 4%);
+  transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease),
+    scale var(--duration) var(--ease-out);
+}
+
+.checkbox-label:hover .checkbox-control {
+  box-shadow: 0 0 0 1px var(--text-tertiary), inset 0 1px 1px rgb(0 0 0 / 4%);
+}
+
+.checkbox-input:focus-visible + .checkbox-control {
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.checkbox-input:focus-visible {
+  outline: 0;
+}
+
+.checkbox-input:checked + .checkbox-control {
+  background: var(--ds-gray-1000);
+  box-shadow: 0 0 0 1px var(--ds-gray-1000);
+}
+
+.checkbox-input:active + .checkbox-control {
+  scale: 0.96;
+}
+
+.checkbox-control svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0;
+  filter: blur(4px);
+  scale: 0.25;
+  stroke-width: 2.75;
+  transition: opacity 200ms var(--ease-out), filter 200ms var(--ease-out), scale 200ms var(--ease-out);
+}
+
+.checkbox-input:checked + .checkbox-control svg {
+  opacity: 1;
+  filter: blur(0);
+  scale: 1;
 }
 
 @media (max-width: 900px) {

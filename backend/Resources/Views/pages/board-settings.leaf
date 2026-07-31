@@ -163,7 +163,11 @@
                       <option value="orange">Orange</option>
                       <option value="red">Red</option>
                     </select>
-                    <label class="checkbox-label"><input type="checkbox" name="isCompleted" value="true" />Completed</label>
+                    <label class="checkbox-label">
+                      <input class="checkbox-input" type="checkbox" name="isCompleted" value="true" />
+                      <span class="checkbox-control" aria-hidden="true"><i data-lucide="check"></i></span>
+                      <span>Completed</span>
+                    </label>
                     <button class="button small" type="submit">Add status</button>
                   </form>
                 </div>
