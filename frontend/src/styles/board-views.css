@@ -93,6 +93,12 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-red-700) 24%, transparent);
 }
 
+.badge.workflow-custom {
+  color: color-mix(in srgb, var(--workflow-color) 72%, var(--text));
+  background: color-mix(in srgb, var(--workflow-color) 14%, var(--surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--workflow-color) 32%, transparent);
+}
+
 .badge.success {
   color: var(--ds-green-900);
   background: var(--ds-green-200);
@@ -188,6 +194,10 @@
 .column-dot.urgent,
 .column-dot.workflow-red {
   background: var(--ds-red-800);
+}
+
+.column-dot.workflow-custom {
+  background: var(--workflow-color);
 }
 
 .column-header strong {

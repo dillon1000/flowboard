@@ -146,7 +146,7 @@
                   <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward board progress.</span></span></div>
                   #for(option in boardSettings.statuses):
                     <div class="panel-row">
-                      <span class="badge status #(option.colorClass)">#(option.name)</span>
+                      <span class="badge status #(option.colorClass)" style="#(option.colorStyle)">#(option.name)</span>
                       <span class="panel-row-main">#if(option.isCompleted):<span>Counts as completed</span>#else:<span>Active work</span>#endif</span>
                     </div>
                   #endfor
@@ -168,7 +168,7 @@
                   <div class="panel-row"><span class="panel-row-main"><strong>Severities</strong><span>Severity describes the effect or urgency of a task.</span></span></div>
                   #for(option in boardSettings.severities):
                     <div class="panel-row">
-                      <span class="badge #(option.colorClass)">#(option.name)</span>
+                      <span class="badge #(option.colorClass)" style="#(option.colorStyle)">#(option.name)</span>
                     </div>
                   #endfor
                   <form class="panel-row workflow-option-form" method="post" action="/app/boards/#(boardSettings.id)/task-options">

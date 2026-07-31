@@ -114,7 +114,7 @@
                 #for(column in board.columns):
                   <section class="kanban-column">
                     <header class="column-header">
-                      <span class="column-dot #(column.dotClass)" aria-hidden="true"></span>
+                      <span class="column-dot #(column.dotClass)" style="#(column.dotStyle)" aria-hidden="true"></span>
                       <strong>#(column.name)</strong>
                       <span class="count">#(column.count)</span>
                     </header>
@@ -141,16 +141,18 @@
                           data-preview-status="#(task.statusName)"
                           data-preview-status-value="#(task.statusValue)"
                           data-preview-status-class="#(task.statusColorClass)"
+                          data-preview-status-color="#(task.statusCustomColor)"
                           data-preview-priority="#(task.priorityName)"
                           data-preview-priority-value="#(task.priorityValue)"
                           data-preview-priority-class="#(task.priorityColorClass)"
+                          data-preview-priority-color="#(task.priorityCustomColor)"
                           data-preview-assignee="#(task.assigneeName)"
                           data-preview-due="#(task.dueDisplay)"
                           data-preview-body="#(task.description)"
                         >
                           <td><a href="#(task.href)">#(task.title)</a></td>
-                          <td><span class="badge status #(task.statusColorClass)">#(task.statusName)</span></td>
-                          <td><span class="badge #(task.priorityColorClass)">#(task.priorityName)</span></td>
+                          <td><span class="badge status #(task.statusColorClass)" style="#(task.statusColorStyle)">#(task.statusName)</span></td>
+                          <td><span class="badge #(task.priorityColorClass)" style="#(task.priorityColorStyle)">#(task.priorityName)</span></td>
                           <td#if(!task.hasAssignee): class="muted"#endif>#(task.assigneeName)</td>
                           <td class="muted">#(task.startDisplay)</td>
                           <td#if(!task.hasDueDate): class="muted"#endif>#(task.dueDisplay)</td>
@@ -188,15 +190,18 @@
                       #for(task in day.tasks):
                         <a
                           class="calendar-task #(task.statusColorClass)"
+                          style="#(task.statusColorStyle)"
                           href="#(task.href)"
                           data-preview-title="#(task.title)"
                           data-preview-board="#(board.name)"
                           data-preview-status="#(task.statusName)"
                           data-preview-status-value="#(task.statusValue)"
                           data-preview-status-class="#(task.statusColorClass)"
+                          data-preview-status-color="#(task.statusCustomColor)"
                           data-preview-priority="#(task.priorityName)"
                           data-preview-priority-value="#(task.priorityValue)"
                           data-preview-priority-class="#(task.priorityColorClass)"
+                          data-preview-priority-color="#(task.priorityCustomColor)"
                           data-preview-assignee="#(task.assigneeName)"
                           data-preview-due="#(task.dueDisplay)"
                           data-preview-body="#(task.description)"
@@ -220,9 +225,11 @@
                       data-preview-status="#(task.statusName)"
                       data-preview-status-value="#(task.statusValue)"
                       data-preview-status-class="#(task.statusColorClass)"
+                      data-preview-status-color="#(task.statusCustomColor)"
                       data-preview-priority="#(task.priorityName)"
                       data-preview-priority-value="#(task.priorityValue)"
                       data-preview-priority-class="#(task.priorityColorClass)"
+                      data-preview-priority-color="#(task.priorityCustomColor)"
                       data-preview-assignee="#(task.assigneeName)"
                       data-preview-due="#(task.dueDisplay)"
                       data-preview-body="#(task.description)"
@@ -230,8 +237,8 @@
                       <h3>#(task.title)</h3>
                       <p>#if(task.hasDescription):#(task.description)#else:No description.#endif</p>
                       <div class="task-meta">
-                        <span class="badge status #(task.statusColorClass)">#(task.statusName)</span>
-                        <span class="badge #(task.priorityColorClass)">#(task.priorityName)</span>
+                        <span class="badge status #(task.statusColorClass)" style="#(task.statusColorStyle)">#(task.statusName)</span>
+                        <span class="badge #(task.priorityColorClass)" style="#(task.priorityColorStyle)">#(task.priorityName)</span>
                       </div>
                     </a>
                   #endfor

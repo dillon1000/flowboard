@@ -250,7 +250,7 @@ extension WorkspaceActionController {
                 )
             }
         }
-        let palette = BoardTaskOptionColor.allCases
+        let palette = BoardTaskOptionColor.presetPalette
         var usedOptionIDs: Set<String> = []
         let options: [BoardPropertyOption] = if type.usesOptions {
             optionNames.enumerated().map { index, optionName in

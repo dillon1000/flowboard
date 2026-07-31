@@ -47,6 +47,7 @@ import {
 import {
   BoardController,
   ChecklistController,
+  ColorPickerController,
   CompletionController,
   DatePickerController,
   DialogController,
@@ -64,6 +65,7 @@ import {
 const application = Application.start();
 application.register('board', BoardController);
 application.register('checklist', ChecklistController);
+application.register('color-picker', ColorPickerController);
 application.register('completion', CompletionController);
 application.register('date-picker', DatePickerController);
 application.register('dialog', DialogController);

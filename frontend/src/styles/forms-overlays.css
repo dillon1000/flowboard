@@ -293,10 +293,10 @@
 }
 
 .color-picker-panel {
-  width: 224px;
-  max-height: none;
+  width: 272px;
+  max-height: min(480px, calc(100vh - 32px));
   padding: 8px;
-  overflow: visible;
+  overflow-y: auto;
 }
 
 .color-picker-title {
@@ -370,8 +370,89 @@
   scale: 1;
 }
 
+.color-picker-custom {
+  margin-top: 8px;
+  padding: 10px 6px 4px;
+  border-top: 1px solid var(--border);
+}
+
+.color-picker-custom .color-picker-title {
+  padding: 0 0 8px;
+}
+
+.color-picker-spectrum {
+  display: block;
+  width: 100%;
+  height: 172px;
+}
+
+.color-picker-spectrum:not(:defined) {
+  visibility: hidden;
+}
+
+.color-picker-spectrum::part(saturation) {
+  bottom: 30px;
+  border-radius: var(--radius-medium);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
+}
+
+.color-picker-spectrum::part(hue) {
+  height: 20px;
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%);
+}
+
+.color-picker-spectrum::part(saturation-pointer),
+.color-picker-spectrum::part(hue-pointer) {
+  width: 18px;
+  height: 18px;
+  box-shadow: 0 0 0 2px var(--surface), 0 1px 4px rgb(0 0 0 / 32%);
+}
+
+.color-picker-hex {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  gap: 3px;
+  padding: 0 10px;
+  margin-top: 10px;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  font-family: 'Geist Mono Variable', monospace;
+  font-size: 13px;
+  transition: box-shadow var(--duration) var(--ease);
+}
+
+.color-picker-hex:focus-within {
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.color-picker-hex:has(input[aria-invalid='true']) {
+  box-shadow: 0 0 0 1px var(--ds-red-800), 0 0 0 4px color-mix(in srgb, var(--ds-red-700) 14%, transparent);
+}
+
+.color-picker-hex input {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 :root[data-theme='dark'] .color-picker-swatch {
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 14%);
+}
+
+:root[data-theme='dark'] .color-picker-spectrum::part(saturation),
+:root[data-theme='dark'] .color-picker-spectrum::part(hue) {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
 }
 
 .menu-separator {

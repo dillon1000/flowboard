@@ -7,6 +7,7 @@ export {
 } from './controllers/content_controllers';
 export {
   ChecklistController,
+  ColorPickerController,
   DatePickerController,
   DialogController,
   FileFieldController,

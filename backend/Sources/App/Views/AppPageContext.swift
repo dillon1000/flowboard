@@ -214,7 +214,8 @@ struct BoardPageContext: Encodable {
                 TaskColumnContext(
                     value: severity.id,
                     name: severity.name,
-                    dotClass: "workflow-\(severity.color.rawValue)",
+                    dotClass: severity.color.cssClass,
+                    dotStyle: severity.color.cssStyle,
                     isCompleted: false,
                     tasks: tasks.filter { $0.priorityValue == severity.id }
                 )
@@ -224,7 +225,8 @@ struct BoardPageContext: Encodable {
                 TaskColumnContext(
                     value: status.id,
                     name: status.name,
-                    dotClass: "workflow-\(status.color.rawValue)",
+                    dotClass: status.color.cssClass,
+                    dotStyle: status.color.cssStyle,
                     isCompleted: status.isCompleted,
                     tasks: tasks.filter { $0.statusValue == status.id }
                 )

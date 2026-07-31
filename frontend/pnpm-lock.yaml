@@ -32,6 +32,9 @@ importers:
       sortablejs:
         specifier: ^1.15.7
         version: 1.15.7
+      vanilla-colorful:
+        specifier: ^0.7.2
+        version: 0.7.2
     devDependencies:
       '@types/canvas-confetti':
         specifier: ^1.9.0
@@ -328,6 +331,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  vanilla-colorful@0.7.2:
+    resolution: {integrity: sha512-z2YZusTFC6KnLERx1cgoIRX2CjPRP0W75N+3CC6gbvdX5Ch47rZkEMGO2Xnf+IEmi3RiFLxS18gayMA27iU7Kg==}
+
   vite@8.1.5:
     resolution: {integrity: sha512-7ULLwsCdYx/nRyrpiEwvqb5TFHrMVZyBt+rg/OAXT7rgj/z+DtTDyKFeLAdDkubDVDKD8jOsndmy7m55XcfUsw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -576,6 +582,8 @@ snapshots:
     optional: true
 
   typescript@6.0.3: {}
+
+  vanilla-colorful@0.7.2: {}
 
   vite@8.1.5:
     dependencies:

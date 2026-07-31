@@ -1,16 +1,34 @@
 import Foundation
 
+extension BoardTaskOptionColor {
+    var cssClass: String {
+        rawValue.hasPrefix("#") ? "workflow-custom" : "workflow-\(rawValue)"
+    }
+
+    var cssStyle: String {
+        rawValue.hasPrefix("#") ? "--workflow-color: \(rawValue)" : ""
+    }
+
+    var customHex: String {
+        rawValue.hasPrefix("#") ? rawValue : ""
+    }
+}
+
 struct TaskOptionContext: Encodable {
     let value: String
     let name: String
     let colorClass: String
+    let colorStyle: String
+    let customColor: String
     let isSelected: Bool
     let isCompleted: Bool
 
     init(option: BoardTaskOption, selectedValue: String? = nil) {
         self.value = option.id
         self.name = option.name
-        self.colorClass = "workflow-\(option.color.rawValue)"
+        self.colorClass = option.color.cssClass
+        self.colorStyle = option.color.cssStyle
+        self.customColor = option.color.customHex
         self.isSelected = option.id == selectedValue
         self.isCompleted = option.isCompleted
     }
@@ -20,6 +38,7 @@ struct TaskColumnContext: Encodable {
     let value: String
     let name: String
     let dotClass: String
+    let dotStyle: String
     let isCompleted: Bool
     let tasks: [TaskCardContext]
     let count: Int
@@ -28,12 +47,14 @@ struct TaskColumnContext: Encodable {
         value: String,
         name: String,
         dotClass: String,
+        dotStyle: String,
         isCompleted: Bool = false,
         tasks: [TaskCardContext]
     ) {
         self.value = value
         self.name = name
         self.dotClass = dotClass
+        self.dotStyle = dotStyle
         self.isCompleted = isCompleted
         self.tasks = tasks
         self.count = tasks.count
@@ -51,9 +72,13 @@ struct TaskCardContext: Encodable {
     let statusValue: String
     let statusName: String
     let statusColorClass: String
+    let statusColorStyle: String
+    let statusCustomColor: String
     let priorityValue: String
     let priorityName: String
     let priorityColorClass: String
+    let priorityColorStyle: String
+    let priorityCustomColor: String
     let labels: [String]
     let labelsJoined: String
     let hasLabels: Bool
@@ -91,10 +116,14 @@ struct TaskCardContext: Encodable {
         self.hasDescription = !(task.description ?? "").isEmpty
         self.statusValue = task.status.rawValue
         self.statusName = statusOption.name
-        self.statusColorClass = "workflow-\(statusOption.color.rawValue)"
+        self.statusColorClass = statusOption.color.cssClass
+        self.statusColorStyle = statusOption.color.cssStyle
+        self.statusCustomColor = statusOption.color.customHex
         self.priorityValue = task.priority.rawValue
         self.priorityName = severityOption.name
-        self.priorityColorClass = "workflow-\(severityOption.color.rawValue)"
+        self.priorityColorClass = severityOption.color.cssClass
+        self.priorityColorStyle = severityOption.color.cssStyle
+        self.priorityCustomColor = severityOption.color.customHex
         self.labels = task.labels
         self.labelsJoined = task.labels.joined(separator: ", ")
         self.hasLabels = !task.labels.isEmpty

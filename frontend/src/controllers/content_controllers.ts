@@ -205,8 +205,10 @@ export class TaskPreviewController extends Controller {
     this.boardTarget.hidden = !data.previewBoard;
     this.statusTarget.textContent = data.previewStatus ?? '';
     this.statusTarget.className = `badge status ${data.previewStatusClass ?? 'workflow-gray'}`;
+    this.applyWorkflowColor(this.statusTarget, data.previewStatusColor);
     this.priorityTarget.textContent = data.previewPriority ?? '';
     this.priorityTarget.className = `badge ${data.previewPriorityClass ?? 'workflow-gray'}`;
+    this.applyWorkflowColor(this.priorityTarget, data.previewPriorityColor);
     this.assigneeTarget.textContent = data.previewAssignee ?? '';
     this.dueTarget.textContent = data.previewDue ?? '';
     this.bodyTarget.textContent = data.previewBody ?? '';
@@ -215,6 +217,13 @@ export class TaskPreviewController extends Controller {
     this.cardTarget.hidden = false;
     this.position(anchor);
     this.cardTarget.dataset.open = 'true';
+  }
+
+  private applyWorkflowColor(target: HTMLElement, color: string | undefined): void {
+    target.style.removeProperty('--workflow-color');
+    if (color) {
+      target.style.setProperty('--workflow-color', color);
+    }
   }
 
   // Prefer sitting to the right of the anchor; flip or clamp at the edges.

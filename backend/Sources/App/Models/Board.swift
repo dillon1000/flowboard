@@ -105,14 +105,53 @@ final class Board: Model, @unchecked Sendable {
     }
 }
 
-enum BoardTaskOptionColor: String, Codable, CaseIterable, Sendable {
-    case gray
-    case blue
-    case purple
-    case green
-    case amber
-    case orange
-    case red
+/// A workflow color is either a theme-aware preset or a six-digit hex value.
+/// The single-string encoding keeps existing board JSON and exports compatible.
+struct BoardTaskOptionColor: RawRepresentable, Codable, Equatable, Sendable {
+    let rawValue: String
+
+    static let gray = Self("gray")
+    static let blue = Self("blue")
+    static let purple = Self("purple")
+    static let green = Self("green")
+    static let amber = Self("amber")
+    static let orange = Self("orange")
+    static let red = Self("red")
+    static let presetPalette = [gray, blue, purple, green, amber, orange, red]
+
+    private static let presetValues = Set(presetPalette.map(\.rawValue))
+    private static let hexDigits = CharacterSet(charactersIn: "0123456789abcdef")
+
+    init?(rawValue: String) {
+        let normalized = rawValue.lowercased()
+        let hexValue = normalized.dropFirst()
+        let isHex = normalized.count == 7
+            && normalized.first == "#"
+            && hexValue.unicodeScalars.allSatisfy(Self.hexDigits.contains)
+        guard Self.presetValues.contains(normalized) || isHex else { return nil }
+        self.rawValue = normalized
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let color = Self(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Workflow colors must be a preset or a six-digit hex value."
+            )
+        }
+        self = color
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
+    private init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
 }
 
 /// One board-owned status or severity choice. IDs are immutable task values,

@@ -17,7 +17,8 @@
     "canvas-confetti": "^1.9.4",
     "flatpickr": "^4.6.13",
     "lucide": "^1.27.0",
-    "sortablejs": "^1.15.7"
+    "sortablejs": "^1.15.7",
+    "vanilla-colorful": "^0.7.2"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

@@ -1,6 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 import flatpickr from 'flatpickr';
 import type { Instance as FlatpickrInstance } from 'flatpickr/dist/types/instance';
+import 'vanilla-colorful';
+import type { HexColorPicker } from 'vanilla-colorful';
 
 // Derives checklist progress from the rendered items so the server does not
 // have to supply a second, redundant count.
@@ -225,6 +227,84 @@ export class MenuController extends Controller {
     const nextIndex = (currentIndex + delta + this.optionTargets.length) % this.optionTargets.length;
     this.optionTargets[nextIndex]?.focus();
   };
+}
+
+const PRESET_COLOR_HEX: Record<string, string> = {
+  gray: '#7d7d7d',
+  blue: '#0068d7',
+  purple: '#7c3aed',
+  green: '#2f8f46',
+  amber: '#e6a500',
+  orange: '#f27b0a',
+  red: '#dc3636',
+};
+const CUSTOM_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+/** Keeps preset, spectrum, hex, preview, and submitted workflow colors in sync. */
+export class ColorPickerController extends Controller {
+  static targets = ['input', 'picker', 'hex', 'swatch', 'label', 'preset'];
+
+  declare readonly inputTarget: HTMLInputElement;
+  declare readonly pickerTarget: HexColorPicker;
+  declare readonly hexTarget: HTMLInputElement;
+  declare readonly swatchTarget: HTMLElement;
+  declare readonly labelTarget: HTMLElement;
+  declare readonly presetTargets: HTMLButtonElement[];
+
+  connect(): void {
+    const presetHex = PRESET_COLOR_HEX[this.inputTarget.value];
+    if (presetHex) {
+      this.syncPreset(this.inputTarget.value, presetHex);
+      return;
+    }
+    this.syncCustom(this.inputTarget.value);
+  }
+
+  preset(event: Event): void {
+    const token = (event.currentTarget as HTMLElement).dataset.value ?? '';
+    const hex = PRESET_COLOR_HEX[token];
+    if (hex) {
+      this.syncPreset(token, hex);
+    }
+  }
+
+  custom(event: Event): void {
+    const colorEvent = event as CustomEvent<{ value: string }>;
+    this.syncCustom(colorEvent.detail.value);
+  }
+
+  type(event: Event): void {
+    const value = `#${(event.currentTarget as HTMLInputElement).value}`;
+    if (CUSTOM_COLOR_PATTERN.test(value)) {
+      this.syncCustom(value);
+    }
+  }
+
+  private syncPreset(token: string, hex: string): void {
+    this.pickerTarget.color = hex;
+    this.hexTarget.value = hex.slice(1).toUpperCase();
+    this.hexTarget.removeAttribute('aria-invalid');
+    this.swatchTarget.dataset.color = token;
+    this.swatchTarget.style.removeProperty('--color-picker-value');
+  }
+
+  private syncCustom(value: string): void {
+    const normalized = value.toLowerCase();
+    if (!CUSTOM_COLOR_PATTERN.test(normalized)) {
+      this.hexTarget.setAttribute('aria-invalid', 'true');
+      return;
+    }
+
+    this.inputTarget.value = normalized;
+    this.pickerTarget.color = normalized;
+    this.hexTarget.value = normalized.slice(1).toUpperCase();
+    this.hexTarget.removeAttribute('aria-invalid');
+    this.swatchTarget.dataset.color = 'custom';
+    this.swatchTarget.style.setProperty('--color-picker-value', normalized);
+    this.labelTarget.textContent = normalized.toUpperCase();
+    this.presetTargets.forEach((preset) => preset.setAttribute('aria-selected', 'false'));
+    this.inputTarget.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
 /** Shows the option-name input only for fields whose values come from a fixed list. */

@@ -1,20 +1,28 @@
-<div class="menu color-picker" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
-  <input data-menu-target="input" type="hidden" name="color" value="gray" />
+<div class="menu color-picker" data-controller="menu color-picker" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+  <input data-menu-target="input" data-color-picker-target="input" type="hidden" name="color" value="gray" />
   <button class="select-trigger color-picker-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-haspopup="listbox" aria-expanded="false">
-    <span class="color-picker-swatch" data-menu-target="swatch" data-color="gray" aria-hidden="true"></span>
-    <span data-menu-target="value">Gray</span>
+    <span class="color-picker-swatch" data-menu-target="swatch" data-color-picker-target="swatch" data-color="gray" aria-hidden="true"></span>
+    <span data-menu-target="value" data-color-picker-target="label">Gray</span>
     <i data-lucide="chevron-down"></i>
   </button>
   <div class="menu-panel right color-picker-panel" data-menu-target="panel" hidden>
-    <span class="color-picker-title">Color</span>
+    <span class="color-picker-title">Presets</span>
     <div class="color-picker-grid" role="listbox" aria-label="Color">
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="gray" data-label="Gray" aria-selected="true"><span class="color-picker-swatch" data-color="gray" aria-hidden="true"></span><span>Gray</span><i data-lucide="check" aria-hidden="true"></i></button>
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="blue" data-label="Blue" aria-selected="false"><span class="color-picker-swatch" data-color="blue" aria-hidden="true"></span><span>Blue</span><i data-lucide="check" aria-hidden="true"></i></button>
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="purple" data-label="Purple" aria-selected="false"><span class="color-picker-swatch" data-color="purple" aria-hidden="true"></span><span>Purple</span><i data-lucide="check" aria-hidden="true"></i></button>
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="green" data-label="Green" aria-selected="false"><span class="color-picker-swatch" data-color="green" aria-hidden="true"></span><span>Green</span><i data-lucide="check" aria-hidden="true"></i></button>
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="amber" data-label="Amber" aria-selected="false"><span class="color-picker-swatch" data-color="amber" aria-hidden="true"></span><span>Amber</span><i data-lucide="check" aria-hidden="true"></i></button>
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="orange" data-label="Orange" aria-selected="false"><span class="color-picker-swatch" data-color="orange" aria-hidden="true"></span><span>Orange</span><i data-lucide="check" aria-hidden="true"></i></button>
-      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-action="menu#choose" data-value="red" data-label="Red" aria-selected="false"><span class="color-picker-swatch" data-color="red" aria-hidden="true"></span><span>Red</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="gray" data-label="Gray" aria-selected="true"><span class="color-picker-swatch" data-color="gray" aria-hidden="true"></span><span>Gray</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="blue" data-label="Blue" aria-selected="false"><span class="color-picker-swatch" data-color="blue" aria-hidden="true"></span><span>Blue</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="purple" data-label="Purple" aria-selected="false"><span class="color-picker-swatch" data-color="purple" aria-hidden="true"></span><span>Purple</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="green" data-label="Green" aria-selected="false"><span class="color-picker-swatch" data-color="green" aria-hidden="true"></span><span>Green</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="amber" data-label="Amber" aria-selected="false"><span class="color-picker-swatch" data-color="amber" aria-hidden="true"></span><span>Amber</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="orange" data-label="Orange" aria-selected="false"><span class="color-picker-swatch" data-color="orange" aria-hidden="true"></span><span>Orange</span><i data-lucide="check" aria-hidden="true"></i></button>
+      <button class="color-picker-option" type="button" role="option" data-menu-target="option" data-color-picker-target="preset" data-action="menu#choose color-picker#preset" data-value="red" data-label="Red" aria-selected="false"><span class="color-picker-swatch" data-color="red" aria-hidden="true"></span><span>Red</span><i data-lucide="check" aria-hidden="true"></i></button>
+    </div>
+    <div class="color-picker-custom">
+      <span class="color-picker-title">Custom</span>
+      <hex-color-picker class="color-picker-spectrum" color="#7d7d7d" data-color-picker-target="picker" data-action="color-changed->color-picker#custom" aria-label="Custom color"></hex-color-picker>
+      <label class="color-picker-hex">
+        <span aria-hidden="true">#</span>
+        <input data-color-picker-target="hex" data-action="input->color-picker#type" type="text" value="7D7D7D" pattern="[0-9a-fA-F]{6}" maxlength="6" aria-label="Hex color" autocomplete="off" autocapitalize="characters" spellcheck="false" required />
+      </label>
     </div>
   </div>
 </div>

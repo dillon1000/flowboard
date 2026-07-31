@@ -7,9 +7,11 @@
   data-preview-status="#(statusName)"
   data-preview-status-value="#(statusValue)"
   data-preview-status-class="#(statusColorClass)"
+  data-preview-status-color="#(statusCustomColor)"
   data-preview-priority="#(priorityName)"
   data-preview-priority-value="#(priorityValue)"
   data-preview-priority-class="#(priorityColorClass)"
+  data-preview-priority-color="#(priorityCustomColor)"
   data-preview-assignee="#(assigneeName)"
   data-preview-due="#(dueDisplay)"
   data-preview-body="#(description)"
@@ -19,7 +21,7 @@
     <p>#(description)</p>
   #endif
   <div class="task-meta">
-    <span class="badge #(priorityColorClass)">#(priorityName)</span>
+    <span class="badge #(priorityColorClass)" style="#(priorityColorStyle)">#(priorityName)</span>
     #for(label in labels):
       <span class="badge subtle">#(label)</span>
     #endfor

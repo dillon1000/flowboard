@@ -156,6 +156,10 @@
   background: var(--ds-red-800);
 }
 
+.calendar-task.workflow-custom::before {
+  background: var(--workflow-color);
+}
+
 .calendar-task span {
   min-width: 0;
   overflow: hidden;

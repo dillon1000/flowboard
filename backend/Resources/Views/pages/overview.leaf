@@ -71,9 +71,11 @@
                       data-preview-status="#(task.statusName)"
                       data-preview-status-value="#(task.statusValue)"
                       data-preview-status-class="#(task.statusColorClass)"
+                      data-preview-status-color="#(task.statusCustomColor)"
                       data-preview-priority="#(task.priorityName)"
                       data-preview-priority-value="#(task.priorityValue)"
                       data-preview-priority-class="#(task.priorityColorClass)"
+                      data-preview-priority-color="#(task.priorityCustomColor)"
                       data-preview-assignee="#(task.assigneeName)"
                       data-preview-due="#(task.dueDisplay)"
                       data-preview-body="#(task.description)"
@@ -82,7 +84,7 @@
                         <strong>#(task.title)</strong>
                         <span>#(task.boardName) · #(task.updatedDisplay)</span>
                       </span>
-                      <span class="badge status #(task.statusColorClass)">#(task.statusName)</span>
+                      <span class="badge status #(task.statusColorClass)" style="#(task.statusColorStyle)">#(task.statusName)</span>
                     </a>
                   #endfor
                 </div>

@@ -54,7 +54,7 @@ struct WorkflowCustomizationTests {
                         [
                             "kind": "severity",
                             "name": "Critical",
-                            "color": "red",
+                            "color": "#b144dd",
                         ],
                         as: .urlEncodedForm
                     )
@@ -89,6 +89,7 @@ struct WorkflowCustomizationTests {
             #expect(board.statusOption(for: task.status).name == "Released")
             #expect(board.isCompleted(task.status))
             #expect(board.severityOption(for: task.priority).name == "Critical")
+            #expect(board.severityOption(for: task.priority).color.rawValue == "#b144dd")
 
             let summaries = try await app.testing().sendRequest(
                 .GET,
@@ -116,6 +117,7 @@ struct WorkflowCustomizationTests {
             #expect(boardPage.status == .ok)
             expectContains(boardPage.body.string, "Released")
             expectContains(boardPage.body.string, "Critical")
+            expectContains(boardPage.body.string, "--workflow-color: #b144dd")
         }
     }
 
