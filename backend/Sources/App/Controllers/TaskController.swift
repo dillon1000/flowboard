@@ -220,11 +220,12 @@ struct TaskController: RouteCollection {
         properties: [String: String],
         definitions: [BoardPropertyDefinition]
     ) -> [String: String] {
-        let allowed = Set(definitions.map(\.id))
-        return properties.reduce(into: [:]) { result, entry in
-            let value = entry.value.trimmingCharacters(in: .whitespacesAndNewlines)
-            if allowed.contains(entry.key), !value.isEmpty {
-                result[entry.key] = String(value.prefix(2_000))
+        definitions.reduce(into: [:]) { result, definition in
+            if
+                let rawValue = properties[definition.id],
+                let value = definition.normalizedValue(rawValue)
+            {
+                result[definition.id] = value
             }
         }
     }

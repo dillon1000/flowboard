@@ -204,12 +204,13 @@ struct TaskDetailPageContext: Encodable {
         self.members = try members.map {
             try MemberOptionContext(user: $0, selectedID: task.$assignee.id)
         }
-        self.properties = (board.propertyDefinitions ?? []).map { definition in
-            TaskPropertyContext(
+        self.properties = try (board.propertyDefinitions ?? []).map { definition in
+            try TaskPropertyContext(
                 id: definition.id,
                 name: definition.name,
-                value: task.properties?[definition.id] ?? "—",
-                inputValue: task.properties?[definition.id] ?? ""
+                definition: definition,
+                inputValue: task.properties?[definition.id] ?? "",
+                members: members
             )
         }
         self.hasProperties = !(board.propertyDefinitions ?? []).isEmpty
@@ -289,4 +290,85 @@ struct TaskPropertyContext: Encodable {
     let name: String
     let value: String
     let inputValue: String
+    let inputType: String
+    let usesInput: Bool
+    let usesSelect: Bool
+    let usesMultiSelect: Bool
+    let usesCheckbox: Bool
+    let isChecked: Bool
+    let options: [TaskPropertyOptionContext]
+
+    init(
+        id: String,
+        name: String,
+        definition: BoardPropertyDefinition,
+        inputValue: String,
+        members: [User]
+    ) throws {
+        self.id = id
+        self.name = name
+        self.inputValue = inputValue
+        self.inputType = switch definition.type {
+        case .number: "number"
+        case .date: "date"
+        case .url: "url"
+        case .email: "email"
+        default: "text"
+        }
+        self.usesInput = [.text, .number, .date, .url, .email].contains(definition.type)
+        self.usesSelect = definition.type == .select || definition.type == .person
+        self.usesMultiSelect = definition.type == .multiSelect
+        self.usesCheckbox = definition.type == .checkbox
+        let isChecked = definition.type == .checkbox && inputValue == "true"
+        self.isChecked = isChecked
+
+        let selectedIDs = Set(
+            definition.type == .multiSelect
+                ? definition.selectedOptionIDs(from: inputValue)
+                : inputValue.isEmpty ? [] : [inputValue]
+        )
+        let options: [TaskPropertyOptionContext]
+        if definition.type == .person {
+            options = try members.map { member in
+                let memberID = try member.requireID().uuidString.lowercased()
+                return TaskPropertyOptionContext(
+                    id: memberID,
+                    name: member.name,
+                    isSelected: selectedIDs.contains(memberID)
+                )
+            }
+        } else {
+            options = definition.options.map { option in
+                TaskPropertyOptionContext(
+                    id: option.id,
+                    name: option.name,
+                    isSelected: selectedIDs.contains(option.id)
+                )
+            }
+        }
+        self.options = options
+
+        self.value = switch definition.type {
+        case .select, .multiSelect:
+            options.filter(\.isSelected).map(\.name).joined(separator: ", ").nilIfEmpty ?? "—"
+        case .checkbox:
+            isChecked ? "Yes" : "—"
+        case .person:
+            options.first(where: \.isSelected)?.name ?? (inputValue.isEmpty ? "—" : "Former member")
+        default:
+            inputValue.isEmpty ? "—" : inputValue
+        }
+    }
+}
+
+struct TaskPropertyOptionContext: Encodable {
+    let id: String
+    let name: String
+    let isSelected: Bool
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
 }

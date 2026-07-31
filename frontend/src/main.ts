@@ -53,6 +53,7 @@ import {
   FileFieldController,
   MarkdownController,
   MenuController,
+  PropertyDefinitionController,
   SearchController,
   SidebarController,
   TaskPreviewController,
@@ -69,6 +70,7 @@ application.register('dialog', DialogController);
 application.register('file-field', FileFieldController);
 application.register('markdown', MarkdownController);
 application.register('menu', MenuController);
+application.register('property-definition', PropertyDefinitionController);
 application.register('search', SearchController);
 application.register('sidebar', SidebarController);
 application.register('task-preview', TaskPreviewController);

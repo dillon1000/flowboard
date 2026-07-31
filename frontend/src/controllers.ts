@@ -11,6 +11,7 @@ export {
   DialogController,
   FileFieldController,
   MenuController,
+  PropertyDefinitionController,
 } from './controllers/form_controllers';
 export {
   SearchController,

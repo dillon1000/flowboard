@@ -28,6 +28,7 @@ struct ConfigureViewForm: Content {
 struct CreatePropertyForm: Content {
     let name: String
     let type: String
+    let options: String?
 }
 
 struct CreateTaskOptionForm: Content {

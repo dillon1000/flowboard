@@ -113,12 +113,24 @@ extension WorkspaceActionController {
         }
         var values = task.properties ?? [:]
         for definition in board.propertyDefinitions ?? [] {
-            let value = (try? req.content.get(String.self, at: "property-\(definition.id)")) ?? ""
-            let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            if cleaned.isEmpty {
-                values.removeValue(forKey: definition.id)
+            let rawValue: String
+            if definition.type == .multiSelect {
+                let selected = definition.options.compactMap { option in
+                    let key = "property-\(definition.id)-\(option.id)"
+                    return (try? req.content.get(String.self, at: key)) == nil ? nil : option.id
+                }
+                let data = try JSONEncoder().encode(selected)
+                rawValue = String(decoding: data, as: UTF8.self)
             } else {
-                values[definition.id] = String(cleaned.prefix(2_000))
+                rawValue = (try? req.content.get(String.self, at: "property-\(definition.id)")) ?? ""
+            }
+            let cleaned = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cleaned.isEmpty || (definition.type == .multiSelect && cleaned == "[]") {
+                values.removeValue(forKey: definition.id)
+            } else if let normalized = definition.normalizedValue(cleaned) {
+                values[definition.id] = normalized
+            } else {
+                throw Abort(.unprocessableEntity, reason: "Enter a valid value for \(definition.name).")
             }
         }
         task.properties = values

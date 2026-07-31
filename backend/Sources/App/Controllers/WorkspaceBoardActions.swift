@@ -229,10 +229,47 @@ extension WorkspaceActionController {
             .replacingOccurrences(of: "-", with: "_")
             .replacingOccurrences(of: " ", with: "_")
         guard
-            !name.isEmpty,
+            (1...60).contains(name.count),
             let type = BoardPropertyType(rawValue: normalizedType)
         else {
             throw Abort(.unprocessableEntity, reason: "Choose a supported field type.")
+        }
+        let optionNames = (input.options ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if type.usesOptions {
+            guard
+                (1...20).contains(optionNames.count),
+                optionNames.allSatisfy({ (1...40).contains($0.count) }),
+                Set(optionNames.map { $0.lowercased() }).count == optionNames.count
+            else {
+                throw Abort(
+                    .unprocessableEntity,
+                    reason: "Add 1 to 20 unique options, each no longer than 40 characters."
+                )
+            }
+        }
+        let palette = BoardTaskOptionColor.allCases
+        var usedOptionIDs: Set<String> = []
+        let options: [BoardPropertyOption] = if type.usesOptions {
+            optionNames.enumerated().map { index, optionName in
+                let baseID = String(slugify(optionName).prefix(32))
+                var optionID = baseID
+                var suffix = 2
+                while usedOptionIDs.contains(optionID) {
+                    optionID = "\(String(baseID.prefix(28)))-\(suffix)"
+                    suffix += 1
+                }
+                usedOptionIDs.insert(optionID)
+                return BoardPropertyOption(
+                    id: optionID,
+                    name: optionName,
+                    color: palette[index % palette.count].rawValue
+                )
+            }
+        } else {
+            []
         }
         var definitions = access.board.propertyDefinitions ?? []
         definitions.append(
@@ -240,7 +277,7 @@ extension WorkspaceActionController {
                 id: UUID().uuidString.lowercased(),
                 name: name,
                 type: type,
-                options: []
+                options: options
             )
         )
         access.board.propertyDefinitions = definitions

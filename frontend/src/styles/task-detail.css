@@ -124,6 +124,28 @@
   color: var(--text-tertiary);
 }
 
+.property-options {
+  display: grid;
+  gap: 6px;
+}
+
+.property-option,
+.property-boolean {
+  position: relative;
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.property-option:hover .checkbox-control,
+.property-boolean:hover .checkbox-control {
+  box-shadow: 0 0 0 1px var(--text-tertiary), inset 0 1px 1px rgb(0 0 0 / 4%);
+}
+
 /* ---- Checklist ---- */
 
 .checklist-progress {
@@ -268,4 +290,3 @@ progress.progress::-moz-progress-bar {
 .comment-composer .form-actions {
   margin-top: 10px;
 }
-

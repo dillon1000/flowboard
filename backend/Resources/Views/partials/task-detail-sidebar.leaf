@@ -42,8 +42,37 @@
                         <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                         #for(property in taskDetail.properties):
                           <div class="field">
-                            <label for="property-#(property.id)">#(property.name)</label>
-                            <input class="input" id="property-#(property.id)" name="property-#(property.id)" value="#(property.inputValue)" />
+                            #if(property.usesMultiSelect):
+                              <span class="field-label">#(property.name)</span>
+                            #else:
+                              <label for="property-#(property.id)">#(property.name)</label>
+                            #endif
+                            #if(property.usesInput):
+                              <input class="input" type="#(property.inputType)" step="any" id="property-#(property.id)" name="property-#(property.id)" value="#(property.inputValue)" />
+                            #elseif(property.usesSelect):
+                              <select class="input" id="property-#(property.id)" name="property-#(property.id)">
+                                <option value="">No value</option>
+                                #for(option in property.options):
+                                  <option value="#(option.id)"#if(option.isSelected): selected#endif>#(option.name)</option>
+                                #endfor
+                              </select>
+                            #elseif(property.usesMultiSelect):
+                              <div class="property-options" id="property-#(property.id)" role="group" aria-label="#(property.name)">
+                                #for(option in property.options):
+                                  <label class="property-option" for="property-#(property.id)-#(option.id)">
+                                    <input class="checkbox-input" type="checkbox" id="property-#(property.id)-#(option.id)" name="property-#(property.id)-#(option.id)" value="true"#if(option.isSelected): checked#endif />
+                                    <span class="checkbox-control" aria-hidden="true"><i data-lucide="check"></i></span>
+                                    <span>#(option.name)</span>
+                                  </label>
+                                #endfor
+                              </div>
+                            #elseif(property.usesCheckbox):
+                              <label class="property-boolean" for="property-#(property.id)">
+                                <input class="checkbox-input" type="checkbox" id="property-#(property.id)" name="property-#(property.id)" value="true"#if(property.isChecked): checked#endif />
+                                <span class="checkbox-control" aria-hidden="true"><i data-lucide="check"></i></span>
+                                <span>Checked</span>
+                              </label>
+                            #endif
                           </div>
                         #endfor
                         <div class="form-actions"><button class="button small" type="submit">Save fields</button></div>

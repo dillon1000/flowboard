@@ -220,6 +220,24 @@ export class MenuController extends Controller {
   };
 }
 
+/** Shows the option-name input only for fields whose values come from a fixed list. */
+export class PropertyDefinitionController extends Controller {
+  static targets = ['type', 'options'];
+
+  declare readonly typeTarget: HTMLInputElement;
+  declare readonly optionsTarget: HTMLInputElement;
+
+  connect(): void {
+    this.update();
+  }
+
+  update(): void {
+    const usesOptions = ['select', 'multi_select'].includes(this.typeTarget.value);
+    this.optionsTarget.hidden = !usesOptions;
+    this.optionsTarget.required = usesOptions;
+  }
+}
+
 export class DialogController extends Controller {
   static targets = ['panel', 'initial'];
 

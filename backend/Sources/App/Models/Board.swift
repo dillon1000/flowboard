@@ -1,4 +1,5 @@
 import Fluent
+import Foundation
 import Vapor
 
 final class Board: Model, @unchecked Sendable {
@@ -156,6 +157,10 @@ enum BoardPropertyType: String, Codable, CaseIterable, Sendable {
     case url
     case email
     case person
+
+    var usesOptions: Bool {
+        self == .select || self == .multiSelect
+    }
 }
 
 struct BoardPropertyOption: Codable, Sendable {
@@ -169,6 +174,80 @@ struct BoardPropertyDefinition: Codable, Sendable {
     let name: String
     let type: BoardPropertyType
     let options: [BoardPropertyOption]
+
+    /// Converts the public string representation into the canonical value for
+    /// this field type. Invalid values return nil and do not enter task data.
+    func normalizedValue(_ rawValue: String) -> String? {
+        let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return nil }
+
+        switch type {
+        case .text:
+            return String(value.prefix(2_000))
+        case .number:
+            return Decimal(string: value, locale: Locale(identifier: "en_US_POSIX")) == nil
+                ? nil
+                : value
+        case .select:
+            return options.contains { $0.id == value } ? value : nil
+        case .multiSelect:
+            let selected = Set(selectedOptionIDs(from: value))
+            let normalized = options.map(\.id).filter(selected.contains)
+            guard !normalized.isEmpty, let data = try? JSONEncoder().encode(normalized) else {
+                return nil
+            }
+            return String(decoding: data, as: UTF8.self)
+        case .date:
+            return isValidDate(value) ? value : nil
+        case .checkbox:
+            return value == "true" ? value : nil
+        case .url:
+            guard
+                let components = URLComponents(string: value),
+                ["http", "https"].contains(components.scheme?.lowercased() ?? ""),
+                components.host?.isEmpty == false
+            else {
+                return nil
+            }
+            return String(value.prefix(2_000))
+        case .email:
+            guard value.range(of: #"^[^\s@]+@[^\s@]+\.[^\s@]+$"#, options: .regularExpression) != nil else {
+                return nil
+            }
+            return String(value.prefix(320))
+        case .person:
+            return UUID(uuidString: value)?.uuidString.lowercased()
+        }
+    }
+
+    /// Multi-select values remain strings in the task API. The string contains
+    /// a JSON array of option IDs so option names can contain commas safely.
+    func selectedOptionIDs(from value: String) -> [String] {
+        guard
+            let data = value.data(using: .utf8),
+            let decoded = try? JSONDecoder().decode([String].self, from: data)
+        else {
+            return []
+        }
+        let allowed = Set(options.map(\.id))
+        return decoded.filter(allowed.contains)
+    }
+
+    private func isValidDate(_ value: String) -> Bool {
+        guard value.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil else {
+            return false
+        }
+        let parts = value.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return false }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let requested = DateComponents(year: parts[0], month: parts[1], day: parts[2])
+        guard let date = calendar.date(from: requested) else { return false }
+        let actual = calendar.dateComponents([.year, .month, .day], from: date)
+        return actual.year == requested.year
+            && actual.month == requested.month
+            && actual.day == requested.day
+    }
 }
 
 struct BoardResponse: Content {

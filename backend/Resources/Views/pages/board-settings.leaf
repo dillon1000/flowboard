@@ -204,14 +204,14 @@
                 #for(property in boardSettings.properties):
                   <div class="panel-row">
                     <i data-lucide="tag"></i>
-                    <span class="panel-row-main"><strong>#(property.name)</strong><span>#(property.typeName)</span></span>
+                    <span class="panel-row-main"><strong>#(property.name)</strong><span>#(property.detail)</span></span>
                   </div>
                 #endfor
-                <form class="panel-row" method="post" action="/app/boards/#(boardSettings.id)/properties">
+                <form class="panel-row" method="post" action="/app/boards/#(boardSettings.id)/properties" data-controller="property-definition">
                   <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                   <input class="input" name="name" placeholder="Field name" maxlength="60" required />
                   <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
-                    <input data-menu-target="input" type="hidden" name="type" value="text" />
+                    <input data-menu-target="input" data-property-definition-target="type" data-action="change->property-definition#update" type="hidden" name="type" value="text" />
                     <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
                       <span data-menu-target="value">Text</span><i data-lucide="chevron-down"></i>
                     </button>
@@ -227,6 +227,15 @@
                       <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="person" data-label="Person" aria-selected="false">Person</button>
                     </div>
                   </div>
+                  <input
+                    class="input"
+                    name="options"
+                    placeholder="Options, comma-separated"
+                    aria-label="Field options"
+                    maxlength="800"
+                    data-property-definition-target="options"
+                    hidden
+                  />
                   <button class="button small" type="submit">Add field</button>
                 </form>
               </div>

@@ -115,11 +115,15 @@ struct PropertyDefinitionContext: Encodable {
     let id: String
     let name: String
     let typeName: String
+    let detail: String
 
     init(definition: BoardPropertyDefinition) {
         self.id = definition.id
         self.name = definition.name
         self.typeName = definition.type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
+        self.detail = definition.options.isEmpty
+            ? typeName
+            : "\(typeName) · \(definition.options.map(\.name).joined(separator: ", "))"
     }
 }
 
