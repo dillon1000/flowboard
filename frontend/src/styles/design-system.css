@@ -325,6 +325,22 @@ button {
   border: 0;
 }
 
+.build-signature {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.build-signature img {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
 /* Numeric text should never jitter between renders. */
 .tabular,
 .stat strong,
@@ -335,4 +351,3 @@ kbd {
   font-family: 'Geist Mono Variable', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
-

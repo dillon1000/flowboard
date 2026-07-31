@@ -72,14 +72,22 @@
 
 .auth-form-pane {
   display: grid;
-  align-content: center;
+  grid-template-rows: 1fr auto 1fr;
+  align-content: stretch;
   justify-items: center;
   padding: 96px 24px 48px;
   overflow-y: auto;
 }
 
 .auth-card {
+  grid-row: 2;
   width: min(100%, 360px);
+}
+
+.auth-form-pane > .build-signature {
+  grid-row: 3;
+  align-self: end;
+  margin-top: 32px;
 }
 
 .auth-card h1 {
@@ -215,4 +223,3 @@
   color: var(--text-tertiary);
   font-size: 12px;
 }
-

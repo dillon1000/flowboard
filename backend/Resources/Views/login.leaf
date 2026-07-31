@@ -79,6 +79,7 @@
 
         <p class="auth-switch"><a href="/register">Create account</a></p>
       </section>
+      #extend("partials/build-signature")
       </div>
     </main>
   </body>

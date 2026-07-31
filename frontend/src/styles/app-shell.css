@@ -147,6 +147,17 @@
   min-height: 8px;
 }
 
+.sidebar > .build-signature {
+  justify-content: center;
+  padding: 8px 8px 10px;
+  font-size: 10px;
+}
+
+.sidebar > .build-signature img {
+  width: 12px;
+  height: 12px;
+}
+
 .settings-nav {
   padding: 8px;
   border-top: 1px solid var(--border);
@@ -259,7 +270,8 @@
 :root[data-sidebar='collapsed'] .sidebar .nav-link span,
 :root[data-sidebar='collapsed'] .sidebar .nav-link small,
 :root[data-sidebar='collapsed'] .sidebar .nav-section-header span,
-:root[data-sidebar='collapsed'] .sidebar .user-row > span:last-child {
+:root[data-sidebar='collapsed'] .sidebar .user-row > span:last-child,
+:root[data-sidebar='collapsed'] .sidebar > .build-signature {
   display: none;
 }
 
@@ -287,4 +299,3 @@
 :root[data-sidebar='collapsed'] .sidebar .user-row {
   padding-block: 12px;
 }
-

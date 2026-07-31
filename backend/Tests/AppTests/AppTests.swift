@@ -43,6 +43,32 @@ struct AppTests {
         }
     }
 
+    @Test("Auth pages and the app sidebar show the build signature")
+    func pagesShowBuildSignature() async throws {
+        try await withApp(configure: configure) { app in
+            for path in ["login", "register"] {
+                let response = try await app.testing().sendRequest(.GET, path)
+
+                #expect(response.status == .ok)
+                expectContains(response.body.string, "Built with love and")
+                expectContains(response.body.string, #"src="/swift.svg""#)
+                expectContains(response.body.string, "in McKinney, Texas.")
+            }
+
+            let session = try await register(on: app)
+            let appPage = try await app.testing().sendRequest(
+                .GET,
+                "app",
+                headers: ["Cookie": session.cookie]
+            )
+
+            #expect(appPage.status == .ok)
+            expectContains(appPage.body.string, "Built with love and")
+            expectContains(appPage.body.string, #"src="/swift.svg""#)
+            expectContains(appPage.body.string, "in McKinney, Texas.")
+        }
+    }
+
     @Test("Board data requires an authenticated session")
     func boardDataRequiresAuthentication() async throws {
         try await withApp(configure: configure) { app in

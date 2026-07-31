@@ -97,6 +97,7 @@
 
         <p class="auth-switch">Already have an account? <a href="/login">Log in</a></p>
       </section>
+      #extend("partials/build-signature")
       </div>
 
       <aside class="auth-aside">

@@ -99,6 +99,7 @@
         </div>
 
         <div class="sidebar-spacer"></div>
+        #extend("partials/build-signature")
         <nav class="settings-nav">
           <a class="nav-link#if(isSettings): active#endif" href="/app/settings"#if(isSettings): aria-current="page"#endif title="Settings">
             <i data-lucide="settings"></i><span>Settings</span>

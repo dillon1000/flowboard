@@ -132,6 +132,10 @@
     display: revert;
   }
 
+  :root[data-sidebar='collapsed'] .sidebar > .build-signature {
+    display: flex;
+  }
+
   :root[data-sidebar='collapsed'] .sidebar .brand-row {
     justify-content: flex-start;
     padding: 0 12px 0 16px;
@@ -226,7 +230,7 @@
   }
 
   .auth-form-pane {
-    padding: 88px 20px 40px;
+    padding: 88px 20px 24px;
   }
 
   .auth-header {
