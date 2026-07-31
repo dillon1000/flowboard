@@ -1,36 +1,30 @@
 import { Controller } from '@hotwired/stimulus';
+import { autorun, type IReactionDisposer } from 'mobx';
+import { appStore } from '../stores/app_store';
 
 export class ThemeController extends Controller {
   static targets = ['label'];
 
   declare readonly hasLabelTarget: boolean;
   declare readonly labelTarget: HTMLElement;
+  private stopObserving?: IReactionDisposer;
 
   connect(): void {
     document.addEventListener('turbo:render', this.handleTurboRender);
-    this.apply(this.savedTheme());
+    this.stopObserving = autorun(() => this.apply(appStore.theme));
   }
 
   disconnect(): void {
     document.removeEventListener('turbo:render', this.handleTurboRender);
+    this.stopObserving?.();
   }
 
   labelTargetConnected(element: HTMLElement): void {
-    element.textContent = this.themeLabel(this.savedTheme());
+    element.textContent = this.themeLabel(appStore.theme);
   }
 
   toggle(): void {
-    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('flowboard-theme', next);
-    this.apply(next);
-  }
-
-  private savedTheme(): 'light' | 'dark' {
-    const stored = localStorage.getItem('flowboard-theme');
-    if (stored === 'light' || stored === 'dark') {
-      return stored;
-    }
-    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    appStore.toggleTheme();
   }
 
   private apply(theme: 'light' | 'dark'): void {
@@ -53,11 +47,9 @@ export class ThemeController extends Controller {
 
   // Turbo retains the root element, so refresh theme-dependent controls after it replaces the body.
   private readonly handleTurboRender = (): void => {
-    this.apply(this.savedTheme());
+    this.apply(appStore.theme);
   };
 }
-
-const SIDEBAR_STORAGE_KEY = 'flowboard-sidebar';
 
 export class SidebarController extends Controller {
   static targets = ['panel', 'scrim', 'collapseLabel', 'brandLogo'];
@@ -66,31 +58,33 @@ export class SidebarController extends Controller {
   declare readonly scrimTarget: HTMLElement;
   declare readonly collapseLabelTargets: HTMLElement[];
   declare readonly brandLogoTargets: HTMLImageElement[];
+  private stopObserving?: IReactionDisposer;
 
   connect(): void {
     document.addEventListener('turbo:render', this.handleTurboRender);
-    this.applyCollapsed(this.savedCollapsed());
+    this.stopObserving = autorun(() => {
+      this.applyCollapsed(appStore.sidebarCollapsed);
+      this.applyOpen(appStore.sidebarOpen);
+    });
   }
 
   disconnect(): void {
     document.removeEventListener('turbo:render', this.handleTurboRender);
+    this.stopObserving?.();
+    appStore.closeSidebar();
   }
 
   collapseLabelTargetConnected(element: HTMLElement): void {
-    element.textContent = this.collapseLabel(this.savedCollapsed());
+    element.textContent = this.collapseLabel(appStore.sidebarCollapsed);
   }
 
   // Mobile drawer.
   open(): void {
-    this.panelTarget.dataset.open = 'true';
-    this.scrimTarget.hidden = false;
-    document.body.classList.add('no-scroll');
+    appStore.openSidebar();
   }
 
   close(): void {
-    delete this.panelTarget.dataset.open;
-    this.scrimTarget.hidden = true;
-    document.body.classList.remove('no-scroll');
+    appStore.closeSidebar();
   }
 
   // Desktop rail. Below the drawer breakpoint the same button opens the drawer,
@@ -100,9 +94,7 @@ export class SidebarController extends Controller {
       this.open();
       return;
     }
-    const next = !this.savedCollapsed();
-    localStorage.setItem(SIDEBAR_STORAGE_KEY, next ? 'collapsed' : 'expanded');
-    this.applyCollapsed(next);
+    appStore.toggleSidebarCollapsed();
   }
 
   shortcut(event: KeyboardEvent): void {
@@ -111,10 +103,6 @@ export class SidebarController extends Controller {
     }
     event.preventDefault();
     this.toggleCollapse();
-  }
-
-  private savedCollapsed(): boolean {
-    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'collapsed';
   }
 
   private applyCollapsed(collapsed: boolean): void {
@@ -142,9 +130,21 @@ export class SidebarController extends Controller {
     return collapsed ? 'Expand sidebar' : 'Collapse sidebar';
   }
 
-  // Turbo replaces the body, so re-assert the rail state after every render.
+  private applyOpen(open: boolean): void {
+    if (open) {
+      this.panelTarget.dataset.open = 'true';
+    } else {
+      delete this.panelTarget.dataset.open;
+    }
+    this.scrimTarget.hidden = !open;
+    document.body.classList.toggle('no-scroll', open);
+  }
+
+  // Turbo morphs retained controls after MobX has rendered, so this refreshes
+  // their labels and images from the current observable state.
   private readonly handleTurboRender = (): void => {
-    this.applyCollapsed(this.savedCollapsed());
+    this.applyCollapsed(appStore.sidebarCollapsed);
+    this.applyOpen(appStore.sidebarOpen);
   };
 }
 

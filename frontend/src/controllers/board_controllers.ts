@@ -1,6 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 import confetti from 'canvas-confetti';
+import { autorun, type IReactionDisposer } from 'mobx';
 import Sortable, { type SortableEvent } from 'sortablejs';
+import { appStore } from '../stores/app_store';
 
 // The standard value remains a fallback for forms rendered without board metadata.
 const DEFAULT_COMPLETION_STATUS = 'done';
@@ -108,15 +110,23 @@ export class BoardController extends Controller {
   declare readonly columnTargets: HTMLElement[];
   declare readonly editableValue: boolean;
   private sortables: Sortable[] = [];
+  private stopObserving?: IReactionDisposer;
 
   connect(): void {
     if (!this.editableValue) {
       return;
     }
+    this.stopObserving = autorun(() => {
+      this.element.querySelectorAll<HTMLElement>('[data-task-id]').forEach((task) => {
+        const taskID = task.dataset.taskId;
+        task.toggleAttribute('aria-busy', Boolean(taskID && appStore.pendingTaskMoveIDs.has(taskID)));
+      });
+    });
     this.sortables = this.columnTargets.map((column) => new Sortable(column, {
       animation: 140,
       draggable: '[data-task-id]',
       dragClass: 'task-card-drag',
+      filter: '[aria-busy="true"]',
       ghostClass: 'task-card-ghost',
       group: 'flowboard-tasks',
       onEnd: (event) => void this.persistMove(event),
@@ -124,6 +134,7 @@ export class BoardController extends Controller {
   }
 
   disconnect(): void {
+    this.stopObserving?.();
     this.sortables.forEach((sortable) => sortable.destroy());
   }
 
@@ -139,18 +150,12 @@ export class BoardController extends Controller {
     }
 
     try {
-      const response = await fetch(`/api/v1/tasks/${taskID}/move`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
-        },
-        body: JSON.stringify({ status, targetIndex: event.newIndex ?? 0 }),
+      await appStore.moveTask({
+        csrfToken: document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
+        status,
+        targetIndex: event.newIndex ?? 0,
+        taskID,
       });
-      if (!response.ok) {
-        throw new Error('The task move was rejected.');
-      }
       if (sourceColumn.dataset.completed !== 'true' && column.dataset.completed === 'true') {
         const rect = task.getBoundingClientRect();
         window.dispatchEvent(new CustomEvent<TaskCompletedDetail>(TASK_COMPLETED_EVENT, {
@@ -162,9 +167,7 @@ export class BoardController extends Controller {
           },
         }));
       }
-      window.dispatchEvent(new CustomEvent('flowboard:notify', {
-        detail: { message: 'Task moved' },
-      }));
+      appStore.showNotification('Task moved');
     } catch {
       window.location.reload();
     }

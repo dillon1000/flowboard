@@ -1,4 +1,10 @@
 import { Controller } from '@hotwired/stimulus';
+import { autorun, type IReactionDisposer } from 'mobx';
+import {
+  appStore,
+  type TaskPreview,
+  type ToastNotification,
+} from '../stores/app_store';
 
 // Renders a deliberately small Markdown subset. Input is escaped first, so no
 // author-supplied HTML can survive — the renderer only ever adds its own tags.
@@ -144,11 +150,13 @@ export class TaskPreviewController extends Controller {
 
   private timer = 0;
   private anchor: HTMLElement | null = null;
+  private stopObserving?: IReactionDisposer;
 
   connect(): void {
     if (matchMedia('(hover: none)').matches) {
       return;
     }
+    this.stopObserving = autorun(() => this.render(appStore.taskPreview));
     document.addEventListener('pointerover', this.handleOver);
     document.addEventListener('pointerout', this.handleOut);
     document.addEventListener('focusin', this.handleOver);
@@ -165,6 +173,8 @@ export class TaskPreviewController extends Controller {
     window.removeEventListener('scroll', this.dismiss, true);
     document.removeEventListener('keydown', this.handleKeydown);
     window.clearTimeout(this.timer);
+    this.stopObserving?.();
+    appStore.hideTaskPreview();
   }
 
   private readonly handleOver = (event: Event): void => {
@@ -194,28 +204,49 @@ export class TaskPreviewController extends Controller {
   private readonly dismiss = (): void => {
     window.clearTimeout(this.timer);
     this.anchor = null;
-    this.cardTarget.hidden = true;
-    delete this.cardTarget.dataset.open;
+    appStore.hideTaskPreview();
   };
 
   private show(anchor: HTMLElement): void {
     const data = anchor.dataset;
-    this.titleTarget.textContent = data.previewTitle ?? '';
-    this.boardTarget.textContent = data.previewBoard ?? '';
-    this.boardTarget.hidden = !data.previewBoard;
-    this.statusTarget.textContent = data.previewStatus ?? '';
-    this.statusTarget.className = `badge status ${data.previewStatusClass ?? 'workflow-gray'}`;
-    this.applyWorkflowColor(this.statusTarget, data.previewStatusColor);
-    this.priorityTarget.textContent = data.previewPriority ?? '';
-    this.priorityTarget.className = `badge ${data.previewPriorityClass ?? 'workflow-gray'}`;
-    this.applyWorkflowColor(this.priorityTarget, data.previewPriorityColor);
-    this.assigneeTarget.textContent = data.previewAssignee ?? '';
-    this.dueTarget.textContent = data.previewDue ?? '';
-    this.bodyTarget.textContent = data.previewBody ?? '';
-    this.bodyTarget.hidden = !data.previewBody;
+    appStore.showTaskPreview({
+      assignee: data.previewAssignee ?? '',
+      board: data.previewBoard ?? '',
+      body: data.previewBody ?? '',
+      due: data.previewDue ?? '',
+      priority: data.previewPriority ?? '',
+      priorityClass: data.previewPriorityClass ?? 'workflow-gray',
+      priorityColor: data.previewPriorityColor,
+      status: data.previewStatus ?? '',
+      statusClass: data.previewStatusClass ?? 'workflow-gray',
+      statusColor: data.previewStatusColor,
+      title: data.previewTitle ?? '',
+    });
+  }
+
+  private render(preview: TaskPreview | null): void {
+    if (!preview || !this.anchor) {
+      this.cardTarget.hidden = true;
+      delete this.cardTarget.dataset.open;
+      return;
+    }
+
+    this.titleTarget.textContent = preview.title;
+    this.boardTarget.textContent = preview.board;
+    this.boardTarget.hidden = !preview.board;
+    this.statusTarget.textContent = preview.status;
+    this.statusTarget.className = `badge status ${preview.statusClass}`;
+    this.applyWorkflowColor(this.statusTarget, preview.statusColor);
+    this.priorityTarget.textContent = preview.priority;
+    this.priorityTarget.className = `badge ${preview.priorityClass}`;
+    this.applyWorkflowColor(this.priorityTarget, preview.priorityColor);
+    this.assigneeTarget.textContent = preview.assignee;
+    this.dueTarget.textContent = preview.due;
+    this.bodyTarget.textContent = preview.body;
+    this.bodyTarget.hidden = !preview.body;
 
     this.cardTarget.hidden = false;
-    this.position(anchor);
+    this.position(this.anchor);
     this.cardTarget.dataset.open = 'true';
   }
 
@@ -254,16 +285,28 @@ export class ToastController extends Controller {
 
   declare readonly messageTarget: HTMLElement;
   private timer?: number;
+  private stopObserving?: IReactionDisposer;
 
-  show(event: Event): void {
-    const detail = (event as CustomEvent<{ message: string }>).detail;
-    this.messageTarget.textContent = detail.message;
-    this.element.removeAttribute('hidden');
-    (this.element as HTMLElement).dataset.visible = 'true';
+  connect(): void {
+    this.stopObserving = autorun(() => this.render(appStore.notification));
+  }
+
+  disconnect(): void {
+    this.stopObserving?.();
     window.clearTimeout(this.timer);
-    this.timer = window.setTimeout(() => {
+  }
+
+  private render(notification: ToastNotification | null): void {
+    window.clearTimeout(this.timer);
+    if (!notification) {
       delete (this.element as HTMLElement).dataset.visible;
       this.element.setAttribute('hidden', '');
-    }, 2200);
+      return;
+    }
+
+    this.messageTarget.textContent = notification.message;
+    this.element.removeAttribute('hidden');
+    (this.element as HTMLElement).dataset.visible = 'true';
+    this.timer = window.setTimeout(() => appStore.dismissNotification(notification.id), 2200);
   }
 }

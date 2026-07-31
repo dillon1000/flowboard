@@ -26,6 +26,8 @@ export type TaskPreview = {
 
 export type UploadPhase = 'idle' | 'uploading' | 'saving' | 'error';
 
+export type OverlayType = 'dialog' | 'menu';
+
 export type UploadState = {
   error: string | null;
   fileName: string | null;
@@ -90,7 +92,10 @@ export class AppStore {
   theme: Theme = initialTheme();
   sidebarCollapsed = readStorage(SIDEBAR_STORAGE_KEY) === 'collapsed';
   sidebarOpen = false;
-  activeOverlayID: string | null = null;
+  activeOverlayIDs: Record<OverlayType, string | null> = {
+    dialog: null,
+    menu: null,
+  };
   notification: ToastNotification | null = null;
   taskPreview: TaskPreview | null = null;
   upload: UploadState = emptyUpload();
@@ -122,15 +127,15 @@ export class AppStore {
     this.sidebarOpen = false;
   }
 
-  /** Opens one menu or dialog and closes the previously active overlay. */
-  openOverlay(id: string): void {
-    this.activeOverlayID = id;
+  /** Opens one overlay and closes the active overlay of the same type. */
+  openOverlay(type: OverlayType, id: string): void {
+    this.activeOverlayIDs[type] = id;
   }
 
-  /** Closes the overlay only when the caller still owns it. */
-  closeOverlay(id: string): void {
-    if (this.activeOverlayID === id) {
-      this.activeOverlayID = null;
+  /** Closes an overlay only when the caller still owns its type slot. */
+  closeOverlay(type: OverlayType, id: string): void {
+    if (this.activeOverlayIDs[type] === id) {
+      this.activeOverlayIDs[type] = null;
     }
   }
 

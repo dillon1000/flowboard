@@ -1,8 +1,19 @@
 import { Controller } from '@hotwired/stimulus';
 import flatpickr from 'flatpickr';
 import type { Instance as FlatpickrInstance } from 'flatpickr/dist/types/instance';
+import { autorun, type IReactionDisposer } from 'mobx';
 import 'vanilla-colorful';
 import type { HexColorPicker } from 'vanilla-colorful';
+import { appStore, type UploadState } from '../stores/app_store';
+
+let nextOverlayID = 0;
+
+// Runtime IDs let menus and dialogs share one active-overlay state without
+// requiring stable IDs in every server-rendered template.
+function createOverlayID(type: 'dialog' | 'menu'): string {
+  nextOverlayID += 1;
+  return `${type}-${nextOverlayID}`;
+}
 
 // Derives checklist progress from the rendered items so the server does not
 // have to supply a second, redundant count.
@@ -58,11 +69,20 @@ export class FileFieldController extends Controller<HTMLFormElement> {
   declare readonly statusTarget: HTMLElement;
   declare readonly percentTarget: HTMLElement;
   declare readonly errorTarget: HTMLElement;
+  private stopObserving?: IReactionDisposer;
+
+  connect(): void {
+    appStore.resetUpload();
+    this.stopObserving = autorun(() => this.render(appStore.upload));
+  }
+
+  disconnect(): void {
+    this.stopObserving?.();
+  }
 
   choose(): void {
     const file = this.inputTarget.files?.[0];
-    this.nameTarget.textContent = file ? file.name : 'No file chosen';
-    this.resetFeedback();
+    appStore.selectUploadFile(file?.name ?? null);
   }
 
   upload(event: SubmitEvent): void {
@@ -73,7 +93,7 @@ export class FileFieldController extends Controller<HTMLFormElement> {
 
     event.preventDefault();
     if (file.size > MAX_ATTACHMENT_BYTES) {
-      this.showError('Choose a file that is 10 MB or smaller.');
+      appStore.rejectUpload('Choose a file that is 10 MB or smaller.');
       return;
     }
 
@@ -87,19 +107,15 @@ export class FileFieldController extends Controller<HTMLFormElement> {
     );
     request.upload.addEventListener('progress', (progressEvent) => {
       if (!progressEvent.lengthComputable) {
-        this.barTarget.removeAttribute('value');
-        this.percentTarget.textContent = '';
+        appStore.updateUploadProgress(null);
         return;
       }
 
       const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-      this.barTarget.value = percent;
-      this.percentTarget.textContent = `${percent}%`;
+      appStore.updateUploadProgress(percent);
     });
     request.upload.addEventListener('load', () => {
-      this.barTarget.value = 100;
-      this.statusTarget.textContent = 'Saving…';
-      this.percentTarget.textContent = '100%';
+      appStore.saveUpload();
     });
     request.addEventListener('load', () => {
       if (request.status >= 200 && request.status < 400) {
@@ -107,41 +123,46 @@ export class FileFieldController extends Controller<HTMLFormElement> {
         return;
       }
 
-      this.finishWithError(
+      appStore.failUpload(
         request.status === 413
           ? 'Choose a file that is 10 MB or smaller.'
           : 'The upload failed. Refresh the page and try again.',
       );
     });
     request.addEventListener('error', () => {
-      this.finishWithError('The network connection stopped the upload. Try again.');
+      appStore.failUpload('The network connection stopped the upload. Try again.');
     });
 
-    this.element.setAttribute('aria-busy', 'true');
-    this.buttonTarget.disabled = true;
-    this.panelTarget.hidden = false;
-    this.errorTarget.hidden = true;
-    this.barTarget.value = 0;
-    this.statusTarget.textContent = 'Uploading…';
-    this.percentTarget.textContent = '0%';
+    appStore.startUpload();
     request.send(formData);
   }
 
-  private resetFeedback(): void {
-    this.panelTarget.hidden = true;
-    this.errorTarget.hidden = true;
-  }
-
-  private showError(message: string): void {
-    this.errorTarget.textContent = message;
-    this.errorTarget.hidden = false;
-  }
-
-  private finishWithError(message: string): void {
-    this.element.removeAttribute('aria-busy');
-    this.buttonTarget.disabled = false;
-    this.statusTarget.textContent = 'Upload stopped';
-    this.showError(message);
+  private render(state: UploadState): void {
+    const busy = state.phase === 'uploading' || state.phase === 'saving';
+    this.nameTarget.textContent = state.fileName ?? 'No file chosen';
+    this.buttonTarget.disabled = busy;
+    this.panelTarget.hidden = !state.progressVisible;
+    this.errorTarget.hidden = !state.error;
+    this.errorTarget.textContent = state.error ?? '';
+    if (busy) {
+      this.element.setAttribute('aria-busy', 'true');
+    } else {
+      this.element.removeAttribute('aria-busy');
+    }
+    if (state.percent === null) {
+      this.barTarget.removeAttribute('value');
+      this.percentTarget.textContent = '';
+    } else {
+      this.barTarget.value = state.percent;
+      this.percentTarget.textContent = `${state.percent}%`;
+    }
+    this.statusTarget.textContent = state.phase === 'saving'
+      ? 'Saving…'
+      : state.phase === 'error'
+        ? 'Upload stopped'
+        : state.phase === 'uploading'
+          ? 'Uploading…'
+          : '';
   }
 }
 
@@ -156,18 +177,25 @@ export class MenuController extends Controller {
   declare readonly optionTargets: HTMLElement[];
   declare readonly swatchTarget: HTMLElement;
   declare readonly hasSwatchTarget: boolean;
+  private readonly overlayID = createOverlayID('menu');
+  private stopObserving?: IReactionDisposer;
 
   connect(): void {
     this.element.addEventListener('keydown', this.handleKeydown);
+    this.stopObserving = autorun(() => (
+      this.renderOpen(appStore.activeOverlayIDs.menu === this.overlayID)
+    ));
   }
 
   disconnect(): void {
     this.element.removeEventListener('keydown', this.handleKeydown);
+    this.stopObserving?.();
+    appStore.closeOverlay('menu', this.overlayID);
   }
 
   toggle(event: Event): void {
     event.stopPropagation();
-    this.panelTarget.hidden ? this.open() : this.close();
+    appStore.activeOverlayIDs.menu === this.overlayID ? this.close() : this.open();
   }
 
   choose(event: Event): void {
@@ -202,14 +230,19 @@ export class MenuController extends Controller {
   }
 
   close(): void {
-    this.panelTarget.hidden = true;
-    this.triggerTarget.setAttribute('aria-expanded', 'false');
+    appStore.closeOverlay('menu', this.overlayID);
   }
 
   private open(): void {
-    this.panelTarget.hidden = false;
-    this.triggerTarget.setAttribute('aria-expanded', 'true');
-    this.optionTargets.find((option) => option.getAttribute('aria-selected') === 'true')?.focus();
+    appStore.openOverlay('menu', this.overlayID);
+  }
+
+  private renderOpen(open: boolean): void {
+    this.panelTarget.hidden = !open;
+    this.triggerTarget.setAttribute('aria-expanded', String(open));
+    if (open) {
+      this.optionTargets.find((option) => option.getAttribute('aria-selected') === 'true')?.focus();
+    }
   }
 
   private handleKeydown = (event: Event): void => {
@@ -331,28 +364,54 @@ export class DialogController extends Controller {
   declare readonly panelTarget: HTMLElement;
   declare readonly hasInitialTarget: boolean;
   declare readonly initialTarget: HTMLElement;
+  private readonly overlayID = createOverlayID('dialog');
+  private stopObserving?: IReactionDisposer;
+
+  connect(): void {
+    this.stopObserving = autorun(() => (
+      this.renderOpen(appStore.activeOverlayIDs.dialog === this.overlayID)
+    ));
+  }
+
+  disconnect(): void {
+    this.stopObserving?.();
+    appStore.closeOverlay('dialog', this.overlayID);
+  }
 
   open(): void {
-    this.panelTarget.hidden = false;
-    document.body.classList.add('no-scroll');
-    requestAnimationFrame(() => {
-      this.panelTarget.dataset.open = 'true';
-      (this.hasInitialTarget ? this.initialTarget : this.panelTarget).focus();
-    });
+    appStore.openOverlay('dialog', this.overlayID);
   }
 
   close(): void {
-    delete this.panelTarget.dataset.open;
-    document.body.classList.remove('no-scroll');
-    setTimeout(() => {
-      this.panelTarget.hidden = true;
-    }, 120);
+    appStore.closeOverlay('dialog', this.overlayID);
   }
 
   backdrop(event: Event): void {
     if (event.target === this.panelTarget) {
       this.close();
     }
+  }
+
+  private renderOpen(open: boolean): void {
+    const dialogActive = Boolean(appStore.activeOverlayIDs.dialog);
+    document.body.classList.toggle('no-scroll', dialogActive);
+    if (open) {
+      this.panelTarget.hidden = false;
+      requestAnimationFrame(() => {
+        if (appStore.activeOverlayIDs.dialog === this.overlayID) {
+          this.panelTarget.dataset.open = 'true';
+          (this.hasInitialTarget ? this.initialTarget : this.panelTarget).focus();
+        }
+      });
+      return;
+    }
+
+    delete this.panelTarget.dataset.open;
+    setTimeout(() => {
+      if (appStore.activeOverlayIDs.dialog !== this.overlayID) {
+        this.panelTarget.hidden = true;
+      }
+    }, 120);
   }
 }
 
