@@ -49,25 +49,23 @@
                                   <span data-menu-target="value">#(board.newTaskStatusName)</span><i data-lucide="chevron-down"></i>
                                 </button>
                                 <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(board.newTaskIsBacklog)">Backlog</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(board.newTaskIsInProgress)">In progress</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(board.newTaskIsReview)">Review</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(board.newTaskIsDone)">Done</button>
+                                  #for(option in board.statusOptions):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+                                  #endfor
                                 </div>
                               </div>
                             </div>
                             <div class="field">
-                              <span class="field-label">Priority</span>
+                              <span class="field-label">Severity</span>
                               <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
                                 <input data-menu-target="input" type="hidden" name="priority" value="#(board.newTaskPriority)" />
                                 <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
                                   <span data-menu-target="value">#(board.newTaskPriorityName)</span><i data-lucide="chevron-down"></i>
                                 </button>
                                 <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="low" data-label="Low" aria-selected="#(board.newTaskIsLowPriority)">Low</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="medium" data-label="Medium" aria-selected="#(board.newTaskIsMediumPriority)">Medium</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="high" data-label="High" aria-selected="#(board.newTaskIsHighPriority)">High</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="urgent" data-label="Urgent" aria-selected="#(board.newTaskIsUrgentPriority)">Urgent</button>
+                                  #for(option in board.severityOptions):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+                                  #endfor
                                 </div>
                               </div>
                             </div>
@@ -120,7 +118,7 @@
                       <strong>#(column.name)</strong>
                       <span class="count">#(column.count)</span>
                     </header>
-                    <div class="column-tasks" data-board-target="column" data-status="#(column.value)">
+                    <div class="column-tasks" data-board-target="column" data-status="#(column.value)" data-completed="#(column.isCompleted)">
                       #for(task in column.tasks):
                         #extend("partials/task-card", task)
                       #endfor
@@ -134,7 +132,7 @@
               #if(board.hasTasks):
                 <div class="table-wrap">
                   <table class="data-table">
-                    <thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Start</th><th>Due</th></tr></thead>
+                    <thead><tr><th>Task</th><th>Status</th><th>Severity</th><th>Assignee</th><th>Start</th><th>Due</th></tr></thead>
                     <tbody>
                       #for(task in board.tasks):
                         <tr
@@ -142,15 +140,17 @@
                           data-preview-board="#(board.name)"
                           data-preview-status="#(task.statusName)"
                           data-preview-status-value="#(task.statusValue)"
+                          data-preview-status-class="#(task.statusColorClass)"
                           data-preview-priority="#(task.priorityName)"
                           data-preview-priority-value="#(task.priorityValue)"
+                          data-preview-priority-class="#(task.priorityColorClass)"
                           data-preview-assignee="#(task.assigneeName)"
                           data-preview-due="#(task.dueDisplay)"
                           data-preview-body="#(task.description)"
                         >
                           <td><a href="#(task.href)">#(task.title)</a></td>
-                          <td><span class="badge status status-#(task.statusValue)">#(task.statusName)</span></td>
-                          <td><span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span></td>
+                          <td><span class="badge status #(task.statusColorClass)">#(task.statusName)</span></td>
+                          <td><span class="badge #(task.priorityColorClass)">#(task.priorityName)</span></td>
                           <td#if(!task.hasAssignee): class="muted"#endif>#(task.assigneeName)</td>
                           <td class="muted">#(task.startDisplay)</td>
                           <td#if(!task.hasDueDate): class="muted"#endif>#(task.dueDisplay)</td>
@@ -187,14 +187,16 @@
                       <span class="calendar-date">#(day.day)</span>
                       #for(task in day.tasks):
                         <a
-                          class="calendar-task status-#(task.statusValue)"
+                          class="calendar-task #(task.statusColorClass)"
                           href="#(task.href)"
                           data-preview-title="#(task.title)"
                           data-preview-board="#(board.name)"
                           data-preview-status="#(task.statusName)"
                           data-preview-status-value="#(task.statusValue)"
+                          data-preview-status-class="#(task.statusColorClass)"
                           data-preview-priority="#(task.priorityName)"
                           data-preview-priority-value="#(task.priorityValue)"
+                          data-preview-priority-class="#(task.priorityColorClass)"
                           data-preview-assignee="#(task.assigneeName)"
                           data-preview-due="#(task.dueDisplay)"
                           data-preview-body="#(task.description)"
@@ -217,8 +219,10 @@
                       data-preview-board="#(board.name)"
                       data-preview-status="#(task.statusName)"
                       data-preview-status-value="#(task.statusValue)"
+                      data-preview-status-class="#(task.statusColorClass)"
                       data-preview-priority="#(task.priorityName)"
                       data-preview-priority-value="#(task.priorityValue)"
+                      data-preview-priority-class="#(task.priorityColorClass)"
                       data-preview-assignee="#(task.assigneeName)"
                       data-preview-due="#(task.dueDisplay)"
                       data-preview-body="#(task.description)"
@@ -226,8 +230,8 @@
                       <h3>#(task.title)</h3>
                       <p>#if(task.hasDescription):#(task.description)#else:No description.#endif</p>
                       <div class="task-meta">
-                        <span class="badge status status-#(task.statusValue)">#(task.statusName)</span>
-                        <span class="badge priority-#(task.priorityValue)">#(task.priorityName)</span>
+                        <span class="badge status #(task.statusColorClass)">#(task.statusName)</span>
+                        <span class="badge #(task.priorityColorClass)">#(task.priorityName)</span>
                       </div>
                     </a>
                   #endfor

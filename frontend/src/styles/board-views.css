@@ -47,23 +47,27 @@
   content: '';
 }
 
-.badge.status-backlog {
+.badge.status-backlog,
+.badge.workflow-gray {
   color: var(--text-tertiary);
 }
 
-.badge.status-in_progress {
+.badge.status-in_progress,
+.badge.workflow-blue {
   color: var(--ds-blue-900);
   background: var(--ds-blue-200);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-blue-700) 24%, transparent);
 }
 
-.badge.status-review {
+.badge.status-review,
+.badge.workflow-purple {
   color: var(--ds-purple-900);
   background: var(--ds-purple-200);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-purple-700) 24%, transparent);
 }
 
-.badge.status-done {
+.badge.status-done,
+.badge.workflow-green {
   color: var(--ds-green-900);
   background: var(--ds-green-200);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-green-700) 24%, transparent);
@@ -73,14 +77,17 @@
   color: var(--text-tertiary);
 }
 
-.badge.priority-medium {
+.badge.priority-medium,
+.badge.workflow-amber {
   color: var(--ds-amber-900);
   background: var(--ds-amber-200);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-amber-700) 28%, transparent);
 }
 
 .badge.priority-high,
-.badge.priority-urgent {
+.badge.priority-urgent,
+.badge.workflow-orange,
+.badge.workflow-red {
   color: var(--ds-red-900);
   background: var(--ds-red-200);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-red-700) 24%, transparent);
@@ -148,31 +155,38 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, currentcolor 0%, transparent);
 }
 
-.column-dot.progress {
+.column-dot.progress,
+.column-dot.workflow-blue {
   background: var(--ds-blue-700);
 }
 
-.column-dot.review {
+.column-dot.review,
+.column-dot.workflow-purple {
   background: var(--ds-purple-700);
 }
 
-.column-dot.done {
+.column-dot.done,
+.column-dot.workflow-green {
   background: var(--ds-green-700);
 }
 
-.column-dot.low {
+.column-dot.low,
+.column-dot.workflow-gray {
   background: var(--ds-gray-600);
 }
 
-.column-dot.medium {
+.column-dot.medium,
+.column-dot.workflow-amber {
   background: var(--ds-amber-700);
 }
 
-.column-dot.high {
+.column-dot.high,
+.column-dot.workflow-orange {
   background: var(--ds-amber-800);
 }
 
-.column-dot.urgent {
+.column-dot.urgent,
+.column-dot.workflow-red {
   background: var(--ds-red-800);
 }
 
@@ -361,4 +375,3 @@
 .data-table .muted {
   color: var(--text-tertiary);
 }
-

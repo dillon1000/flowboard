@@ -4,11 +4,11 @@
                   <dl class="property-list">
                     <div class="property-row">
                       <dt>Status</dt>
-                      <dd><span class="badge status status-#(taskDetail.task.statusValue)">#(taskDetail.task.statusName)</span></dd>
+                      <dd><span class="badge status #(taskDetail.task.statusColorClass)">#(taskDetail.task.statusName)</span></dd>
                     </div>
                     <div class="property-row">
-                      <dt>Priority</dt>
-                      <dd><span class="badge priority-#(taskDetail.task.priorityValue)">#(taskDetail.task.priorityName)</span></dd>
+                      <dt>Severity</dt>
+                      <dd><span class="badge #(taskDetail.task.priorityColorClass)">#(taskDetail.task.priorityName)</span></dd>
                     </div>
                     <div class="property-row">
                       <dt>Assignee</dt>

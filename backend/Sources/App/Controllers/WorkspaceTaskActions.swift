@@ -6,7 +6,7 @@ extension WorkspaceActionController {
     func createTask(req: Request) async throws -> Response {
         let input = try req.content.decode(CreateTaskForm.self)
         let userID = try req.auth.require(User.self).requireID()
-        _ = try await BoardAccessService.require(
+        let access = try await BoardAccessService.require(
             boardID: input.boardID,
             userID: userID,
             permission: .edit,
@@ -16,11 +16,14 @@ extension WorkspaceActionController {
         guard !title.isEmpty else {
             throw Abort(.unprocessableEntity, reason: "Task title is required.")
         }
-        let status = TaskStatus(rawValue: input.status ?? "") ?? .backlog
-        let priority = TaskPriority(rawValue: input.priority ?? "") ?? .medium
+        let status = TaskStatus(rawValue: input.status ?? TaskStatus.backlog.rawValue)
+        let priority = TaskPriority(rawValue: input.priority ?? TaskPriority.medium.rawValue)
+        guard access.board.accepts(status: status), access.board.accepts(priority: priority) else {
+            throw Abort(.unprocessableEntity, reason: "Select a status and severity configured for this board.")
+        }
         let count = try await Task.query(on: req.db)
             .filter(\.$board.$id == input.boardID)
-            .filter(\.$status == status)
+            .filter(\.$statusValue == status.rawValue)
             .count()
         let task = Task(
             boardID: input.boardID,
@@ -42,12 +45,17 @@ extension WorkspaceActionController {
         let task = try await requiredTask(for: req, permission: .edit)
         let input = try req.content.decode(UpdateTaskForm.self)
         let title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let status = TaskStatus(rawValue: input.status)
+        let priority = TaskPriority(rawValue: input.priority)
+        guard !title.isEmpty else {
+            throw Abort(.unprocessableEntity, reason: "Task title, status, and severity are required.")
+        }
         guard
-            !title.isEmpty,
-            let status = TaskStatus(rawValue: input.status),
-            let priority = TaskPriority(rawValue: input.priority)
+            let board = try await Board.find(task.$board.id, on: req.db),
+            board.accepts(status: status),
+            board.accepts(priority: priority)
         else {
-            throw Abort(.unprocessableEntity, reason: "Task title, status, and priority are required.")
+            throw Abort(.unprocessableEntity, reason: "Select a status and severity configured for this board.")
         }
         task.title = title
         task.description = clean(input.description)
@@ -58,7 +66,7 @@ extension WorkspaceActionController {
         if task.status != status {
             let count = try await Task.query(on: req.db)
                 .filter(\.$board.$id == task.$board.id)
-                .filter(\.$status == status)
+                .filter(\.$statusValue == status.rawValue)
                 .count()
             task.status = status
             task.position = (count + 1) * 1_000
@@ -79,13 +87,17 @@ extension WorkspaceActionController {
     func changeTaskStatus(req: Request) async throws -> Response {
         let task = try await requiredTask(for: req, permission: .edit)
         let input = try req.content.decode(ChangeTaskStatusForm.self)
-        guard let status = TaskStatus(rawValue: input.status) else {
-            throw Abort(.unprocessableEntity, reason: "Select a valid task status.")
+        let status = TaskStatus(rawValue: input.status)
+        guard
+            let board = try await Board.find(task.$board.id, on: req.db),
+            board.accepts(status: status)
+        else {
+            throw Abort(.unprocessableEntity, reason: "Select a status configured for this board.")
         }
         if task.status != status {
             let count = try await Task.query(on: req.db)
                 .filter(\.$board.$id == task.$board.id)
-                .filter(\.$status == status)
+                .filter(\.$statusValue == status.rawValue)
                 .count()
             task.status = status
             task.position = (count + 1) * 1_000

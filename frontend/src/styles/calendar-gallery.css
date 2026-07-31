@@ -132,16 +132,28 @@
   content: '';
 }
 
-.calendar-task.status-in_progress::before {
+.calendar-task.status-in_progress::before,
+.calendar-task.workflow-blue::before {
   background: var(--ds-blue-700);
 }
 
-.calendar-task.status-review::before {
+.calendar-task.status-review::before,
+.calendar-task.workflow-purple::before {
   background: var(--ds-purple-700);
 }
 
-.calendar-task.status-done::before {
+.calendar-task.status-done::before,
+.calendar-task.workflow-green::before {
   background: var(--ds-green-700);
+}
+
+.calendar-task.workflow-amber::before {
+  background: var(--ds-amber-700);
+}
+
+.calendar-task.workflow-orange::before,
+.calendar-task.workflow-red::before {
+  background: var(--ds-red-800);
 }
 
 .calendar-task span {
@@ -262,4 +274,3 @@
 .empty-state .button {
   margin-top: 20px;
 }
-

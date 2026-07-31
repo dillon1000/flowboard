@@ -26,6 +26,7 @@ struct AppPageController: RouteCollection {
         let allTasks = try await Task.query(on: req.db)
             .filter(\.$board.$id ~~ boardIDs)
             .filter(\.$isArchived == false)
+            .with(\.$board)
             .all()
 
         return try await render(
@@ -34,8 +35,12 @@ struct AppPageController: RouteCollection {
             pageKind: .overview,
             overview: OverviewPageContext(
                 totalTasks: allTasks.count,
-                completedTasks: allTasks.filter { $0.status == .done }.count,
-                dueTasks: allTasks.filter { $0.dueAt != nil && $0.status != .done }.count,
+                completedTasks: allTasks.filter {
+                    $0.$board.value?.isCompleted($0.status) ?? ($0.status == .done)
+                }.count,
+                dueTasks: allTasks.filter {
+                    $0.dueAt != nil && !($0.$board.value?.isCompleted($0.status) ?? ($0.status == .done))
+                }.count,
                 boardCount: common.boards.filter { !$0.isArchived }.count,
                 recentTasks: taskContexts
             ),
@@ -140,7 +145,7 @@ struct AppPageController: RouteCollection {
             .filter(\.$board.$id == boardID)
             .filter(\.$isDefault == true)
             .first()
-        let filteredTasks = apply(activeView.configuration, to: tasks)
+        let filteredTasks = apply(activeView.configuration, to: tasks, board: access.board)
         let taskContexts = try await makeTaskContexts(filteredTasks, on: req.db)
         let calendarMonth = requestedCalendarMonth(from: req)
         let viewPath = "/app/boards/\(boardID)/views/\(viewID)"

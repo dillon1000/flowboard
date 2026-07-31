@@ -14,6 +14,8 @@ extension WorkspaceActionController {
             name: access.board.name,
             description: access.board.description,
             propertyDefinitions: access.board.propertyDefinitions ?? [],
+            statusDefinitions: access.board.taskStatuses,
+            severityDefinitions: access.board.taskSeverities,
             views: views.map {
                 ExportView(name: $0.name, type: $0.type, position: $0.position, configuration: $0.configuration)
             },
@@ -74,8 +76,25 @@ extension WorkspaceActionController {
         guard payload.version == 1, payload.tasks.count <= 5_000 else {
             throw Abort(.unprocessableEntity, reason: "This board export is not supported.")
         }
+        let statusDefinitions = payload.statusDefinitions ?? BoardTaskOption.defaultStatuses
+        let severityDefinitions = payload.severityDefinitions ?? BoardTaskOption.defaultSeverities
+        let mergedStatuses = merge(current: access.board.taskStatuses, imported: statusDefinitions)
+        let mergedSeverities = merge(current: access.board.taskSeverities, imported: severityDefinitions)
+        guard
+            mergedStatuses.count <= 12,
+            mergedSeverities.count <= 12,
+            payload.tasks.allSatisfy({ task in
+                statusDefinitions.contains { $0.id == task.status.rawValue }
+                    && severityDefinitions.contains { $0.id == task.priority.rawValue }
+            })
+        else {
+            throw Abort(.unprocessableEntity, reason: "The import contains invalid status or severity values.")
+        }
         let boardID = try access.board.requireID()
         try await req.db.transaction { database in
+            access.board.statusDefinitions = mergedStatuses
+            access.board.severityDefinitions = mergedSeverities
+            try await access.board.update(on: database)
             for exported in payload.tasks {
                 let task = Task(
                     boardID: boardID,
@@ -94,5 +113,16 @@ extension WorkspaceActionController {
             }
         }
         return req.redirect(to: "/app/boards/\(boardID)")
+    }
+
+    private func merge(
+        current: [BoardTaskOption],
+        imported: [BoardTaskOption]
+    ) -> [BoardTaskOption] {
+        imported.reduce(into: current) { result, option in
+            if !result.contains(where: { $0.id == option.id }) {
+                result.append(option)
+            }
+        }
     }
 }

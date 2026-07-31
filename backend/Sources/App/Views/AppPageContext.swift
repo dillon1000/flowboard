@@ -102,7 +102,9 @@ struct BoardNavigationContext: Encodable {
             "/app/boards/\(id)"
         }
         self.taskCount = board.tasks.filter { !$0.isArchived }.count
-        self.completedCount = board.tasks.filter { !$0.isArchived && $0.status == .done }.count
+        self.completedCount = board.tasks.filter {
+            !$0.isArchived && board.isCompleted($0.status)
+        }.count
         self.isArchived = board.isArchived
     }
 }
@@ -163,14 +165,8 @@ struct BoardPageContext: Encodable {
     let newTaskPriority: String
     let newTaskPriorityName: String
     let newTaskLabels: String
-    let newTaskIsBacklog: Bool
-    let newTaskIsInProgress: Bool
-    let newTaskIsReview: Bool
-    let newTaskIsDone: Bool
-    let newTaskIsLowPriority: Bool
-    let newTaskIsMediumPriority: Bool
-    let newTaskIsHighPriority: Bool
-    let newTaskIsUrgentPriority: Bool
+    let statusOptions: [TaskOptionContext]
+    let severityOptions: [TaskOptionContext]
 
     init(
         board: Board,
@@ -203,7 +199,7 @@ struct BoardPageContext: Encodable {
         self.hasTasks = !tasks.isEmpty
         let configuration = activeView.configuration
         let groupBy = configuration?.groupBy ?? "status"
-        self.groupByName = groupBy == "priority" ? "Priority" : "Status"
+        self.groupByName = groupBy == "priority" ? "Severity" : "Status"
         self.hasFilters = !(configuration?.filters.isEmpty ?? true)
         self.filterSummary = configuration?.filters.first.map {
             "\($0.field.replacingOccurrences(of: "_", with: " ").capitalized): \($0.value)"
@@ -214,21 +210,23 @@ struct BoardPageContext: Encodable {
         } ?? ""
         self.canDrag = canEdit && activeView.type == .board && groupBy == "status"
         self.columns = if groupBy == "priority" {
-            TaskPriority.allCases.map { priority in
+            board.taskSeverities.map { severity in
                 TaskColumnContext(
-                    value: priority.rawValue,
-                    name: priority.rawValue.capitalized,
-                    dotClass: priority.rawValue,
-                    tasks: tasks.filter { $0.priorityValue == priority.rawValue }
+                    value: severity.id,
+                    name: severity.name,
+                    dotClass: "workflow-\(severity.color.rawValue)",
+                    isCompleted: false,
+                    tasks: tasks.filter { $0.priorityValue == severity.id }
                 )
             }
         } else {
-            TaskStatus.allCases.map { status in
+            board.taskStatuses.map { status in
                 TaskColumnContext(
-                    value: status.rawValue,
-                    name: status.displayName,
-                    dotClass: status.dotClass,
-                    tasks: tasks.filter { $0.statusValue == status.rawValue }
+                    value: status.id,
+                    name: status.name,
+                    dotClass: "workflow-\(status.color.rawValue)",
+                    isCompleted: status.isCompleted,
+                    tasks: tasks.filter { $0.statusValue == status.id }
                 )
             }
         }
@@ -243,19 +241,17 @@ struct BoardPageContext: Encodable {
         self.newTaskDescription = defaultTemplate?.description ?? ""
         let defaultStatus = defaultTemplate?.status ?? .backlog
         self.newTaskStatus = defaultStatus.rawValue
-        self.newTaskStatusName = defaultStatus.displayName
+        self.newTaskStatusName = board.statusOption(for: defaultStatus).name
         let defaultPriority = defaultTemplate?.priority ?? .medium
         self.newTaskPriority = defaultPriority.rawValue
-        self.newTaskPriorityName = defaultPriority.rawValue.capitalized
+        self.newTaskPriorityName = board.severityOption(for: defaultPriority).name
         self.newTaskLabels = defaultTemplate?.labels.joined(separator: ", ") ?? ""
-        self.newTaskIsBacklog = defaultStatus == .backlog
-        self.newTaskIsInProgress = defaultStatus == .inProgress
-        self.newTaskIsReview = defaultStatus == .review
-        self.newTaskIsDone = defaultStatus == .done
-        self.newTaskIsLowPriority = defaultPriority == .low
-        self.newTaskIsMediumPriority = defaultPriority == .medium
-        self.newTaskIsHighPriority = defaultPriority == .high
-        self.newTaskIsUrgentPriority = defaultPriority == .urgent
+        self.statusOptions = board.taskStatuses.map {
+            TaskOptionContext(option: $0, selectedValue: defaultStatus.rawValue)
+        }
+        self.severityOptions = board.taskSeverities.map {
+            TaskOptionContext(option: $0, selectedValue: defaultPriority.rawValue)
+        }
     }
 }
 
@@ -287,27 +283,6 @@ struct BoardViewTabContext: Encodable {
         case .table: "table-2"
         case .calendar: "calendar-days"
         case .gallery: "gallery-horizontal-end"
-        }
-    }
-}
-
-
-private extension TaskStatus {
-    var displayName: String {
-        switch self {
-        case .backlog: "Backlog"
-        case .inProgress: "In progress"
-        case .review: "Review"
-        case .done: "Done"
-        }
-    }
-
-    var dotClass: String {
-        switch self {
-        case .backlog: ""
-        case .inProgress: "progress"
-        case .review: "review"
-        case .done: "done"
         }
     }
 }

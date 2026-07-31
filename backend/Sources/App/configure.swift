@@ -78,6 +78,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddUserProfilePicture())
     app.migrations.add(CreateBoard())
     app.migrations.add(AddBoardOwner())
+    app.migrations.add(AddBoardTaskDefinitions())
     app.migrations.add(CreateTask())
     app.migrations.add(ExpandWorkspace())
     app.migrations.add(CreateWorkspaceFeatures())

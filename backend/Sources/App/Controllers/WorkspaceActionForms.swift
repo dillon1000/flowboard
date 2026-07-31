@@ -30,6 +30,13 @@ struct CreatePropertyForm: Content {
     let type: String
 }
 
+struct CreateTaskOptionForm: Content {
+    let kind: String
+    let name: String
+    let color: String
+    let isCompleted: String?
+}
+
 struct AddMemberForm: Content {
     let email: String
     let role: String
@@ -88,6 +95,8 @@ struct BoardExport: Codable {
     let name: String
     let description: String?
     let propertyDefinitions: [BoardPropertyDefinition]
+    let statusDefinitions: [BoardTaskOption]?
+    let severityDefinitions: [BoardTaskOption]?
     let views: [ExportView]
     let tasks: [ExportTask]
     let templates: [ExportTemplate]

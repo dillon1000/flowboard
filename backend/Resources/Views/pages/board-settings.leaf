@@ -14,6 +14,7 @@
               <nav class="settings-menu" aria-label="Board settings sections">
                 <a class="nav-link" href="#general"><i data-lucide="settings"></i><span>General</span></a>
                 <a class="nav-link" href="#views"><i data-lucide="columns-3"></i><span>Views</span></a>
+                <a class="nav-link" href="#workflow"><i data-lucide="list-filter"></i><span>Workflow</span></a>
                 <a class="nav-link" href="#fields"><i data-lucide="tag"></i><span>Custom fields</span></a>
                 <a class="nav-link" href="#members"><i data-lucide="users"></i><span>Members</span></a>
                 <a class="nav-link" href="#templates"><i data-lucide="copy"></i><span>Templates</span></a>
@@ -73,7 +74,7 @@
                                 </button>
                                 <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
                                   <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="status" data-label="Status" aria-selected="#(view.isGroupedByStatus)">Status</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="priority" data-label="Priority" aria-selected="#(view.isGroupedByPriority)">Priority</button>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="priority" data-label="Severity" aria-selected="#(view.isGroupedByPriority)">Severity</button>
                                 </div>
                               </div>
                             </div>
@@ -135,6 +136,61 @@
                   </div>
                   <button class="button small" type="submit">Add view</button>
                 </form>
+              </div>
+            </section>
+
+            <section class="section" id="workflow">
+              <div class="section-heading"><div><h2>Workflow</h2><p>Add the status and severity values that this board needs.</p></div></div>
+              <div class="settings-split">
+                <div class="panel">
+                  <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward board progress.</span></span></div>
+                  #for(option in boardSettings.statuses):
+                    <div class="panel-row">
+                      <span class="badge status #(option.colorClass)">#(option.name)</span>
+                      <span class="panel-row-main">#if(option.isCompleted):<span>Counts as completed</span>#else:<span>Active work</span>#endif</span>
+                    </div>
+                  #endfor
+                  <form class="panel-row workflow-option-form" method="post" action="/app/boards/#(boardSettings.id)/task-options">
+                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                    <input type="hidden" name="kind" value="status" />
+                    <input class="input" name="name" placeholder="Status name" maxlength="40" required />
+                    <select class="input" name="color" aria-label="Status color">
+                      <option value="gray">Gray</option>
+                      <option value="blue">Blue</option>
+                      <option value="purple">Purple</option>
+                      <option value="green">Green</option>
+                      <option value="amber">Amber</option>
+                      <option value="orange">Orange</option>
+                      <option value="red">Red</option>
+                    </select>
+                    <label class="checkbox-label"><input type="checkbox" name="isCompleted" value="true" />Completed</label>
+                    <button class="button small" type="submit">Add status</button>
+                  </form>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-row"><span class="panel-row-main"><strong>Severities</strong><span>Severity describes the effect or urgency of a task.</span></span></div>
+                  #for(option in boardSettings.severities):
+                    <div class="panel-row">
+                      <span class="badge #(option.colorClass)">#(option.name)</span>
+                    </div>
+                  #endfor
+                  <form class="panel-row workflow-option-form" method="post" action="/app/boards/#(boardSettings.id)/task-options">
+                    <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                    <input type="hidden" name="kind" value="severity" />
+                    <input class="input" name="name" placeholder="Severity name" maxlength="40" required />
+                    <select class="input" name="color" aria-label="Severity color">
+                      <option value="gray">Gray</option>
+                      <option value="blue">Blue</option>
+                      <option value="purple">Purple</option>
+                      <option value="green">Green</option>
+                      <option value="amber">Amber</option>
+                      <option value="orange">Orange</option>
+                      <option value="red">Red</option>
+                    </select>
+                    <button class="button small" type="submit">Add severity</button>
+                  </form>
+                </div>
               </div>
             </section>
 

@@ -1,27 +1,52 @@
 import Fluent
 import Vapor
 
-enum TaskStatus: String, Codable, CaseIterable, Content, Sendable {
-    case backlog
-    case inProgress = "in_progress"
-    case review
-    case done
+/// A string-backed value keeps the public task contract stable while each board
+/// can define additional values. Controllers validate the value against its board.
+struct TaskStatus: Codable, Content, Hashable, Sendable {
+    let rawValue: String
 
-    var sortOrder: Int {
-        switch self {
-        case .backlog: 0
-        case .inProgress: 1
-        case .review: 2
-        case .done: 3
-        }
+    static let backlog = Self(rawValue: "backlog")
+    static let inProgress = Self(rawValue: "in_progress")
+    static let review = Self(rawValue: "review")
+    static let done = Self(rawValue: "done")
+
+    init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    init(from decoder: any Decoder) throws {
+        self.rawValue = try decoder.singleValueContainer().decode(String.self)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 }
 
-enum TaskPriority: String, Codable, CaseIterable, Content, Sendable {
-    case low
-    case medium
-    case high
-    case urgent
+/// The database and API continue to call this field `priority` for compatibility.
+/// The product presents it as severity and boards can add their own values.
+struct TaskPriority: Codable, Content, Hashable, Sendable {
+    let rawValue: String
+
+    static let low = Self(rawValue: "low")
+    static let medium = Self(rawValue: "medium")
+    static let high = Self(rawValue: "high")
+    static let urgent = Self(rawValue: "urgent")
+
+    init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    init(from decoder: any Decoder) throws {
+        self.rawValue = try decoder.singleValueContainer().decode(String.self)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 final class Task: Model, @unchecked Sendable {
@@ -39,11 +64,21 @@ final class Task: Model, @unchecked Sendable {
     @OptionalField(key: "description")
     var description: String?
 
-    @Enum(key: "status")
-    var status: TaskStatus
+    @Field(key: "status")
+    var statusValue: String
 
-    @Enum(key: "priority")
-    var priority: TaskPriority
+    @Field(key: "priority")
+    var priorityValue: String
+
+    var status: TaskStatus {
+        get { TaskStatus(rawValue: statusValue) }
+        set { statusValue = newValue.rawValue }
+    }
+
+    var priority: TaskPriority {
+        get { TaskPriority(rawValue: priorityValue) }
+        set { priorityValue = newValue.rawValue }
+    }
 
     /// Position uses gaps of 1,000 so most moves can be represented without changing
     /// neighboring tasks. The move endpoint normalizes a column after each drop.
@@ -110,8 +145,8 @@ final class Task: Model, @unchecked Sendable {
         self.$board.id = boardID
         self.title = title
         self.description = description
-        self.status = status
-        self.priority = priority
+        self.statusValue = status.rawValue
+        self.priorityValue = priority.rawValue
         self.position = position
         self.labels = labels
         self.startAt = startAt

@@ -1,16 +1,40 @@
 import Foundation
 
+struct TaskOptionContext: Encodable {
+    let value: String
+    let name: String
+    let colorClass: String
+    let isSelected: Bool
+    let isCompleted: Bool
+
+    init(option: BoardTaskOption, selectedValue: String? = nil) {
+        self.value = option.id
+        self.name = option.name
+        self.colorClass = "workflow-\(option.color.rawValue)"
+        self.isSelected = option.id == selectedValue
+        self.isCompleted = option.isCompleted
+    }
+}
+
 struct TaskColumnContext: Encodable {
     let value: String
     let name: String
     let dotClass: String
+    let isCompleted: Bool
     let tasks: [TaskCardContext]
     let count: Int
 
-    init(value: String, name: String, dotClass: String, tasks: [TaskCardContext]) {
+    init(
+        value: String,
+        name: String,
+        dotClass: String,
+        isCompleted: Bool = false,
+        tasks: [TaskCardContext]
+    ) {
         self.value = value
         self.name = name
         self.dotClass = dotClass
+        self.isCompleted = isCompleted
         self.tasks = tasks
         self.count = tasks.count
     }
@@ -26,16 +50,10 @@ struct TaskCardContext: Encodable {
     let hasDescription: Bool
     let statusValue: String
     let statusName: String
-    let isBacklog: Bool
-    let isInProgress: Bool
-    let isReview: Bool
-    let isDone: Bool
+    let statusColorClass: String
     let priorityValue: String
     let priorityName: String
-    let isLowPriority: Bool
-    let isMediumPriority: Bool
-    let isHighPriority: Bool
-    let isUrgentPriority: Bool
+    let priorityColorClass: String
     let labels: [String]
     let labelsJoined: String
     let hasLabels: Bool
@@ -54,8 +72,16 @@ struct TaskCardContext: Encodable {
     let updatedDisplay: String
     let isArchived: Bool
     let canEdit: Bool
+    let statusOptions: [TaskOptionContext]
+    let severityOptions: [TaskOptionContext]
+    let completionStatuses: String
 
-    init(task: Task, assignee: User?, canEdit: Bool = false) throws {
+    init(task: Task, assignee: User?, board: Board? = nil, canEdit: Bool = false) throws {
+        let resolvedBoard = board ?? task.$board.value
+        let statusOption = resolvedBoard?.statusOption(for: task.status)
+            ?? BoardTaskOption.fallback(id: task.status.rawValue)
+        let severityOption = resolvedBoard?.severityOption(for: task.priority)
+            ?? BoardTaskOption.fallback(id: task.priority.rawValue)
         self.id = try task.requireID()
         self.boardID = task.$board.id
         self.boardName = task.$board.value?.name ?? ""
@@ -64,22 +90,11 @@ struct TaskCardContext: Encodable {
         self.description = task.description ?? ""
         self.hasDescription = !(task.description ?? "").isEmpty
         self.statusValue = task.status.rawValue
-        self.statusName = switch task.status {
-        case .backlog: "Backlog"
-        case .inProgress: "In progress"
-        case .review: "Review"
-        case .done: "Done"
-        }
-        self.isBacklog = task.status == .backlog
-        self.isInProgress = task.status == .inProgress
-        self.isReview = task.status == .review
-        self.isDone = task.status == .done
+        self.statusName = statusOption.name
+        self.statusColorClass = "workflow-\(statusOption.color.rawValue)"
         self.priorityValue = task.priority.rawValue
-        self.priorityName = task.priority.rawValue.capitalized
-        self.isLowPriority = task.priority == .low
-        self.isMediumPriority = task.priority == .medium
-        self.isHighPriority = task.priority == .high
-        self.isUrgentPriority = task.priority == .urgent
+        self.priorityName = severityOption.name
+        self.priorityColorClass = "workflow-\(severityOption.color.rawValue)"
         self.labels = task.labels
         self.labelsJoined = task.labels.joined(separator: ", ")
         self.hasLabels = !task.labels.isEmpty
@@ -98,6 +113,16 @@ struct TaskCardContext: Encodable {
         self.updatedDisplay = task.updatedAt.map(displayDate) ?? "Recently"
         self.isArchived = task.isArchived
         self.canEdit = canEdit
+        self.statusOptions = (resolvedBoard?.taskStatuses ?? BoardTaskOption.defaultStatuses).map {
+            TaskOptionContext(option: $0, selectedValue: task.status.rawValue)
+        }
+        self.severityOptions = (resolvedBoard?.taskSeverities ?? BoardTaskOption.defaultSeverities).map {
+            TaskOptionContext(option: $0, selectedValue: task.priority.rawValue)
+        }
+        self.completionStatuses = (resolvedBoard?.taskStatuses ?? BoardTaskOption.defaultStatuses)
+            .filter(\.isCompleted)
+            .map(\.id)
+            .joined(separator: ",")
     }
 }
 
@@ -155,7 +180,8 @@ struct TaskDetailPageContext: Encodable {
     ) throws {
         self.task = try TaskCardContext(
             task: task,
-            assignee: task.$assignee.id.flatMap { id in members.first { $0.id == id } }
+            assignee: task.$assignee.id.flatMap { id in members.first { $0.id == id } },
+            board: board
         )
         self.boardName = board.name
         self.boardHref = "/app/boards/\(try board.requireID())"
@@ -264,4 +290,3 @@ struct TaskPropertyContext: Encodable {
     let value: String
     let inputValue: String
 }
-

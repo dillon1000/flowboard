@@ -25,8 +25,8 @@ struct TaskController: RouteCollection {
             }
             query = query.filter(\.$board.$id == boardID)
         }
-        if let status: TaskStatus = req.query["status"] {
-            query = query.filter(\.$status == status)
+        if let status: String = req.query["status"] {
+            query = query.filter(\.$statusValue == status)
         }
 
         let page = try await query.sort(\.$position, .ascending).paginate(for: req)
@@ -40,7 +40,7 @@ struct TaskController: RouteCollection {
         let input = try req.content.decode(CreateTaskRequest.self)
 
         let userID = try req.auth.require(User.self).requireID()
-        _ = try await BoardAccessService.require(
+        let access = try await BoardAccessService.require(
             boardID: input.boardID,
             userID: userID,
             permission: .edit,
@@ -48,16 +48,18 @@ struct TaskController: RouteCollection {
         )
 
         let status = input.status ?? .backlog
+        let priority = input.priority ?? .medium
+        try validate(status: status, priority: priority, for: access.board)
         let count = try await Task.query(on: req.db)
             .filter(\.$board.$id == input.boardID)
-            .filter(\.$status == status)
+            .filter(\.$statusValue == status.rawValue)
             .count()
         let task = Task(
             boardID: input.boardID,
             title: input.title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: input.description,
             status: status,
-            priority: input.priority ?? .medium,
+            priority: priority,
             position: (count + 1) * 1_000,
             labels: sanitize(labels: input.labels ?? []),
             startAt: input.startAt,
@@ -85,6 +87,8 @@ struct TaskController: RouteCollection {
         try UpdateTaskRequest.validate(content: req)
         let input = try req.content.decode(UpdateTaskRequest.self)
         let task = try await findTask(req)
+        let board = try await requiredBoard(for: task, on: req.db)
+        try validate(status: input.status, priority: input.priority, for: board)
 
         task.title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
         task.description = input.description
@@ -104,7 +108,7 @@ struct TaskController: RouteCollection {
         if input.status != task.status {
             let count = try await Task.query(on: req.db)
                 .filter(\.$board.$id == task.$board.id)
-                .filter(\.$status == input.status)
+                .filter(\.$statusValue == input.status.rawValue)
                 .count()
             task.status = input.status
             task.position = (count + 1) * 1_000
@@ -120,13 +124,17 @@ struct TaskController: RouteCollection {
         try MoveTaskRequest.validate(content: req)
         let input = try req.content.decode(MoveTaskRequest.self)
         let task = try await findTask(req)
+        let board = try await requiredBoard(for: task, on: req.db)
+        guard board.accepts(status: input.status) else {
+            throw Abort(.unprocessableEntity, reason: "Select a status configured for this board.")
+        }
         let taskID = try task.requireID()
         let oldStatus = task.status
 
         return try await req.db.transaction { database in
             var destination = try await Task.query(on: database)
                 .filter(\.$board.$id == task.$board.id)
-                .filter(\.$status == input.status)
+                .filter(\.$statusValue == input.status.rawValue)
                 .filter(\.$id != taskID)
                 .sort(\.$position, .ascending)
                 .all()
@@ -139,7 +147,7 @@ struct TaskController: RouteCollection {
             if oldStatus != input.status {
                 let source = try await Task.query(on: database)
                     .filter(\.$board.$id == task.$board.id)
-                    .filter(\.$status == oldStatus)
+                    .filter(\.$statusValue == oldStatus.rawValue)
                     .sort(\.$position, .ascending)
                     .all()
                 try await normalize(source, on: database)
@@ -176,6 +184,19 @@ struct TaskController: RouteCollection {
         for (index, task) in tasks.enumerated() {
             task.position = (index + 1) * 1_000
             try await task.save(on: database)
+        }
+    }
+
+    private func requiredBoard(for task: Task, on database: any Database) async throws -> Board {
+        guard let board = try await Board.find(task.$board.id, on: database) else {
+            throw Abort(.notFound, reason: "The board does not exist.")
+        }
+        return board
+    }
+
+    private func validate(status: TaskStatus, priority: TaskPriority, for board: Board) throws {
+        guard board.accepts(status: status), board.accepts(priority: priority) else {
+            throw Abort(.unprocessableEntity, reason: "Select a status and severity configured for this board.")
         }
     }
 

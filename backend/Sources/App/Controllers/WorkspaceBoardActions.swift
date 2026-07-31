@@ -73,6 +73,8 @@ extension WorkspaceActionController {
                 ownerID: userID
             )
             board.propertyDefinitions = access.board.propertyDefinitions
+            board.statusDefinitions = access.board.taskStatuses
+            board.severityDefinitions = access.board.taskSeverities
             try await board.create(on: database)
             let boardID = try board.requireID()
 
@@ -246,6 +248,55 @@ extension WorkspaceActionController {
         return req.redirect(to: "/app/boards/\(try access.board.requireID())/settings")
     }
 
+    /// Adds one ordered status or severity definition to a board. The generated
+    /// ID becomes the stored task value, so later label changes can remain safe.
+    func createTaskOption(req: Request) async throws -> Response {
+        let access = try await requiredBoard(for: req, permission: .admin)
+        let input = try req.content.decode(CreateTaskOptionForm.self)
+        let name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard
+            (1...40).contains(name.count),
+            let color = BoardTaskOptionColor(rawValue: input.color)
+        else {
+            throw Abort(.unprocessableEntity, reason: "Use a name between 1 and 40 characters and select a color.")
+        }
+
+        let isStatus = input.kind == "status"
+        guard isStatus || input.kind == "severity" else {
+            throw Abort(.unprocessableEntity, reason: "Choose status or severity.")
+        }
+        var options = isStatus ? access.board.taskStatuses : access.board.taskSeverities
+        guard options.count < 12 else {
+            throw Abort(.unprocessableEntity, reason: "A board can have up to 12 values of each type.")
+        }
+        guard !options.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else {
+            throw Abort(.unprocessableEntity, reason: "That name already exists on this board.")
+        }
+
+        let baseID = String(slugify(name).prefix(32))
+        var optionID = baseID
+        var suffix = 2
+        while options.contains(where: { $0.id == optionID }) {
+            optionID = "\(String(baseID.prefix(28)))-\(suffix)"
+            suffix += 1
+        }
+        options.append(
+            BoardTaskOption(
+                id: optionID,
+                name: name,
+                color: color,
+                isCompleted: isStatus && input.isCompleted != nil
+            )
+        )
+        if isStatus {
+            access.board.statusDefinitions = options
+        } else {
+            access.board.severityDefinitions = options
+        }
+        try await access.board.update(on: req.db)
+        return req.redirect(to: "/app/boards/\(try access.board.requireID())/settings#workflow")
+    }
+
     func addMember(req: Request) async throws -> Response {
         let access = try await requiredBoard(for: req, permission: .admin)
         let input = try req.content.decode(AddMemberForm.self)
@@ -313,7 +364,7 @@ extension WorkspaceActionController {
         let template = try await requiredTemplate(for: req, boardID: boardID)
         let count = try await Task.query(on: req.db)
             .filter(\.$board.$id == boardID)
-            .filter(\.$status == template.status)
+            .filter(\.$statusValue == template.status.rawValue)
             .count()
         let task = Task(
             boardID: boardID,

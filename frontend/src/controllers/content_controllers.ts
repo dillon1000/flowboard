@@ -204,9 +204,9 @@ export class TaskPreviewController extends Controller {
     this.boardTarget.textContent = data.previewBoard ?? '';
     this.boardTarget.hidden = !data.previewBoard;
     this.statusTarget.textContent = data.previewStatus ?? '';
-    this.statusTarget.className = `badge status status-${data.previewStatusValue ?? 'backlog'}`;
+    this.statusTarget.className = `badge status ${data.previewStatusClass ?? 'workflow-gray'}`;
     this.priorityTarget.textContent = data.previewPriority ?? '';
-    this.priorityTarget.className = `badge priority-${data.previewPriorityValue ?? 'low'}`;
+    this.priorityTarget.className = `badge ${data.previewPriorityClass ?? 'workflow-gray'}`;
     this.assigneeTarget.textContent = data.previewAssignee ?? '';
     this.dueTarget.textContent = data.previewDue ?? '';
     this.bodyTarget.textContent = data.previewBody ?? '';

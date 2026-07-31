@@ -2,9 +2,8 @@ import { Controller } from '@hotwired/stimulus';
 import confetti from 'canvas-confetti';
 import Sortable, { type SortableEvent } from 'sortablejs';
 
-// DONE_STATUS mirrors TaskStatus.done on the server. The event and storage keys
-// carry the completion signal across both direct board moves and Turbo redirects.
-const DONE_STATUS = 'done';
+// The standard value remains a fallback for forms rendered without board metadata.
+const DEFAULT_COMPLETION_STATUS = 'done';
 const TASK_COMPLETED_EVENT = 'flowboard:task-completed';
 const PENDING_COMPLETION_KEY = 'flowboard-pending-completion';
 
@@ -43,7 +42,12 @@ export class CompletionController extends Controller {
     }
 
     const nextStatus = new FormData(form).get('status');
-    if (form.dataset.completionStatus !== DONE_STATUS && nextStatus === DONE_STATUS) {
+    const completionStatuses = (form.dataset.completionStatuses ?? DEFAULT_COMPLETION_STATUS).split(',');
+    if (
+      !completionStatuses.includes(form.dataset.completionStatus) &&
+      typeof nextStatus === 'string' &&
+      completionStatuses.includes(nextStatus)
+    ) {
       this.pendingForms.add(form);
     } else {
       this.pendingForms.delete(form);
@@ -147,7 +151,7 @@ export class BoardController extends Controller {
       if (!response.ok) {
         throw new Error('The task move was rejected.');
       }
-      if (sourceColumn.dataset.status !== DONE_STATUS && status === DONE_STATUS) {
+      if (sourceColumn.dataset.completed !== 'true' && column.dataset.completed === 'true') {
         const rect = task.getBoundingClientRect();
         window.dispatchEvent(new CustomEvent<TaskCompletedDetail>(TASK_COMPLETED_EVENT, {
           detail: {

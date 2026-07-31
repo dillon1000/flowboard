@@ -14,6 +14,8 @@ struct BoardSettingsPageContext: Encodable {
     let members: [BoardMemberContext]
     let templates: [TemplateContext]
     let properties: [PropertyDefinitionContext]
+    let statuses: [TaskOptionContext]
+    let severities: [TaskOptionContext]
 
     init(
         board: Board,
@@ -42,6 +44,8 @@ struct BoardSettingsPageContext: Encodable {
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
         self.properties = (board.propertyDefinitions ?? []).map(PropertyDefinitionContext.init)
+        self.statuses = board.taskStatuses.map { TaskOptionContext(option: $0) }
+        self.severities = board.taskSeverities.map { TaskOptionContext(option: $0) }
     }
 }
 
@@ -65,7 +69,7 @@ struct BoardSettingsViewContext: Encodable {
         self.name = view.name
         self.typeName = view.type.rawValue.capitalized
         self.groupBy = view.configuration?.groupBy ?? "status"
-        self.groupByName = self.groupBy == "priority" ? "Priority" : "Status"
+        self.groupByName = self.groupBy == "priority" ? "Severity" : "Status"
         self.isGroupedByStatus = self.groupBy == "status"
         self.isGroupedByPriority = self.groupBy == "priority"
         self.filterField = view.configuration?.filters.first?.field ?? ""
@@ -146,4 +150,3 @@ func displayDateOnly(_ date: Date) -> String {
 func displayDate(_ date: Date) -> String {
     date.formatted(.dateTime.month(.abbreviated).day().year())
 }
-

@@ -141,7 +141,12 @@ extension AppPageController {
             }
             editPermissions[task.$board.id] = canEdit
             result.append(
-                try TaskCardContext(task: task, assignee: assignee, canEdit: canEdit)
+                try TaskCardContext(
+                    task: task,
+                    assignee: assignee,
+                    board: task.$board.value,
+                    canEdit: canEdit
+                )
             )
         }
         return result
@@ -149,7 +154,8 @@ extension AppPageController {
 
     func apply(
         _ configuration: BoardViewConfiguration?,
-        to tasks: [Task]
+        to tasks: [Task],
+        board: Board
     ) -> [Task] {
         guard let configuration else {
             return tasks
@@ -177,9 +183,13 @@ extension AppPageController {
                 case "due_at":
                     comparison = (left.dueAt ?? .distantFuture).compare(right.dueAt ?? .distantFuture)
                 case "priority":
-                    comparison = left.priority.sortOrder == right.priority.sortOrder
+                    let leftOrder = board.taskSeverities.firstIndex { $0.id == left.priorityValue }
+                        ?? board.taskSeverities.count
+                    let rightOrder = board.taskSeverities.firstIndex { $0.id == right.priorityValue }
+                        ?? board.taskSeverities.count
+                    comparison = leftOrder == rightOrder
                         ? .orderedSame
-                        : left.priority.sortOrder < right.priority.sortOrder ? .orderedAscending : .orderedDescending
+                        : leftOrder < rightOrder ? .orderedAscending : .orderedDescending
                 default:
                     comparison = left.position == right.position
                         ? .orderedSame
@@ -275,16 +285,5 @@ extension AppPageController {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
         return calendar
-    }
-}
-
-extension TaskPriority {
-    fileprivate var sortOrder: Int {
-        switch self {
-        case .low: 0
-        case .medium: 1
-        case .high: 2
-        case .urgent: 3
-        }
     }
 }

@@ -2,8 +2,8 @@
               <div class="page-title">
                 <h1>#(taskDetail.task.title)</h1>
                 <div class="task-facts">
-                  <span class="badge status status-#(taskDetail.task.statusValue)">#(taskDetail.task.statusName)</span>
-                  <span class="badge priority-#(taskDetail.task.priorityValue)">#(taskDetail.task.priorityName)</span>
+                  <span class="badge status #(taskDetail.task.statusColorClass)">#(taskDetail.task.statusName)</span>
+                  <span class="badge #(taskDetail.task.priorityColorClass)">#(taskDetail.task.priorityName)</span>
                   #for(label in taskDetail.task.labels):
                     <span class="badge subtle">#(label)</span>
                   #endfor
@@ -28,6 +28,7 @@
                     data-action="click@window->menu#outside keydown.esc@window->menu#close"
                     data-submit-on-choose="true"
                     data-completion-status="#(taskDetail.task.statusValue)"
+                    data-completion-statuses="#(taskDetail.task.completionStatuses)"
                   >
                     <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                     <input data-menu-target="input" type="hidden" name="status" value="#(taskDetail.task.statusValue)" />
@@ -44,18 +45,11 @@
                       <i data-lucide="chevron-down"></i>
                     </button>
                     <div class="menu-panel right" data-menu-target="panel" role="listbox" aria-label="Change task status" hidden>
-                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(taskDetail.task.isBacklog)">
-                        <span class="badge status status-backlog">Backlog</span>
-                      </button>
-                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(taskDetail.task.isInProgress)">
-                        <span class="badge status status-in_progress">In progress</span>
-                      </button>
-                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(taskDetail.task.isReview)">
-                        <span class="badge status status-review">Review</span>
-                      </button>
-                      <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(taskDetail.task.isDone)">
-                        <span class="badge status status-done">Done</span>
-                      </button>
+                      #for(option in taskDetail.task.statusOptions):
+                        <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">
+                          <span class="badge status #(option.colorClass)">#(option.name)</span>
+                        </button>
+                      #endfor
                     </div>
                   </form>
                 #endif
@@ -85,6 +79,7 @@
                         method="post"
                         action="/app/tasks/#(taskDetail.task.id)/update"
                         data-completion-status="#(taskDetail.task.statusValue)"
+                        data-completion-statuses="#(taskDetail.task.completionStatuses)"
                       >
                         <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                         <div class="dialog-header">
@@ -110,25 +105,23 @@
                                   <span data-menu-target="value">#(taskDetail.task.statusName)</span><i data-lucide="chevron-down"></i>
                                 </button>
                                 <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="backlog" data-label="Backlog" aria-selected="#(taskDetail.task.isBacklog)">Backlog</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="in_progress" data-label="In progress" aria-selected="#(taskDetail.task.isInProgress)">In progress</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="review" data-label="Review" aria-selected="#(taskDetail.task.isReview)">Review</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="done" data-label="Done" aria-selected="#(taskDetail.task.isDone)">Done</button>
+                                  #for(option in taskDetail.task.statusOptions):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+                                  #endfor
                                 </div>
                               </div>
                             </div>
                             <div class="field">
-                              <span class="field-label">Priority</span>
+                              <span class="field-label">Severity</span>
                               <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
                                 <input data-menu-target="input" type="hidden" name="priority" value="#(taskDetail.task.priorityValue)" />
                                 <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
                                   <span data-menu-target="value">#(taskDetail.task.priorityName)</span><i data-lucide="chevron-down"></i>
                                 </button>
                                 <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="low" data-label="Low" aria-selected="#(taskDetail.task.isLowPriority)">Low</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="medium" data-label="Medium" aria-selected="#(taskDetail.task.isMediumPriority)">Medium</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="high" data-label="High" aria-selected="#(taskDetail.task.isHighPriority)">High</button>
-                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="urgent" data-label="Urgent" aria-selected="#(taskDetail.task.isUrgentPriority)">Urgent</button>
+                                  #for(option in taskDetail.task.severityOptions):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+                                  #endfor
                                 </div>
                               </div>
                             </div>

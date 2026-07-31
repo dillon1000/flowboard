@@ -18,6 +18,7 @@ struct WorkspaceActionController: RouteCollection {
         routes.post("app", "boards", ":boardID", "views", ":viewID", "configure", use: configureView)
         routes.post("app", "boards", ":boardID", "views", ":viewID", "delete", use: deleteView)
         routes.post("app", "boards", ":boardID", "properties", use: createProperty)
+        routes.post("app", "boards", ":boardID", "task-options", use: createTaskOption)
         routes.post("app", "boards", ":boardID", "members", use: addMember)
         routes.post("app", "boards", ":boardID", "members", ":memberID", "remove", use: removeMember)
         routes.post("app", "boards", ":boardID", "templates", use: createTemplate)

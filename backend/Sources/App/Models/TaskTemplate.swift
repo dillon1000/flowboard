@@ -19,11 +19,21 @@ final class TaskTemplate: Model, @unchecked Sendable {
     @OptionalField(key: "description")
     var description: String?
 
-    @Enum(key: "status")
-    var status: TaskStatus
+    @Field(key: "status")
+    var statusValue: String
 
-    @Enum(key: "priority")
-    var priority: TaskPriority
+    @Field(key: "priority")
+    var priorityValue: String
+
+    var status: TaskStatus {
+        get { TaskStatus(rawValue: statusValue) }
+        set { statusValue = newValue.rawValue }
+    }
+
+    var priority: TaskPriority {
+        get { TaskPriority(rawValue: priorityValue) }
+        set { priorityValue = newValue.rawValue }
+    }
 
     @Field(key: "labels")
     var labels: [String]
@@ -52,8 +62,8 @@ final class TaskTemplate: Model, @unchecked Sendable {
         self.name = name
         self.title = title
         self.description = description
-        self.status = status
-        self.priority = priority
+        self.statusValue = status.rawValue
+        self.priorityValue = priority.rawValue
         self.labels = labels
         self.isDefault = isDefault
     }
