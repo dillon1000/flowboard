@@ -1,9 +1,7 @@
 export { BoardController, CompletionController } from './controllers/board_controllers';
 export {
-  MarkdownController,
   TaskPreviewController,
   ToastController,
-  renderMarkdown,
 } from './controllers/content_controllers';
 export {
   ColorPickerController,

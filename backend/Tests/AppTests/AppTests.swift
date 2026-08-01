@@ -183,6 +183,33 @@ struct AppTests {
         }
     }
 
+    @Test("Task descriptions render safe Markdown on the server")
+    func taskDescriptionsRenderSafeMarkdown() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let task = Task(
+                boardID: session.boardID,
+                title: "Render Markdown",
+                description: "# Release notes\n\n- **Ready**\n\n<script>alert('xss')</script>",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+
+            let taskPage = try await app.testing().sendRequest(
+                .GET,
+                String(task.browserPath.dropFirst()),
+                headers: ["Cookie": session.cookie]
+            )
+
+            #expect(taskPage.status == .ok)
+            expectContains(taskPage.body.string, "<h1>Release notes</h1>")
+            expectContains(taskPage.body.string, "<li><strong>Ready</strong></li>")
+            #expect(!taskPage.body.string.contains("<script>alert('xss')</script>"))
+            #expect(!taskPage.body.string.contains("data-controller=\"markdown\""))
+        }
+    }
+
     @Test("An archived task can be found and restored")
     func archivedTaskRecovery() async throws {
         try await withApp(configure: configure) { app in

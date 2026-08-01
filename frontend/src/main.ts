@@ -52,7 +52,6 @@ import {
   DatePickerController,
   DialogController,
   FileFieldController,
-  MarkdownController,
   MenuController,
   PropertyDefinitionController,
   SearchController,
@@ -70,7 +69,6 @@ application.register('completion', CompletionController);
 application.register('date-picker', DatePickerController);
 application.register('dialog', DialogController);
 application.register('file-field', FileFieldController);
-application.register('markdown', MarkdownController);
 application.register('menu', MenuController);
 application.register('property-definition', PropertyDefinitionController);
 application.register('search', SearchController);

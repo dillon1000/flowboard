@@ -2,7 +2,7 @@
                   <div class="card-header"><h2>Description</h2></div>
                   <div class="card-body">
                     #if(taskDetail.task.hasDescription):
-                      <div class="task-description markdown" data-controller="markdown">#(taskDetail.task.description)</div>
+                      <div class="task-description markdown">#markdown(taskDetail.task.description)</div>
                     #else:
                       <div class="task-description empty">No description yet.</div>
                     #endif

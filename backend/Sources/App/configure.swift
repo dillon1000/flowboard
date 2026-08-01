@@ -1,6 +1,7 @@
 import Fluent
 import FluentSQLiteDriver
 import Leaf
+import LeafMarkdown
 import Vapor
 
 /// Configures the database, middleware, migrations, and routes for one application process.
@@ -52,6 +53,8 @@ public func configure(_ app: Application) async throws {
     // Leaf renders every browser page. File middleware serves the Hotwire,
     // Stimulus, and design assets created by `pnpm build`.
     app.views.use(.leaf)
+    // The default options omit raw HTML and unsafe links from user-authored text.
+    app.leaf.tags["markdown"] = MarkdownTag()
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
     // Sessions use Fluent so login survives server restarts and works across
