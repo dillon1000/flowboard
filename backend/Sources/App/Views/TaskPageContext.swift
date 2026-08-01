@@ -319,6 +319,7 @@ struct TaskPropertyContext: Encodable {
     let name: String
     let value: String
     let inputValue: String
+    let inputLabel: String
     let inputType: String
     let usesInput: Bool
     let usesSelect: Bool
@@ -377,7 +378,7 @@ struct TaskPropertyContext: Encodable {
         }
         self.options = options
 
-        self.value = switch definition.type {
+        let value = switch definition.type {
         case .select, .multiSelect:
             options.filter(\.isSelected).map(\.name).joined(separator: ", ").nilIfEmpty ?? "—"
         case .checkbox:
@@ -387,6 +388,8 @@ struct TaskPropertyContext: Encodable {
         default:
             inputValue.isEmpty ? "—" : inputValue
         }
+        self.value = value
+        self.inputLabel = inputValue.isEmpty ? "No value" : value
     }
 }
 

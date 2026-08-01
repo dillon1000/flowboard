@@ -42,7 +42,9 @@
                         <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                         #for(property in taskDetail.properties):
                           <div class="field">
-                            #if(property.usesMultiSelect):
+                            #if(property.usesSelect):
+                              <span class="field-label">#(property.name)</span>
+                            #elseif(property.usesMultiSelect):
                               <span class="field-label">#(property.name)</span>
                             #else:
                               <label for="property-#(property.id)">#(property.name)</label>
@@ -50,12 +52,18 @@
                             #if(property.usesInput):
                               <input class="input" type="#(property.inputType)" step="any" id="property-#(property.id)" name="property-#(property.id)" value="#(property.inputValue)" />
                             #elseif(property.usesSelect):
-                              <select class="input" id="property-#(property.id)" name="property-#(property.id)">
-                                <option value="">No value</option>
-                                #for(option in property.options):
-                                  <option value="#(option.id)"#if(option.isSelected): selected#endif>#(option.name)</option>
-                                #endfor
-                              </select>
+                              <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                <input data-menu-target="input" type="hidden" name="property-#(property.id)" value="#(property.inputValue)" />
+                                <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-haspopup="listbox" aria-expanded="false">
+                                  <span data-menu-target="value">#(property.inputLabel)</span><i data-lucide="chevron-down"></i>
+                                </button>
+                                <div class="menu-panel right" data-menu-target="panel" role="listbox" hidden>
+                                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="" data-label="No value" aria-selected="#if(property.inputValue):false#else:true#endif">No value</button>
+                                  #for(option in property.options):
+                                    <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.id)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+                                  #endfor
+                                </div>
+                              </div>
                             #elseif(property.usesMultiSelect):
                               <div class="property-options" id="property-#(property.id)" role="group" aria-label="#(property.name)">
                                 #for(option in property.options):

@@ -17,6 +17,8 @@ struct CustomFieldTests {
                 headers: ["Cookie": session.cookie]
             )
             let csrfToken = try csrfToken(from: settings.body.string)
+            #expect(!settings.body.string.contains("<select"))
+            expectContains(settings.body.string, #"data-menu-target="input" type="hidden" name="color""#)
             let response = try await app.testing().sendRequest(
                 .POST,
                 "app/boards/\(session.boardID)/properties",
@@ -42,6 +44,14 @@ struct CustomFieldTests {
             #expect(definition.type == .multiSelect)
             #expect(definition.options.map(\.id) == ["north-america", "europe", "asia-pacific"])
             #expect(definition.options.map(\.name) == ["North America", "Europe", "Asia Pacific"])
+            let primaryRegion = BoardPropertyDefinition(
+                id: "primary-region",
+                name: "Primary region",
+                type: .select,
+                options: definition.options
+            )
+            board.propertyDefinitions = [definition, primaryRegion]
+            try await board.update(on: app.db)
 
             let task = Task(
                 boardID: session.boardID,
@@ -49,7 +59,10 @@ struct CustomFieldTests {
                 position: 1_000,
                 creatorID: session.userID
             )
-            task.properties = [definition.id: #"["north-america","europe"]"#]
+            task.properties = [
+                definition.id: #"["north-america","europe"]"#,
+                primaryRegion.id: "europe",
+            ]
             try await task.create(on: app.db)
             let taskPage = try await app.testing().sendRequest(
                 .GET,
@@ -57,8 +70,11 @@ struct CustomFieldTests {
                 headers: ["Cookie": session.cookie]
             )
             #expect(taskPage.status == .ok)
+            #expect(!taskPage.body.string.contains("<select"))
             expectContains(taskPage.body.string, "North America, Europe")
             expectContains(taskPage.body.string, #"name="property-\#(definition.id)-north-america""#)
+            expectContains(taskPage.body.string, #"name="property-primary-region" value="europe""#)
+            expectContains(taskPage.body.string, #"data-menu-target="value">Europe"#)
         }
     }
 
