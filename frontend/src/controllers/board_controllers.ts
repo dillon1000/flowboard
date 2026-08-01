@@ -1,40 +1,39 @@
 import { Controller } from '@hotwired/stimulus';
 import confetti from 'canvas-confetti';
-import { autorun, type IReactionDisposer } from 'mobx';
+import { autorun, reaction, type IReactionDisposer } from 'mobx';
 import Sortable, { type SortableEvent } from 'sortablejs';
-import { appStore } from '../stores/app_store';
+import { appStore, type ConfettiOrigin } from '../stores/app_store';
 
 // The standard value remains a fallback for forms rendered without board metadata.
 const DEFAULT_COMPLETION_STATUS = 'done';
-const TASK_COMPLETED_EVENT = 'flowboard:task-completed';
-const PENDING_COMPLETION_KEY = 'flowboard-pending-completion';
-
-type ConfettiOrigin = {
-  x: number;
-  y: number;
-};
-
-type TaskCompletedDetail = {
-  origin?: ConfettiOrigin;
-};
 
 // Coordinates one-shot completion effects from direct board moves and Turbo form
 // redirects. Failed form submissions never set the pending completion flag.
 export class CompletionController extends Controller {
   private pendingForms = new WeakSet<HTMLFormElement>();
+  private stopObserving?: IReactionDisposer;
 
   connect(): void {
     document.addEventListener('turbo:submit-start', this.handleSubmitStart);
     document.addEventListener('turbo:submit-end', this.handleSubmitEnd);
     document.addEventListener('turbo:load', this.handleTurboLoad);
-    window.addEventListener(TASK_COMPLETED_EVENT, this.handleTaskCompleted);
+    this.stopObserving = reaction(
+      () => appStore.celebration,
+      (request) => {
+        if (request) {
+          this.celebrate(request.origin);
+          appStore.dismissCelebration(request.id);
+        }
+      },
+      { fireImmediately: true },
+    );
   }
 
   disconnect(): void {
     document.removeEventListener('turbo:submit-start', this.handleSubmitStart);
     document.removeEventListener('turbo:submit-end', this.handleSubmitEnd);
     document.removeEventListener('turbo:load', this.handleTurboLoad);
-    window.removeEventListener(TASK_COMPLETED_EVENT, this.handleTaskCompleted);
+    this.stopObserving?.();
   }
 
   private readonly handleSubmitStart = (event: Event): void => {
@@ -65,22 +64,16 @@ export class CompletionController extends Controller {
     this.pendingForms.delete(form);
     const { success } = (event as CustomEvent<{ success: boolean }>).detail;
     if (success) {
-      sessionStorage.setItem(PENDING_COMPLETION_KEY, 'true');
+      appStore.markCompletionPending();
     }
   };
 
   private readonly handleTurboLoad = (): void => {
-    if (sessionStorage.getItem(PENDING_COMPLETION_KEY) !== 'true') {
+    if (!appStore.consumeCompletionPending()) {
       return;
     }
 
-    sessionStorage.removeItem(PENDING_COMPLETION_KEY);
-    requestAnimationFrame(() => this.celebrate());
-  };
-
-  private readonly handleTaskCompleted = (event: Event): void => {
-    const detail = (event as CustomEvent<TaskCompletedDetail>).detail;
-    this.celebrate(detail.origin);
+    requestAnimationFrame(() => appStore.requestCelebration());
   };
 
   private celebrate(origin: ConfettiOrigin = { x: 0.5, y: 0.6 }): void {
@@ -158,14 +151,10 @@ export class BoardController extends Controller {
       });
       if (sourceColumn.dataset.completed !== 'true' && column.dataset.completed === 'true') {
         const rect = task.getBoundingClientRect();
-        window.dispatchEvent(new CustomEvent<TaskCompletedDetail>(TASK_COMPLETED_EVENT, {
-          detail: {
-            origin: {
-              x: (rect.left + rect.width / 2) / window.innerWidth,
-              y: (rect.top + rect.height / 2) / window.innerHeight,
-            },
-          },
-        }));
+        appStore.requestCelebration({
+          x: (rect.left + rect.width / 2) / window.innerWidth,
+          y: (rect.top + rect.height / 2) / window.innerHeight,
+        });
       }
       appStore.showNotification('Task moved');
     } catch {

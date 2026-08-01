@@ -8,13 +8,20 @@ export class ThemeController extends Controller {
   declare readonly hasLabelTarget: boolean;
   declare readonly labelTarget: HTMLElement;
   private stopObserving?: IReactionDisposer;
+  private darkModeQuery?: MediaQueryList;
 
   connect(): void {
+    this.darkModeQuery = matchMedia('(prefers-color-scheme: dark)');
+    appStore.setSystemTheme(this.darkModeQuery.matches);
+    this.darkModeQuery.addEventListener('change', this.handleSystemThemeChange);
+    window.addEventListener('storage', this.handleStorageChange);
     document.addEventListener('turbo:render', this.handleTurboRender);
     this.stopObserving = autorun(() => this.apply(appStore.theme));
   }
 
   disconnect(): void {
+    this.darkModeQuery?.removeEventListener('change', this.handleSystemThemeChange);
+    window.removeEventListener('storage', this.handleStorageChange);
     document.removeEventListener('turbo:render', this.handleTurboRender);
     this.stopObserving?.();
   }
@@ -44,6 +51,14 @@ export class ThemeController extends Controller {
   private themeLabel(theme: 'light' | 'dark'): string {
     return theme === 'dark' ? 'Use light theme' : 'Use dark theme';
   }
+
+  private readonly handleSystemThemeChange = (event: MediaQueryListEvent): void => {
+    appStore.setSystemTheme(event.matches);
+  };
+
+  private readonly handleStorageChange = (event: StorageEvent): void => {
+    appStore.syncStoredPreference(event.key, event.newValue);
+  };
 
   // Turbo retains the root element, so refresh theme-dependent controls after it replaces the body.
   private readonly handleTurboRender = (): void => {

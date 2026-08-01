@@ -2,12 +2,23 @@ import { configure, makeAutoObservable, runInAction } from 'mobx';
 
 const THEME_STORAGE_KEY = 'flowboard-theme';
 const SIDEBAR_STORAGE_KEY = 'flowboard-sidebar';
+const PENDING_COMPLETION_KEY = 'flowboard-pending-completion';
 
 export type Theme = 'light' | 'dark';
 
 export type ToastNotification = {
   id: number;
   message: string;
+};
+
+export type ConfettiOrigin = {
+  x: number;
+  y: number;
+};
+
+export type CelebrationRequest = {
+  id: number;
+  origin?: ConfettiOrigin;
 };
 
 export type TaskPreview = {
@@ -45,6 +56,7 @@ export type TaskMoveRequest = {
 };
 
 let nextNotificationID = 0;
+let nextCelebrationID = 0;
 
 // All state changes go through store actions. This makes async changes explicit
 // when several Stimulus controllers use the same state.
@@ -66,12 +78,32 @@ function writeStorage(key: string, value: string): void {
   }
 }
 
-function initialTheme(): Theme {
-  const stored = readStorage(THEME_STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark') {
-    return stored;
+function parseTheme(value: string | null): Theme | null {
+  return value === 'light' || value === 'dark' ? value : null;
+}
+
+function readSessionStorage(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
   }
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function writeSessionStorage(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // The observable flag still covers Turbo navigation in this tab.
+  }
+}
+
+function removeSessionStorage(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // The observable flag is cleared even when storage is unavailable.
+  }
 }
 
 function emptyUpload(): UploadState {
@@ -89,14 +121,17 @@ function emptyUpload(): UploadState {
  * The server remains the source of truth for boards, tasks, and form data.
  */
 export class AppStore {
-  theme: Theme = initialTheme();
+  themePreference: Theme | null = parseTheme(readStorage(THEME_STORAGE_KEY));
+  systemTheme: Theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   sidebarCollapsed = readStorage(SIDEBAR_STORAGE_KEY) === 'collapsed';
   sidebarOpen = false;
   activeOverlayIDs: Record<OverlayType, string | null> = {
     dialog: null,
     menu: null,
   };
-  notification: ToastNotification | null = null;
+  notifications: ToastNotification[] = [];
+  celebration: CelebrationRequest | null = null;
+  completionPending = readSessionStorage(PENDING_COMPLETION_KEY) === 'true';
   taskPreview: TaskPreview | null = null;
   upload: UploadState = emptyUpload();
   pendingTaskMoveIDs = new Set<string>();
@@ -105,10 +140,38 @@ export class AppStore {
     makeAutoObservable(this, {}, { autoBind: true });
   }
 
+  /** Resolves an explicit browser choice over the current operating-system theme. */
+  get theme(): Theme {
+    return this.themePreference ?? this.systemTheme;
+  }
+
+  /** Returns the toast at the front of the observable display queue. */
+  get notification(): ToastNotification | null {
+    return this.notifications[0] ?? null;
+  }
+
   /** Changes the theme and saves the preference for the next browser session. */
   toggleTheme(): void {
-    this.theme = this.theme === 'dark' ? 'light' : 'dark';
-    writeStorage(THEME_STORAGE_KEY, this.theme);
+    this.themePreference = this.theme === 'dark' ? 'light' : 'dark';
+    writeStorage(THEME_STORAGE_KEY, this.themePreference);
+  }
+
+  /** Updates the computed theme when the operating-system preference changes. */
+  setSystemTheme(dark: boolean): void {
+    this.systemTheme = dark ? 'dark' : 'light';
+  }
+
+  /** Applies preference changes made by another tab in the same browser. */
+  syncStoredPreference(key: string | null, value: string | null): void {
+    if (key === null || key === THEME_STORAGE_KEY) {
+      this.themePreference = key === null
+        ? parseTheme(readStorage(THEME_STORAGE_KEY))
+        : parseTheme(value);
+    }
+    if (key === null || key === SIDEBAR_STORAGE_KEY) {
+      const sidebarValue = key === null ? readStorage(SIDEBAR_STORAGE_KEY) : value;
+      this.sidebarCollapsed = sidebarValue === 'collapsed';
+    }
   }
 
   /** Changes the desktop rail width and saves the preference. */
@@ -139,17 +202,44 @@ export class AppStore {
     }
   }
 
-  /** Replaces the active toast so repeated messages restart its display time. */
+  /** Adds a toast to the display queue so rapid messages remain visible. */
   showNotification(message: string): void {
     nextNotificationID += 1;
-    this.notification = { id: nextNotificationID, message };
+    this.notifications.push({ id: nextNotificationID, message });
   }
 
-  /** Clears a toast only if its display timer still owns the active message. */
+  /** Removes a toast after its display timer completes. */
   dismissNotification(id: number): void {
-    if (this.notification?.id === id) {
-      this.notification = null;
+    this.notifications = this.notifications.filter((notification) => notification.id !== id);
+  }
+
+  /** Requests one completion effect with an optional pointer-relative origin. */
+  requestCelebration(origin?: ConfettiOrigin): void {
+    nextCelebrationID += 1;
+    this.celebration = { id: nextCelebrationID, origin };
+  }
+
+  /** Clears a completion effect only after its observer has handled it. */
+  dismissCelebration(id: number): void {
+    if (this.celebration?.id === id) {
+      this.celebration = null;
     }
+  }
+
+  /** Saves a completion effect across a Turbo redirect or a full page load. */
+  markCompletionPending(): void {
+    this.completionPending = true;
+    writeSessionStorage(PENDING_COMPLETION_KEY, 'true');
+  }
+
+  /** Returns and clears the completion effect queued by a successful form. */
+  consumeCompletionPending(): boolean {
+    if (!this.completionPending) {
+      return false;
+    }
+    this.completionPending = false;
+    removeSessionStorage(PENDING_COMPLETION_KEY);
+    return true;
   }
 
   /** Sets the task preview that the global preview surface must render. */
