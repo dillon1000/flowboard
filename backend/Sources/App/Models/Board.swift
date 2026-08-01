@@ -356,6 +356,14 @@ struct UpdateBoardRequest: Content, Validatable {
     }
 }
 
+/// Board PATCH requests can change one property at a time. Description accepts
+/// null so clients can remove it without sending the rest of the board.
+struct PatchBoardRequest: Content {
+    @PatchField var name: PatchField<String>.State
+    @PatchField var description: PatchField<String>.State
+    @PatchField var isArchived: PatchField<Bool>.State
+}
+
 struct BoardSummaryResponse: Content {
     let id: UUID
     let name: String

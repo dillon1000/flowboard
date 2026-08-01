@@ -5,6 +5,8 @@ struct TaskController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let tasks = routes.grouped("tasks")
         tasks.get(use: index)
+        tasks.get("search", use: search)
+        tasks.get(":taskID", use: show)
         tasks.post(use: create)
         tasks.patch(":taskID", use: update)
         tasks.post(":taskID", "move", use: move)
@@ -12,13 +14,39 @@ struct TaskController: RouteCollection {
     }
 
     func index(req: Request) async throws -> Page<TaskResponse> {
+        try await taskPage(req: req)
+    }
+
+    func search(req: Request) async throws -> Page<TaskResponse> {
+        guard let query = clean(req.query[String.self, at: "q"]) else {
+            throw Abort(.badRequest, reason: "Add a non-empty q search parameter.")
+        }
+        guard query.count <= 120 else {
+            throw Abort(.unprocessableEntity, reason: "Search terms cannot exceed 120 characters.")
+        }
+        return try await taskPage(req: req)
+    }
+
+    func show(req: Request) async throws -> TaskResponse {
+        let task = try await findTask(req, permission: .view)
+        let board = try await requiredBoard(for: task, on: req.db)
+        return try TaskResponse(task: task, boardName: board.name)
+    }
+
+    /// Applies supported filters before pagination so counts and page boundaries
+    /// describe the filtered result. Query values are bound by Fluent.
+    private func taskPage(req: Request) async throws -> Page<TaskResponse> {
         let userID = try req.auth.require(User.self).requireID()
         let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: req.db)
 
         var query = Task.query(on: req.db)
             .filter(\.$board.$id ~~ boardIDs)
-            .filter(\.$isArchived == false)
             .with(\.$board)
+        if let archived: Bool = req.query["archived"] {
+            query = query.filter(\.$isArchived == archived)
+        } else {
+            query = query.filter(\.$isArchived == false)
+        }
         if let boardID: UUID = req.query["boardID"] {
             guard boardIDs.contains(boardID) else {
                 throw Abort(.notFound, reason: "The board does not exist.")
@@ -27,6 +55,23 @@ struct TaskController: RouteCollection {
         }
         if let status: String = req.query["status"] {
             query = query.filter(\.$statusValue == status)
+        }
+        if let priority: String = req.query["priority"] {
+            query = query.filter(\.$priorityValue == priority)
+        }
+        if let assigneeID: UUID = req.query["assigneeID"] {
+            query = query.filter(\.$assignee.$id == assigneeID)
+        }
+        if let search = clean(req.query[String.self, at: "q"]) {
+            guard search.count <= 120 else {
+                throw Abort(.unprocessableEntity, reason: "Search terms cannot exceed 120 characters.")
+            }
+            query = query.group(.or) { matches in
+                matches
+                    .filter(\.$title, .custom("LIKE"), "%\(search)%")
+                    .filter(\.$description, .custom("LIKE"), "%\(search)%")
+                    .filter(\.$publicID == search.lowercased())
+            }
         }
 
         let page = try await query.sort(\.$position, .ascending).paginate(for: req)
@@ -82,37 +127,90 @@ struct TaskController: RouteCollection {
         return try await response.encodeResponse(status: .created, for: req)
     }
 
-    /// Replaces the editable task fields. Moving between columns also assigns the task
-    /// to the end of the destination column, which keeps ordering valid for API clients.
+    /// Updates only fields supplied by the client. A status change also assigns the
+    /// task to the end of the destination column so ordering remains valid.
     func update(req: Request) async throws -> TaskResponse {
-        try UpdateTaskRequest.validate(content: req)
-        let input = try req.content.decode(UpdateTaskRequest.self)
+        let input = try req.content.decode(PatchTaskRequest.self)
         let task = try await findTask(req)
         let board = try await requiredBoard(for: task, on: req.db)
-        try validate(status: input.status, priority: input.priority, for: board)
-
-        task.title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        task.description = input.description
-        task.priority = input.priority
-        task.labels = sanitize(labels: input.labels)
-        task.startAt = input.startAt
-        task.dueAt = input.dueAt
-        task.properties = sanitize(
-            properties: input.properties ?? [:],
-            definitions: try await boardDefinitions(boardID: task.$board.id, on: req.db)
-        )
-        task.$assignee.id = try await validAssignee(
-            input.assigneeID,
-            boardID: task.$board.id,
-            on: req.db
-        )
-        if input.status != task.status {
+        if case let .value(title) = input.title {
+            let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard (1...120).contains(title.count) else {
+                throw Abort(.unprocessableEntity, reason: "Use a title between 1 and 120 characters.")
+            }
+            task.title = title
+        } else if case .null = input.title {
+            throw Abort(.unprocessableEntity, reason: "Task titles cannot be null.")
+        }
+        switch input.description {
+        case let .value(description):
+            guard description.count <= 2_000 else {
+                throw Abort(.unprocessableEntity, reason: "Descriptions cannot exceed 2,000 characters.")
+            }
+            task.description = clean(description)
+        case .null:
+            task.description = nil
+        case .omitted:
+            break
+        }
+        if case let .value(priority) = input.priority {
+            guard board.accepts(priority: priority) else {
+                throw Abort(.unprocessableEntity, reason: "Select a severity configured for this board.")
+            }
+            task.priority = priority
+        } else if case .null = input.priority {
+            throw Abort(.unprocessableEntity, reason: "Task severity cannot be null.")
+        }
+        if case let .value(labels) = input.labels {
+            guard labels.count <= 6 else {
+                throw Abort(.unprocessableEntity, reason: "Tasks can have at most six labels.")
+            }
+            task.labels = sanitize(labels: labels)
+        } else if case .null = input.labels {
+            task.labels = []
+        }
+        apply(input.startAt, to: &task.startAt)
+        apply(input.dueAt, to: &task.dueAt)
+        switch input.properties {
+        case let .value(properties):
+            task.properties = sanitize(
+                properties: properties,
+                definitions: try await boardDefinitions(boardID: task.$board.id, on: req.db)
+            )
+        case .null:
+            task.properties = [:]
+        case .omitted:
+            break
+        }
+        switch input.assigneeID {
+        case let .value(assigneeID):
+            task.$assignee.id = try await validAssignee(
+                assigneeID,
+                boardID: task.$board.id,
+                on: req.db
+            )
+        case .null:
+            task.$assignee.id = nil
+        case .omitted:
+            break
+        }
+        if case let .value(isArchived) = input.isArchived {
+            task.isArchived = isArchived
+        } else if case .null = input.isArchived {
+            throw Abort(.unprocessableEntity, reason: "Task archive state cannot be null.")
+        }
+        if case let .value(status) = input.status, status != task.status {
+            guard board.accepts(status: status) else {
+                throw Abort(.unprocessableEntity, reason: "Select a status configured for this board.")
+            }
             let count = try await Task.query(on: req.db)
                 .filter(\.$board.$id == task.$board.id)
-                .filter(\.$statusValue == input.status.rawValue)
+                .filter(\.$statusValue == status.rawValue)
                 .count()
-            task.status = input.status
+            task.status = status
             task.position = (count + 1) * 1_000
+        } else if case .null = input.status {
+            throw Abort(.unprocessableEntity, reason: "Task status cannot be null.")
         }
 
         try await task.update(on: req.db)
@@ -164,7 +262,10 @@ struct TaskController: RouteCollection {
         return .noContent
     }
 
-    private func findTask(_ req: Request) async throws -> Task {
+    private func findTask(
+        _ req: Request,
+        permission: BoardPermission = .edit
+    ) async throws -> Task {
         let userID = try req.auth.require(User.self).requireID()
         guard
             let taskID = req.parameters.get("taskID", as: UUID.self),
@@ -175,7 +276,7 @@ struct TaskController: RouteCollection {
         _ = try await BoardAccessService.require(
             boardID: task.$board.id,
             userID: userID,
-            permission: .edit,
+            permission: permission,
             on: req.db
         )
         return task
@@ -202,12 +303,11 @@ struct TaskController: RouteCollection {
     }
 
     private func sanitize(labels: [String]) -> [String] {
-        Array(
-            labels
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-                .prefix(6)
-        )
+        var seen: Set<String> = []
+        return Array(labels
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+            .prefix(6))
     }
 
     private func boardDefinitions(
@@ -242,5 +342,22 @@ struct TaskController: RouteCollection {
             throw Abort(.unprocessableEntity, reason: "The assignee cannot access this board.")
         }
         return userID
+    }
+
+    private func apply(_ patch: PatchField<Date>.State, to value: inout Date?) {
+        switch patch {
+        case let .value(date):
+            value = date
+        case .null:
+            value = nil
+        case .omitted:
+            break
+        }
+    }
+
+    private func clean(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
     }
 }

@@ -221,6 +221,7 @@ final class Task: Model, @unchecked Sendable {
 
 struct TaskResponse: Content {
     let id: UUID
+    let publicID: String
     let boardID: UUID
     let boardName: String?
     let title: String
@@ -232,13 +233,16 @@ struct TaskResponse: Content {
     let startAt: Date?
     let dueAt: Date?
     let assigneeID: UUID?
+    let creatorID: UUID?
     let properties: [String: String]
     let isArchived: Bool
+    let browserPath: String
     let createdAt: Date?
     let updatedAt: Date?
 
     init(task: Task, boardName: String? = nil) throws {
         self.id = try task.requireID()
+        self.publicID = task.publicID
         self.boardID = task.$board.id
         self.boardName = boardName
         self.title = task.title
@@ -250,8 +254,10 @@ struct TaskResponse: Content {
         self.startAt = task.startAt
         self.dueAt = task.dueAt
         self.assigneeID = task.$assignee.id
+        self.creatorID = task.$creator.id
         self.properties = task.properties ?? [:]
         self.isArchived = task.isArchived
+        self.browserPath = task.browserPath
         self.createdAt = task.createdAt
         self.updatedAt = task.updatedAt
     }
@@ -338,6 +344,21 @@ struct UpdateTaskRequest: Content, Validatable {
         validations.add("description", as: String.self, is: .count(...2_000), required: false)
         validations.add("labels", as: [String].self, is: .count(...6))
     }
+}
+
+/// All task properties are optional because PATCH changes only fields present in
+/// the request. PatchField preserves explicit nulls for nullable task properties.
+struct PatchTaskRequest: Content {
+    @PatchField var title: PatchField<String>.State
+    @PatchField var description: PatchField<String>.State
+    @PatchField var status: PatchField<TaskStatus>.State
+    @PatchField var priority: PatchField<TaskPriority>.State
+    @PatchField var labels: PatchField<[String]>.State
+    @PatchField var startAt: PatchField<Date>.State
+    @PatchField var dueAt: PatchField<Date>.State
+    @PatchField var assigneeID: PatchField<UUID>.State
+    @PatchField var properties: PatchField<[String: String]>.State
+    @PatchField var isArchived: PatchField<Bool>.State
 }
 
 struct MoveTaskRequest: Content, Validatable {

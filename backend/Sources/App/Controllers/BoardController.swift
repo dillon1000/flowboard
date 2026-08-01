@@ -16,11 +16,24 @@ struct BoardController: RouteCollection {
     func index(req: Request) async throws -> [BoardSummaryResponse] {
         let userID = try req.auth.require(User.self).requireID()
         let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: req.db)
-        let boards = try await Board.query(on: req.db)
+        var query = Board.query(on: req.db)
             .filter(\.$id ~~ boardIDs)
             .with(\.$tasks)
-            .sort(\.$createdAt, .ascending)
-            .all()
+        if let archived: Bool = req.query["archived"] {
+            query = query.filter(\.$isArchived == archived)
+        }
+        if let search = clean(req.query[String.self, at: "q"]) {
+            guard search.count <= 120 else {
+                throw Abort(.unprocessableEntity, reason: "Search terms cannot exceed 120 characters.")
+            }
+            query = query.group(.or) { matches in
+                matches
+                    .filter(\.$name, .custom("LIKE"), "%\(search)%")
+                    .filter(\.$description, .custom("LIKE"), "%\(search)%")
+                    .filter(\.$slug, .custom("LIKE"), "%\(search)%")
+            }
+        }
+        let boards = try await query.sort(\.$createdAt, .ascending).all()
         return try boards.map { try BoardSummaryResponse(board: $0, tasks: $0.tasks) }
     }
 
@@ -67,11 +80,39 @@ struct BoardController: RouteCollection {
     }
 
     func update(req: Request) async throws -> BoardResponse {
-        try UpdateBoardRequest.validate(content: req)
-        let input = try req.content.decode(UpdateBoardRequest.self)
-        let board = try await findBoard(req, permission: .edit)
-        board.name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        board.description = input.description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let input = try req.content.decode(PatchBoardRequest.self)
+        let permission: BoardPermission = switch input.isArchived {
+        case .omitted:
+            .edit
+        case .null, .value:
+            .admin
+        }
+        let board = try await findBoard(req, permission: permission)
+        if case let .value(name) = input.name {
+            let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard (2...80).contains(name.count) else {
+                throw Abort(.unprocessableEntity, reason: "Use a board name between 2 and 80 characters.")
+            }
+            board.name = name
+        } else if case .null = input.name {
+            throw Abort(.unprocessableEntity, reason: "Board names cannot be null.")
+        }
+        switch input.description {
+        case let .value(description):
+            guard description.count <= 500 else {
+                throw Abort(.unprocessableEntity, reason: "Descriptions cannot exceed 500 characters.")
+            }
+            board.description = clean(description)
+        case .null:
+            board.description = nil
+        case .omitted:
+            break
+        }
+        if case let .value(isArchived) = input.isArchived {
+            board.isArchived = isArchived
+        } else if case .null = input.isArchived {
+            throw Abort(.unprocessableEntity, reason: "Board archive state cannot be null.")
+        }
         try await board.update(on: req.db)
         return try await response(for: board, on: req.db)
     }
@@ -131,5 +172,11 @@ struct BoardController: RouteCollection {
             return requested
         }
         return "\(String(requested.prefix(39)))-\(UUID().uuidString.prefix(8).lowercased())"
+    }
+
+    private func clean(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
     }
 }
