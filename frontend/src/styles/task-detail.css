@@ -208,6 +208,10 @@ progress.progress::-moz-progress-bar {
   text-decoration-color: var(--ds-gray-500);
 }
 
+.checklist-item[data-pending='true'] {
+  opacity: 0.62;
+}
+
 .checklist-add {
   display: flex;
   gap: 8px;
@@ -288,5 +292,25 @@ progress.progress::-moz-progress-bar {
 }
 
 .comment-composer .form-actions {
+  align-items: center;
+  justify-content: space-between;
   margin-top: 10px;
+}
+
+.comment-draft-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.comment-draft-meta kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  color: var(--text-tertiary);
+  font-size: 10px;
 }

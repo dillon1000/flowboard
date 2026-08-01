@@ -9,12 +9,12 @@
                   </div>
                 </section>
 
-                <section class="card" data-controller="checklist">
+                <section class="card">
                   <div class="card-header">
                     <h2>Checklist</h2>
                     <span class="checklist-progress">
-                      <span data-checklist-target="label">No items</span>
-                      <progress class="progress" data-checklist-target="bar" value="0" max="1"></progress>
+                      <span data-task-page-target="checklistLabel">No items</span>
+                      <progress class="progress" data-task-page-target="checklistBar" value="0" max="1"></progress>
                     </span>
                   </div>
                   #if(taskDetail.hasChecklist):
@@ -25,7 +25,10 @@
                             class="checklist-item#if(item.isCompleted): completed#endif"
                             method="post"
                             action="/app/checklist/#(item.id)/toggle"
-                            data-checklist-target="item"
+                            data-task-page-target="checklistItem"
+                            data-item-id="#(item.id)"
+                            data-completed="#(item.isCompleted)"
+                            data-action="submit->task-page#toggleChecklist turbo:submit-end->task-page#finishChecklistToggle"
                           >
                             <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                             <button class="custom-checkbox#if(item.isCompleted): checked#endif" type="submit" aria-label="Toggle “#(item.title)”">
@@ -197,7 +200,12 @@
                     #endfor
                   </div>
                   #if(taskDetail.canComment):
-                    <form class="comment-composer" method="post" action="/app/tasks/#(taskDetail.task.id)/comments">
+                    <form
+                      class="comment-composer"
+                      method="post"
+                      action="/app/tasks/#(taskDetail.task.id)/comments"
+                      data-action="turbo:submit-end->task-page#finishComment"
+                    >
                       <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                       <span class="avatar">
                         #if(common.userAvatar.hasProfilePicture):
@@ -215,9 +223,16 @@
                           maxlength="4000"
                           placeholder="Leave a comment…"
                           required
+                          data-task-page-target="commentInput"
+                          data-action="input->task-page#updateCommentDraft keydown->task-page#commentKeydown"
                         ></textarea>
                         <div class="form-actions">
-                          <button class="button primary" type="submit">Comment</button>
+                          <span class="comment-draft-meta">
+                            <span data-task-page-target="commentStatus" role="status"></span>
+                            <span class="tabular" data-task-page-target="commentCount">0 / 4000</span>
+                            <kbd>⌘ Enter</kbd>
+                          </span>
+                          <button class="button primary" type="submit" data-task-page-target="commentSubmit" disabled>Comment</button>
                         </div>
                       </div>
                     </form>

@@ -6,7 +6,6 @@ export {
   renderMarkdown,
 } from './controllers/content_controllers';
 export {
-  ChecklistController,
   ColorPickerController,
   DatePickerController,
   DialogController,
@@ -14,6 +13,7 @@ export {
   MenuController,
   PropertyDefinitionController,
 } from './controllers/form_controllers';
+export { TaskPageController } from './controllers/task_page_controller';
 export {
   SearchController,
   SidebarController,

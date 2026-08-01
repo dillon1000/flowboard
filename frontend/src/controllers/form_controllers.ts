@@ -15,42 +15,6 @@ function createOverlayID(type: 'dialog' | 'menu'): string {
   return `${type}-${nextOverlayID}`;
 }
 
-// Derives checklist progress from the rendered items so the server does not
-// have to supply a second, redundant count.
-export class ChecklistController extends Controller {
-  static targets = ['item', 'bar', 'label'];
-
-  declare readonly itemTargets: HTMLElement[];
-  declare readonly barTarget: HTMLProgressElement;
-  declare readonly labelTarget: HTMLElement;
-  declare readonly hasBarTarget: boolean;
-  declare readonly hasLabelTarget: boolean;
-
-  connect(): void {
-    this.render();
-  }
-
-  itemTargetConnected(): void {
-    this.render();
-  }
-
-  itemTargetDisconnected(): void {
-    this.render();
-  }
-
-  private render(): void {
-    const total = this.itemTargets.length;
-    const done = this.itemTargets.filter((item) => item.classList.contains('completed')).length;
-    if (this.hasBarTarget) {
-      this.barTarget.max = Math.max(total, 1);
-      this.barTarget.value = done;
-    }
-    if (this.hasLabelTarget) {
-      this.labelTarget.textContent = total ? `${done} of ${total}` : 'No items';
-    }
-  }
-}
-
 // MAX_ATTACHMENT_BYTES matches the server limit. Changing either value changes
 // which files the browser accepts before it starts the network request.
 const MAX_ATTACHMENT_BYTES = 10_000_000;

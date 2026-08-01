@@ -1,5 +1,10 @@
         #if(isTaskDetail):
-          <div class="page">
+          <div
+            class="page"
+            data-controller="task-page"
+            data-task-id="#(taskDetail.task.id)"
+            data-action="turbo:render@document->task-page#refresh"
+          >
             #extend("partials/task-detail-header")
             <div class="split-layout">
               <article class="task-main">

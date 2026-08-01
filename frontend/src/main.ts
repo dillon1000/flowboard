@@ -46,7 +46,6 @@ import {
 } from 'lucide';
 import {
   BoardController,
-  ChecklistController,
   ColorPickerController,
   CompletionController,
   DatePickerController,
@@ -57,6 +56,7 @@ import {
   PropertyDefinitionController,
   SearchController,
   SidebarController,
+  TaskPageController,
   TaskPreviewController,
   ThemeController,
   ToastController,
@@ -64,7 +64,6 @@ import {
 
 const application = Application.start();
 application.register('board', BoardController);
-application.register('checklist', ChecklistController);
 application.register('color-picker', ColorPickerController);
 application.register('completion', CompletionController);
 application.register('date-picker', DatePickerController);
@@ -75,6 +74,7 @@ application.register('menu', MenuController);
 application.register('property-definition', PropertyDefinitionController);
 application.register('search', SearchController);
 application.register('sidebar', SidebarController);
+application.register('task-page', TaskPageController);
 application.register('task-preview', TaskPreviewController);
 application.register('theme', ThemeController);
 application.register('toast', ToastController);

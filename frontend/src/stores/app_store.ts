@@ -55,6 +55,21 @@ export type TaskMoveRequest = {
   taskID: string;
 };
 
+export type ChecklistItemSnapshot = {
+  completed: boolean;
+  id: string;
+};
+
+export type ChecklistItemState = ChecklistItemSnapshot & {
+  pending: boolean;
+};
+
+export type TaskPageState = {
+  checklistItems: Record<string, ChecklistItemState>;
+  commentDraft: string;
+  taskID: string | null;
+};
+
 let nextNotificationID = 0;
 let nextCelebrationID = 0;
 
@@ -106,6 +121,10 @@ function removeSessionStorage(key: string): void {
   }
 }
 
+function commentDraftKey(taskID: string): string {
+  return `flowboard-comment-draft:${taskID}`;
+}
+
 function emptyUpload(): UploadState {
   return {
     error: null,
@@ -113,6 +132,14 @@ function emptyUpload(): UploadState {
     percent: null,
     phase: 'idle',
     progressVisible: false,
+  };
+}
+
+function emptyTaskPage(): TaskPageState {
+  return {
+    checklistItems: {},
+    commentDraft: '',
+    taskID: null,
   };
 }
 
@@ -133,6 +160,7 @@ export class AppStore {
   celebration: CelebrationRequest | null = null;
   completionPending = readSessionStorage(PENDING_COMPLETION_KEY) === 'true';
   taskPreview: TaskPreview | null = null;
+  taskPage: TaskPageState = emptyTaskPage();
   upload: UploadState = emptyUpload();
   pendingTaskMoveIDs = new Set<string>();
 
@@ -148,6 +176,15 @@ export class AppStore {
   /** Returns the toast at the front of the observable display queue. */
   get notification(): ToastNotification | null {
     return this.notifications[0] ?? null;
+  }
+
+  /** Returns completed and total checklist counts for the active task page. */
+  get checklistProgress(): { completed: number; total: number } {
+    const items = Object.values(this.taskPage.checklistItems);
+    return {
+      completed: items.filter((item) => item.completed).length,
+      total: items.length,
+    };
   }
 
   /** Changes the theme and saves the preference for the next browser session. */
@@ -250,6 +287,67 @@ export class AppStore {
   /** Clears any task preview that is visible or waiting to render. */
   hideTaskPreview(): void {
     this.taskPreview = null;
+  }
+
+  /** Loads server checklist values and the saved comment draft for one task page. */
+  enterTaskPage(taskID: string, checklistItems: ChecklistItemSnapshot[]): void {
+    this.taskPage = {
+      checklistItems: Object.fromEntries(checklistItems.map((item) => [item.id, {
+        ...item,
+        pending: false,
+      }])),
+      commentDraft: readSessionStorage(commentDraftKey(taskID))?.slice(0, 4_000) ?? '',
+      taskID,
+    };
+  }
+
+  /** Updates the comment draft and saves it for later navigation in this tab. */
+  updateCommentDraft(value: string): void {
+    const taskID = this.taskPage.taskID;
+    if (!taskID) {
+      return;
+    }
+
+    this.taskPage.commentDraft = value.slice(0, 4_000);
+    if (this.taskPage.commentDraft) {
+      writeSessionStorage(commentDraftKey(taskID), this.taskPage.commentDraft);
+    } else {
+      removeSessionStorage(commentDraftKey(taskID));
+    }
+  }
+
+  /** Clears the saved comment after the server accepts it. */
+  clearCommentDraft(): void {
+    const taskID = this.taskPage.taskID;
+    if (taskID) {
+      removeSessionStorage(commentDraftKey(taskID));
+    }
+    this.taskPage.commentDraft = '';
+  }
+
+  /** Applies one optimistic checklist change and blocks duplicate submissions. */
+  beginChecklistToggle(itemID: string): boolean {
+    const item = this.taskPage.checklistItems[itemID];
+    if (!item || item.pending) {
+      return false;
+    }
+
+    item.completed = !item.completed;
+    item.pending = true;
+    return true;
+  }
+
+  /** Confirms a checklist change or restores its prior value after a failure. */
+  finishChecklistToggle(itemID: string, succeeded: boolean): void {
+    const item = this.taskPage.checklistItems[itemID];
+    if (!item?.pending) {
+      return;
+    }
+
+    if (!succeeded) {
+      item.completed = !item.completed;
+    }
+    item.pending = false;
   }
 
   /** Resets upload feedback when a file form connects. */
