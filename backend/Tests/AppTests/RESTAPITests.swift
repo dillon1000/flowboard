@@ -108,6 +108,13 @@ struct RESTAPITests {
             #expect(search.status == .ok)
             let matches = try search.content.decode(Page<TaskResponse>.self)
             #expect(matches.items.map(\.id) == [task.id])
+
+            let oversizedPage = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/tasks?per=101",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(oversizedPage.status == .unprocessableEntity)
         }
     }
 
@@ -146,6 +153,183 @@ struct RESTAPITests {
             )
             #expect(update.status == .notFound)
             #expect(try #require(try await Task.find(taskID, on: app.db)).title == "Private task")
+        }
+    }
+
+    @Test("Task collaboration resources support their full lifecycle")
+    func taskCollaborationResources() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let task = Task(
+                boardID: session.boardID,
+                title: "Coordinate the release",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+            let taskID = try task.requireID()
+
+            let createdComment = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/tasks/\(taskID)/comments",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(CreateTaskCommentRequest(body: "First draft"))
+                }
+            )
+            #expect(createdComment.status == .created)
+            let comment = try createdComment.content.decode(TaskCommentResponse.self)
+            let updatedComment = try await app.testing().sendRequest(
+                .PATCH,
+                "api/v1/tasks/\(taskID)/comments/\(comment.id)",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(CreateTaskCommentRequest(body: "Final draft"))
+                }
+            )
+            #expect(try updatedComment.content.decode(TaskCommentResponse.self).body == "Final draft")
+
+            var checklist: [TaskChecklistItemResponse] = []
+            for title in ["Write notes", "Publish notes"] {
+                let createdItem = try await app.testing().sendRequest(
+                    .POST,
+                    "api/v1/tasks/\(taskID)/checklist",
+                    headers: ["Cookie": session.cookie],
+                    beforeRequest: { request in
+                        try request.content.encode(CreateChecklistItemRequest(title: title))
+                    }
+                )
+                #expect(createdItem.status == .created)
+                checklist.append(try createdItem.content.decode(TaskChecklistItemResponse.self))
+            }
+            let moved = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/tasks/\(taskID)/checklist/\(checklist[1].id)/move",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(MoveChecklistItemRequest(targetIndex: 0))
+                }
+            )
+            #expect(try moved.content.decode(TaskChecklistItemResponse.self).position == 1_000)
+            let listedChecklist = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/tasks/\(taskID)/checklist",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(
+                try listedChecklist.content.decode([TaskChecklistItemResponse].self).map(\.title)
+                    == ["Publish notes", "Write notes"]
+            )
+
+            let followed = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/tasks/\(taskID)/followers/me",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(followed.status == .created)
+            let followedAgain = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/tasks/\(taskID)/followers/me",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(followedAgain.status == .ok)
+            let followers = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/tasks/\(taskID)/followers",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(try followers.content.decode([TaskFollowerResponse].self).count == 1)
+
+            let deletedComment = try await app.testing().sendRequest(
+                .DELETE,
+                "api/v1/tasks/\(taskID)/comments/\(comment.id)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(deletedComment.status == .noContent)
+        }
+    }
+
+    @Test("Board collaboration and configuration resources support their lifecycle")
+    func boardCollaborationResources() async throws {
+        try await withApp(configure: configure) { app in
+            let owner = try await register(on: app)
+            let invited = try await register(on: app)
+            let invitedUser = try #require(try await User.find(invited.userID, on: app.db))
+
+            let createdMember = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/boards/\(owner.boardID)/members",
+                headers: ["Cookie": owner.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        CreateBoardMemberRequest(email: invitedUser.email, role: .editor)
+                    )
+                }
+            )
+            #expect(createdMember.status == .created)
+            let member = try createdMember.content.decode(BoardMemberResponse.self)
+            #expect(member.role == .editor)
+            let members = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/boards/\(owner.boardID)/members",
+                headers: ["Cookie": owner.cookie]
+            )
+            #expect(try members.content.decode([BoardMemberResponse].self).count == 2)
+
+            let createdView = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/boards/\(owner.boardID)/views",
+                headers: ["Cookie": owner.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        CreateBoardViewRequest(
+                            name: "Release queue",
+                            type: .table,
+                            configuration: nil
+                        )
+                    )
+                }
+            )
+            #expect(createdView.status == .created)
+            let view = try createdView.content.decode(BoardViewResponse.self)
+            let updatedView = try await jsonRequest(
+                app: app,
+                method: .PATCH,
+                path: "api/v1/boards/\(owner.boardID)/views/\(view.id)",
+                cookie: owner.cookie,
+                json: #"{"name":"Launch queue","configuration":null}"#
+            )
+            #expect(try updatedView.content.decode(BoardViewResponse.self).name == "Launch queue")
+
+            let createdTemplate = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/boards/\(owner.boardID)/templates",
+                headers: ["Cookie": owner.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        CreateTaskTemplateRequest(
+                            name: "Release task",
+                            title: "Prepare release",
+                            description: "Use the checklist",
+                            status: .backlog,
+                            priority: .high,
+                            labels: ["Release"],
+                            isDefault: true
+                        )
+                    )
+                }
+            )
+            #expect(createdTemplate.status == .created)
+            let template = try createdTemplate.content.decode(TaskTemplateResponse.self)
+            let instantiated = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/boards/\(owner.boardID)/templates/\(template.id)/instantiate",
+                headers: ["Cookie": invited.cookie]
+            )
+            #expect(instantiated.status == .created)
+            let task = try instantiated.content.decode(TaskResponse.self)
+            #expect(task.title == "Prepare release")
+            #expect(task.creatorID == invited.userID)
         }
     }
 

@@ -74,7 +74,17 @@ struct TaskController: RouteCollection {
             }
         }
 
-        let page = try await query.sort(\.$position, .ascending).paginate(for: req)
+        let pageNumber = req.query[Int.self, at: "page"] ?? 1
+        let pageSize = req.query[Int.self, at: "per"] ?? 10
+        guard pageNumber >= 1, (1...100).contains(pageSize) else {
+            throw Abort(
+                .unprocessableEntity,
+                reason: "Page must be at least 1, and per must contain 1 to 100 items."
+            )
+        }
+        let page = try await query
+            .sort(\.$position, .ascending)
+            .paginate(PageRequest(page: pageNumber, per: pageSize))
         return try page.map { try TaskResponse(task: $0, boardName: $0.board.name) }
     }
 
@@ -258,7 +268,18 @@ struct TaskController: RouteCollection {
 
     func delete(req: Request) async throws -> HTTPStatus {
         let task = try await findTask(req)
+        let taskID = try task.requireID()
+        let attachments = try await TaskAttachment.query(on: req.db)
+            .filter(\.$task.$id == taskID)
+            .all()
+        let workspaceActions = WorkspaceActionController()
+        try await workspaceActions.deleteStoredAttachments(attachments, for: req)
         try await task.delete(on: req.db)
+        workspaceActions.removeLocalAttachmentDirectories(
+            boardID: task.$board.id,
+            taskID: taskID,
+            req: req
+        )
         return .noContent
     }
 

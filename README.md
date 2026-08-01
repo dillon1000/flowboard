@@ -177,15 +177,18 @@ Web pages:
 - `POST /logout`
 - `GET /app/**` for protected application pages
 
-The JSON API remains available under `/api/v1`:
+The JSON API is available under `/api/v1`. See [the API guide](backend/API.md)
+for request fields, filters, role rules, and examples.
 
 - `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
 - `GET /auth/me` and `PATCH /auth/me`
 - `GET /boards`, `POST /boards`, `GET /boards/:id`
 - `PATCH /boards/:id` and `DELETE /boards/:id`
-- `GET /tasks?page=1&per=100`, with optional `boardID` and `status`
-- `POST /tasks`, `PATCH /tasks/:id`, and `DELETE /tasks/:id`
+- Board member, saved view, and task template CRUD under `/boards/:id`
+- `GET /tasks?page=1&per=100`, with search and workspace filters
+- `POST /tasks`, `GET /tasks/:id`, `PATCH /tasks/:id`, and `DELETE /tasks/:id`
 - `POST /tasks/:id/move`
+- Task comment, checklist, and follower CRUD under `/tasks/:id`
 - `GET /health`
 
 All board and task routes require a valid session and enforce the board member's

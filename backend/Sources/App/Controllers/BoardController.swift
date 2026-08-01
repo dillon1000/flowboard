@@ -123,7 +123,18 @@ struct BoardController: RouteCollection {
             throw Abort(.forbidden, reason: "Only the board owner can delete this board.")
         }
         let board = access.board
+        let boardID = try board.requireID()
+        let tasks = try await Task.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .with(\.$attachments)
+            .all()
+        let workspaceActions = WorkspaceActionController()
+        try await workspaceActions.deleteStoredAttachments(
+            tasks.flatMap(\.attachments),
+            for: req
+        )
         try await board.delete(on: req.db)
+        workspaceActions.removeLocalAttachmentDirectories(boardID: boardID, req: req)
         return .noContent
     }
 
