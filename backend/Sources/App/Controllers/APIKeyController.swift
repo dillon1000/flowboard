@@ -25,25 +25,14 @@ struct APIKeyController: RouteCollection {
     func create(req: Request) async throws -> Response {
         try CreateAPIKeyRequest.validate(content: req)
         let input = try req.content.decode(CreateAPIKeyRequest.self)
-        let name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else {
-            throw Abort(.unprocessableEntity, reason: "API key name must not be blank.")
-        }
-        if let expiresAt = input.expiresAt, expiresAt <= Date() {
-            throw Abort(.unprocessableEntity, reason: "API key expiry must be in the future.")
-        }
-
         let userID = try req.auth.require(User.self).requireID()
-        let generated = APIKeyService.generate()
-        let credential = APIKeyCredential(
+        let created = try await APIKeyService.create(
+            name: input.name,
+            expiresAt: input.expiresAt,
             userID: userID,
-            name: name,
-            keyHash: generated.hash,
-            keyPrefix: generated.visiblePrefix,
-            expiresAt: input.expiresAt
+            on: req.db
         )
-        try await credential.create(on: req.db)
-        return try await CreatedAPIKeyResponse(credential: credential, key: generated.raw)
+        return try await CreatedAPIKeyResponse(credential: created.credential, key: created.raw)
             .encodeResponse(status: .created, for: req)
     }
 

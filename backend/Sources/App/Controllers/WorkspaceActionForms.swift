@@ -12,6 +12,10 @@ struct UpdateBoardForm: Content {
     let description: String?
 }
 
+struct CreateAPIKeyForm: Content {
+    let name: String
+}
+
 struct CreateViewForm: Content {
     let name: String
     let type: String

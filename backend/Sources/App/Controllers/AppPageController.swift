@@ -9,6 +9,7 @@ struct AppPageController: RouteCollection {
         routes.get("app", "tasks", use: allTasks)
         routes.get("app", "tasks", "archived", use: archivedTasks)
         routes.get("app", "settings", use: settings)
+        routes.get("app", "settings", "api-keys", use: apiKeys)
         routes.get("app", "boards", ":boardID", use: boardDefault)
         routes.get("app", "boards", ":boardID", "views", ":viewID", use: boardView)
         routes.get("app", "boards", ":boardID", "settings", use: boardSettings)
@@ -105,6 +106,49 @@ struct AppPageController: RouteCollection {
             settings: SettingsPageContext(),
             for: req
         )
+    }
+
+    func apiKeys(req: Request) async throws -> View {
+        try await renderAPIKeysPage(for: req)
+    }
+
+    /// Renders key management after GET requests and direct POST responses. The
+    /// created secret stays in request memory and is never stored in a session.
+    func renderAPIKeysPage(
+        for req: Request,
+        createdKey: String? = nil,
+        error: String? = nil
+    ) async throws -> View {
+        let common = try await commonContext(for: req)
+        let userID = try req.auth.require(User.self).requireID()
+        let credentials = try await APIKeyCredential.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .sort(\.$createdAt, .descending)
+            .all()
+        return try await render(
+            common: common,
+            pageTitle: "API keys",
+            pageKind: .apiKeys,
+            apiKeys: try APIKeysPageContext(
+                credentials: credentials,
+                apiBaseURL: apiBaseURL(for: req),
+                createdKey: createdKey,
+                error: error
+            ),
+            for: req
+        )
+    }
+
+    /// Uses the proxy scheme when Railway terminates TLS, then uses the request
+    /// host so documentation examples match the domain that the user opened.
+    private func apiBaseURL(for req: Request) -> String {
+        let scheme = req.headers.first(name: "X-Forwarded-Proto")?
+            .split(separator: ",")
+            .first
+            .map(String.init)
+            ?? (req.application.environment == .production ? "https" : "http")
+        let host = req.headers.first(name: .host) ?? "localhost:8080"
+        return "\(scheme)://\(host)/api/v1"
     }
 
     func boardDefault(req: Request) async throws -> Response {

@@ -23,6 +23,34 @@ enum APIKeyService {
         SHA256.hash(data: Data(rawKey.utf8)).map(hex).joined()
     }
 
+    /// Validates and creates one credential. The returned raw value exists only
+    /// in memory, and callers must show it once without logging or persisting it.
+    static func create(
+        name: String,
+        expiresAt: Date?,
+        userID: UUID,
+        on database: any Database
+    ) async throws -> (credential: APIKeyCredential, raw: String) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...80).contains(cleanName.count) else {
+            throw Abort(.unprocessableEntity, reason: "API key name must contain 1 to 80 characters.")
+        }
+        if let expiresAt, expiresAt <= Date() {
+            throw Abort(.unprocessableEntity, reason: "API key expiry must be in the future.")
+        }
+
+        let generated = generate()
+        let credential = APIKeyCredential(
+            userID: userID,
+            name: cleanName,
+            keyHash: generated.hash,
+            keyPrefix: generated.visiblePrefix,
+            expiresAt: expiresAt
+        )
+        try await credential.create(on: database)
+        return (credential, generated.raw)
+    }
+
     /// Finds a usable key and its owner. Expired and unknown values have the same
     /// result so an authentication response does not disclose key state.
     static func authenticate(

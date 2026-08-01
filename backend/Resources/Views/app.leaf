@@ -23,6 +23,7 @@
         #extend("pages/board")
         #extend("pages/task-detail")
         #extend("pages/settings")
+        #extend("pages/api-keys")
         #extend("pages/board-settings")
       </main>
     </div>

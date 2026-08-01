@@ -43,5 +43,7 @@ struct WorkspaceActionController: RouteCollection {
         routes.post("app", "attachments", ":attachmentID", "delete", use: deleteAttachment)
 
         routes.post("app", "settings", "profile", use: updateProfile)
+        routes.post("app", "settings", "api-keys", use: createAPIKey)
+        routes.post("app", "settings", "api-keys", ":apiKeyID", "revoke", use: revokeAPIKey)
     }
 }

@@ -45,6 +45,7 @@ extension AppPageController {
         tasks: TasksPageContext? = nil,
         taskDetail: TaskDetailPageContext? = nil,
         settings: SettingsPageContext? = nil,
+        apiKeys: APIKeysPageContext? = nil,
         boardSettings: BoardSettingsPageContext? = nil,
         for req: Request
     ) async throws -> View {
@@ -59,6 +60,7 @@ extension AppPageController {
                 tasks: tasks,
                 taskDetail: taskDetail,
                 settings: settings,
+                apiKeys: apiKeys,
                 boardSettings: boardSettings
             )
         )

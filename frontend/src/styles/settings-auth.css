@@ -30,6 +30,83 @@
   margin-top: 0;
 }
 
+.api-key-secret {
+  display: block;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-family: 'Geist Mono Variable', monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.api-key-warning,
+.api-key-docs > p {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.api-key-row code,
+.api-key-docs code {
+  font-family: 'Geist Mono Variable', monospace;
+  font-size: 0.94em;
+}
+
+.api-key-docs h3 {
+  margin: 24px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.api-key-docs h3:first-child {
+  margin-top: 0;
+}
+
+.api-key-docs pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  line-height: 1.6;
+}
+
+.api-endpoints {
+  display: grid;
+  margin: 0;
+  border-radius: var(--radius-medium);
+  box-shadow: var(--shadow-border);
+}
+
+.api-endpoints > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+  padding: 10px 12px;
+}
+
+.api-endpoints > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.api-endpoints dt,
+.api-endpoints dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.api-endpoints dd {
+  color: var(--text-secondary);
+}
+
 /* ==========================================================================
    Auth
    ========================================================================== */

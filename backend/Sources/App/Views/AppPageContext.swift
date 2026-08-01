@@ -7,6 +7,7 @@ enum AppPageKind {
     case archivedTasks
     case taskDetail
     case settings
+    case apiKeys
     case boardSettings
 }
 
@@ -21,12 +22,15 @@ struct AppPageContext: Encodable {
     let isArchivedTasks: Bool
     let isTaskDetail: Bool
     let isSettings: Bool
+    let isProfileSettings: Bool
+    let isAPIKeys: Bool
     let isBoardSettings: Bool
     let overview: OverviewPageContext?
     let board: BoardPageContext?
     let tasks: TasksPageContext?
     let taskDetail: TaskDetailPageContext?
     let settings: SettingsPageContext?
+    let apiKeys: APIKeysPageContext?
     let boardSettings: BoardSettingsPageContext?
 
     init(
@@ -38,6 +42,7 @@ struct AppPageContext: Encodable {
         tasks: TasksPageContext?,
         taskDetail: TaskDetailPageContext?,
         settings: SettingsPageContext?,
+        apiKeys: APIKeysPageContext?,
         boardSettings: BoardSettingsPageContext?
     ) {
         self.common = common
@@ -49,13 +54,16 @@ struct AppPageContext: Encodable {
         self.isActiveTasks = pageKind == .tasks
         self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
-        self.isSettings = pageKind == .settings
+        self.isSettings = pageKind == .settings || pageKind == .apiKeys
+        self.isProfileSettings = pageKind == .settings
+        self.isAPIKeys = pageKind == .apiKeys
         self.isBoardSettings = pageKind == .boardSettings
         self.overview = overview
         self.board = board
         self.tasks = tasks
         self.taskDetail = taskDetail
         self.settings = settings
+        self.apiKeys = apiKeys
         self.boardSettings = boardSettings
     }
 }
