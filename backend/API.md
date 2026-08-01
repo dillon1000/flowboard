@@ -1,9 +1,10 @@
 # Flowboard REST API
 
-The JSON API is available under `/api/v1`. It uses the same session cookie as
-the web application. Call `POST /api/v1/auth/login` with an email address and a
-password, then send the returned `flowboard-session` cookie on later requests.
-All board data is private. Board roles control each read and write operation.
+The JSON API is available under `/api/v1`. It accepts the same session cookie as
+the web application or an API key in `Authorization: Bearer <key>`. Call
+`POST /api/v1/auth/login` with an email address and a password to create a
+session. All board data is private. Board roles control each read and write
+operation.
 
 Dates use ISO 8601. IDs are UUID strings. Validation failures return JSON with
 an HTTP `400` or `422` status. Missing resources and resources that the current
@@ -18,6 +19,15 @@ user cannot access both return `404`, which prevents disclosure of private IDs.
 | `POST` | `/auth/logout` | Delete the current session. |
 | `GET` | `/auth/me` | Read the current account. |
 | `PATCH` | `/auth/me` | Update the current account. |
+| `GET` | `/auth/api-keys` | List API key metadata. |
+| `POST` | `/auth/api-keys` | Create an API key. |
+| `DELETE` | `/auth/api-keys/{apiKeyID}` | Revoke an API key. |
+
+API key management needs a browser session. A Bearer key cannot create or revoke
+another key. Create a key with a `name` and an optional future `expiresAt` date.
+The response contains the raw `key` once. Flowboard stores its SHA-256 hash and a
+short identifying prefix, so it cannot show the raw value again. List responses
+include the prefix, creation date, optional expiry date, and last-used date.
 
 ## Boards
 
@@ -88,4 +98,12 @@ curl -i -c flowboard.cookies \
 
 curl -b flowboard.cookies \
   'http://localhost:8080/api/v1/tasks/search?q=release&priority=high'
+
+curl -b flowboard.cookies \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Release automation"}' \
+  http://localhost:8080/api/v1/auth/api-keys
+
+curl -H 'Authorization: Bearer fbk_REPLACE_WITH_THE_CREATED_KEY' \
+  'http://localhost:8080/api/v1/boards'
 ```

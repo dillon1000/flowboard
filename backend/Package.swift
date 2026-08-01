@@ -11,6 +11,7 @@ let package = Package(
         .executable(name: "App", targets: ["Run"])
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-crypto.git", exact: "4.5.1"),
         .package(
             url: "https://github.com/soto-project/soto-core.git",
             exact: "7.14.0"
@@ -24,6 +25,7 @@ let package = Package(
         .target(
             name: "App",
             dependencies: [
+                .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
                 .product(name: "Leaf", package: "leaf"),

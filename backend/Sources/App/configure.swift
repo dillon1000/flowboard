@@ -70,7 +70,6 @@ public func configure(_ app: Application) async throws {
         )
     }
     app.middleware.use(app.sessions.middleware)
-    app.middleware.use(User.sessionAuthenticator())
     app.middleware.use(CSRFMiddleware())
 
     app.migrations.add(CreateUser())
@@ -86,6 +85,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(BackfillBoardViews())
     app.migrations.add(CreateTaskFollowers())
     app.migrations.add(AddTaskCreator())
+    app.migrations.add(CreateAPIKeyCredential())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

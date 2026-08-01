@@ -11,6 +11,7 @@ struct AuthController: RouteCollection {
         protected.get("me", use: me)
         protected.patch("me", use: updateProfile)
         protected.post("logout", use: logout)
+        try protected.register(collection: APIKeyController())
     }
 
     func register(req: Request) async throws -> Response {
