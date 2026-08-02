@@ -12,25 +12,57 @@ struct TapActionTests {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
             let board = try #require(try await Board.find(session.boardID, on: app.db))
+            board.propertyDefinitions = [
+                BoardPropertyDefinition(
+                    id: "location",
+                    name: "Location",
+                    type: .text,
+                    options: []
+                )
+            ]
+            try await board.update(on: app.db)
             let created = try await TapActionService.create(
                 board: board,
                 definition: createTaskDefinition(cooldownSeconds: 0),
                 on: app.db
             )
-            let input = TapExecutionRequest(token: created.rawToken, requestID: UUID())
+            let input = TapExecutionRequest(
+                token: created.rawToken,
+                requestID: UUID(),
+                task: scannerTaskInput()
+            )
+
+            let preparation = try await prepare(
+                TapPreparationRequest(token: created.rawToken),
+                on: app
+            )
+            #expect(preparation.status == .ok)
+            let taskForm = try #require(try preparation.content.decode(TapPreparationResponse.self).task)
+            #expect(taskForm.properties.map(\.id) == ["location"])
 
             let first = try await execute(input, on: app)
             #expect(first.status == .ok)
             let firstResult = try first.content.decode(TapExecutionResponse.self)
             #expect(firstResult.message == "Task created.")
             #expect(firstResult.actionDescription == "Leave the clipboard at the loading dock.")
+            let createdTask = try #require(
+                try await Task.query(on: app.db)
+                    .filter(\.$board.$id == session.boardID)
+                    .filter(\.$title == "Scanner inspection")
+                    .first()
+            )
+            #expect(createdTask.$description.value == "Entered on the scanner phone.")
+            #expect(createdTask.labels == ["NFC", "intake"])
+            #expect(createdTask.startAt != nil)
+            #expect(createdTask.dueAt != nil)
+            #expect(createdTask.properties?["location"] == "Front desk")
 
             let retry = try await execute(input, on: app)
             #expect(retry.status == .ok)
             #expect(
                 try await Task.query(on: app.db)
                     .filter(\.$board.$id == session.boardID)
-                    .filter(\.$title == "Inspect the loading dock")
+                    .filter(\.$title == "Scanner inspection")
                     .count() == 1
             )
             #expect(try await TapExecution.query(on: app.db).count() == 1)
@@ -48,7 +80,8 @@ struct TapActionTests {
             let secondResult = try await execute(
                 TapExecutionRequest(
                     token: secondAction.rawToken,
-                    requestID: input.requestID
+                    requestID: input.requestID,
+                    task: scannerTaskInput()
                 ),
                 on: app
             )
@@ -144,7 +177,11 @@ struct TapActionTests {
             )
             #expect(
                 try await execute(
-                    TapExecutionRequest(token: limited.rawToken, requestID: UUID()),
+                    TapExecutionRequest(
+                        token: limited.rawToken,
+                        requestID: UUID(),
+                        task: scannerTaskInput()
+                    ),
                     on: app
                 ).status == .ok
             )
@@ -187,14 +224,15 @@ struct TapActionTests {
             #expect(response.headers.first(name: "Referrer-Policy") == "no-referrer")
             let CSS = try text(between: "<style>", and: "</style>", in: page)
             #expect(CSS.split(separator: "\n").count < 400)
-            #expect(page.utf8.count < 15_000)
+            #expect(page.utf8.count < 20_000)
             #expect(!page.contains("/assets/"))
+            #expect(page.contains("/api/v1/taps/prepare"))
             #expect(page.contains("/api/v1/taps/execute"))
             #expect(page.contains("/tagneedsrotation.svg"))
             #expect(page.contains("/scanerror.svg"))
             let fragmentRemoval = try #require(page.range(of: "history.replaceState")?.lowerBound)
-            let executionRequest = try #require(page.range(of: "fetch('/api/v1/taps/execute")?.lowerBound)
-            #expect(fragmentRemoval < executionRequest)
+            let preparationRequest = try #require(page.range(of: "fetch('/api/v1/taps/prepare")?.lowerBound)
+            #expect(fragmentRemoval < preparationRequest)
         }
     }
 
@@ -256,7 +294,7 @@ struct TapActionTests {
             #expect(action.name == "Dock inspection")
             #expect(action.displayDescription == "Leave the clipboard at the loading dock.")
             #expect(action.kind == .createTask)
-            #expect(action.configuration.labels == ["NFC", "inspection"])
+            #expect(action.configuration.labels.isEmpty)
             #expect(action.maxUses == 5)
             #expect(!action.tokenHash.contains(String(tagURL.suffix(36))))
 
@@ -358,6 +396,19 @@ struct TapActionTests {
         )
     }
 
+    private func scannerTaskInput() -> TapTaskInput {
+        TapTaskInput(
+            title: "Scanner inspection",
+            description: "Entered on the scanner phone.",
+            status: TaskStatus.backlog.rawValue,
+            priority: TaskPriority.high.rawValue,
+            labels: ["NFC", "intake"],
+            startAt: "2026-08-02",
+            dueAt: "2026-08-03",
+            properties: ["location": "Front desk"]
+        )
+    }
+
     private func execute(
         _ input: TapExecutionRequest,
         on app: Application
@@ -365,6 +416,19 @@ struct TapActionTests {
         try await app.testing().sendRequest(
             .POST,
             "api/v1/taps/execute",
+            beforeRequest: { request in
+                try request.content.encode(input)
+            }
+        )
+    }
+
+    private func prepare(
+        _ input: TapPreparationRequest,
+        on app: Application
+    ) async throws -> TestingHTTPResponse {
+        try await app.testing().sendRequest(
+            .POST,
+            "api/v1/taps/prepare",
             beforeRequest: { request in
                 try request.content.encode(input)
             }

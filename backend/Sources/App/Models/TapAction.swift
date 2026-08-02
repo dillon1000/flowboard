@@ -171,6 +171,59 @@ final class TapExecution: Model, @unchecked Sendable {
 struct TapExecutionRequest: Content {
     let token: String
     let requestID: UUID
+    let task: TapTaskInput?
+
+    init(token: String, requestID: UUID, task: TapTaskInput? = nil) {
+        self.token = token
+        self.requestID = requestID
+        self.task = task
+    }
+}
+
+/// Holds task values entered on the scanner's phone. The bearer token still
+/// scopes these values to one board and one allowed Tap action.
+struct TapTaskInput: Content {
+    let title: String?
+    let description: String?
+    let status: String?
+    let priority: String?
+    let labels: [String]?
+    let startAt: String?
+    let dueAt: String?
+    let properties: [String: String]?
+}
+
+struct TapPreparationRequest: Content {
+    let token: String
+}
+
+/// Provides the safe, board-defined input choices after a tag has been read.
+/// The token is sent in the request body, so it never enters a URL or referrer.
+struct TapPreparationResponse: Content {
+    let actionName: String
+    let actionDescription: String?
+    let kind: TapActionKind
+    let task: TapTaskForm?
+}
+
+struct TapTaskForm: Content {
+    let status: String
+    let priority: String
+    let statuses: [TapTaskOption]
+    let priorities: [TapTaskOption]
+    let properties: [TapTaskProperty]
+}
+
+struct TapTaskOption: Content {
+    let id: String
+    let name: String
+}
+
+struct TapTaskProperty: Content {
+    let id: String
+    let name: String
+    let type: BoardPropertyType
+    let options: [TapTaskOption]
 }
 
 struct TapExecutionResponse: Content {

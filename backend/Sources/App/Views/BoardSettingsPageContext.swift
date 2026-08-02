@@ -162,7 +162,7 @@ struct TapActionContext: Encodable {
             "Active"
         }
         self.summary = if action.kind == .createTask {
-            "Create “\(action.configuration.title ?? "task")”"
+            "Create a task from scanner input"
         } else {
             "Set \(targetTask?.title ?? "missing task") to \(board.statusOption(for: TaskStatus(rawValue: action.configuration.status)).name)"
         }

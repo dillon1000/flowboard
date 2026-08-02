@@ -36,15 +36,11 @@
       <div class="tap-form-group wide" data-tap-action-form-target="createFields"#if(action.isUpdateTask): hidden#endif>
         <div class="form-grid">
           <div class="field wide">
-            <label for="tap-title-#(action.id)">Task title</label>
-            <input class="input" id="tap-title-#(action.id)" name="title" value="#(action.title)" maxlength="200" required />
-          </div>
-          <div class="field wide">
-            <label for="tap-description-#(action.id)">Task description</label>
-            <textarea class="textarea" id="tap-description-#(action.id)" name="description" maxlength="20000">#(action.description)</textarea>
+            <span class="field-label">Scanner input</span>
+            <span class="field-help">The person who scans this tag enters the task title, description, dates, labels, and board fields on their phone.</span>
           </div>
           <div class="field">
-            <span class="field-label">Severity</span>
+            <span class="field-label">Default severity</span>
             <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
               <input data-menu-target="input" type="hidden" name="priority" value="#(action.severity)" />
               <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
@@ -56,10 +52,6 @@
                 #endfor
               </div>
             </div>
-          </div>
-          <div class="field">
-            <label for="tap-labels-#(action.id)">Labels</label>
-            <input class="input" id="tap-labels-#(action.id)" name="labels" value="#(action.labels)" maxlength="500" />
           </div>
         </div>
       </div>
@@ -82,7 +74,7 @@
       </div>
 
       <div class="field wide">
-        <span class="field-label">Resulting status</span>
+        <span class="field-label">Default status</span>
         <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
           <input data-menu-target="input" type="hidden" name="status" value="#(action.status)" />
           <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">

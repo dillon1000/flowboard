@@ -37,15 +37,11 @@
       <div class="tap-form-group wide" data-tap-action-form-target="createFields">
         <div class="form-grid">
           <div class="field wide">
-            <label for="new-tap-title">Task title</label>
-            <input class="input" id="new-tap-title" name="title" maxlength="200" placeholder="New NFC request" required />
-          </div>
-          <div class="field wide">
-            <label for="new-tap-description">Task description</label>
-            <textarea class="textarea" id="new-tap-description" name="description" maxlength="20000" placeholder="Optional fixed details"></textarea>
+            <span class="field-label">Scanner input</span>
+            <span class="field-help">The person who scans this tag enters the task title, description, dates, labels, and board fields on their phone.</span>
           </div>
           <div class="field">
-            <span class="field-label">Severity</span>
+            <span class="field-label">Default severity</span>
             <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
               <input data-menu-target="input" type="hidden" name="priority" value="#(boardSettings.defaultTapSeverity)" />
               <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
@@ -57,10 +53,6 @@
                 #endfor
               </div>
             </div>
-          </div>
-          <div class="field">
-            <label for="new-tap-labels">Labels</label>
-            <input class="input" id="new-tap-labels" name="labels" maxlength="500" placeholder="nfc, intake" />
           </div>
         </div>
       </div>
@@ -84,7 +76,7 @@
       </div>
 
       <div class="field wide">
-        <span class="field-label">Resulting status</span>
+        <span class="field-label">Default status</span>
         <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
           <input data-menu-target="input" type="hidden" name="status" value="#(boardSettings.defaultTapStatus)" />
           <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">

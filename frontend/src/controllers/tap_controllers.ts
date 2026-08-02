@@ -10,7 +10,7 @@ interface NDEFWriterConstructor {
 
 type NFCWindow = Window & { NDEFReader?: NDEFWriterConstructor };
 
-/** Switches the fixed task fields when an administrator changes the action type. */
+/** Switches the scanner-input defaults or fixed update fields when action type changes. */
 export class TapActionFormController extends Controller<HTMLFormElement> {
   static targets = ['kind', 'createFields', 'updateFields'];
 

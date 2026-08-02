@@ -151,6 +151,7 @@
       .tap-card[data-state="rotation"] .spinner { display: none; }
       .tap-card[data-state="error"] .state-art,
       .tap-card[data-state="rotation"] .state-art { display: block; }
+      .tap-card[data-state="ready"] .state-icon { display: none; }
 
       .state-label {
         margin: 0 0 8px;
@@ -187,6 +188,33 @@
         font-weight: 500;
       }
 
+      .tap-form { display: grid; gap: 16px; margin-top: 24px; }
+
+      .form-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+      .field { display: grid; gap: 7px; min-width: 0; }
+      .field.wide { grid-column: 1 / -1; }
+
+      .field-label { color: var(--text); font-size: 13px; font-weight: 500; }
+
+      input, textarea, select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        color: var(--text);
+        background: var(--surface);
+        font: inherit;
+      }
+
+      input, select { padding: 0 11px; }
+      textarea { min-height: 96px; padding: 10px 11px; resize: vertical; }
+      select[multiple] { height: 112px; padding: 6px; }
+      input:focus, textarea:focus, select:focus { border-color: var(--focus); outline: 2px solid color-mix(in srgb, var(--focus) 20%, transparent); outline-offset: 0; }
+
+      .check-field { display: flex; min-height: 40px; align-items: center; gap: 9px; color: var(--text-secondary); }
+      .check-field input { width: 16px; min-height: 16px; margin: 0; accent-color: var(--text); }
+
       button {
         display: inline-flex;
         height: 40px;
@@ -215,6 +243,8 @@
       @media (width <= 480px) {
         .tap-header { padding: 0 16px; }
         main { align-items: start; padding: min(18vh, 112px) 20px 64px; }
+        .form-grid { grid-template-columns: 1fr; }
+        .field.wide { grid-column: auto; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -237,6 +267,7 @@
         <h1 id="title">Running action…</h1>
         <p class="message" id="message">Keep this page open.</p>
         <p class="result" id="result" hidden></p>
+        <form class="tap-form" id="task-form" hidden></form>
         <button id="retry" type="button" hidden>Try again</button>
         <noscript><p class="message">JavaScript is required to run this Tap action.</p></noscript>
       </section>
@@ -253,21 +284,147 @@
         const retry = document.getElementById('retry');
         const art = document.getElementById('state-art');
         const requestID = crypto.randomUUID();
+        const form = document.getElementById('task-form');
+        let prepared;
+        let draft;
+        let propertyControls = [];
 
         const render = (state, heading, detail, outcome = '', canRetry = false, asset = '') => {
           tap.dataset.state = state;
-          label.textContent = state === 'success' ? 'Action complete' : state === 'running' ? 'Tap action' : 'Tap action stopped';
+          label.textContent = state === 'success' ? 'Action complete' : state === 'running' ? 'Tap action' : state === 'ready' ? 'Create task' : 'Tap action stopped';
           title.textContent = heading;
           message.textContent = detail;
           message.hidden = !detail;
           result.textContent = outcome;
           result.hidden = !outcome;
           retry.hidden = !canRetry;
+          form.hidden = state !== 'ready';
           if (asset) art.src = asset;
           else art.removeAttribute('src');
         };
 
-        const execute = async () => {
+        const option = (value, text, selected = false) => {
+          const item = document.createElement('option');
+          item.value = value;
+          item.textContent = text;
+          item.selected = selected;
+          return item;
+        };
+
+        const field = (label, control, wide = false) => {
+          const item = document.createElement('label');
+          item.className = `field${wide ? ' wide' : ''}`;
+          const text = document.createElement('span');
+          text.className = 'field-label';
+          text.textContent = label;
+          item.append(text, control);
+          form.append(item);
+        };
+
+        const textInput = (name, type = 'text') => {
+          const input = document.createElement('input');
+          input.name = name;
+          input.type = type;
+          return input;
+        };
+
+        const select = (name, options, selected, multiple = false) => {
+          const input = document.createElement('select');
+          input.name = name;
+          input.multiple = multiple;
+          if (!multiple) input.append(option('', 'Select an option'));
+          options.forEach((item) => input.append(option(item.id, item.name, item.id === selected)));
+          return input;
+        };
+
+        const buildForm = (data) => {
+          form.replaceChildren();
+          propertyControls = [];
+          const task = data.task;
+          const titleInput = textInput('title');
+          titleInput.maxLength = 120;
+          titleInput.required = true;
+          titleInput.autofocus = true;
+          field('Task title', titleInput, true);
+          const description = document.createElement('textarea');
+          description.name = 'description';
+          description.maxLength = 5000;
+          field('Task description', description, true);
+          field('Status', select('status', task.statuses, task.status));
+          field('Severity', select('priority', task.priorities, task.priority));
+          field('Start date', textInput('startAt', 'date'));
+          field('Due date', textInput('dueAt', 'date'));
+          const labels = textInput('labels');
+          labels.maxLength = 500;
+          labels.placeholder = 'Design, Launch';
+          field('Labels', labels, true);
+          task.properties.forEach((property) => {
+            let control;
+            if (property.type === 'select' || property.type === 'person') {
+              control = select(`property-${property.id}`, property.options, '');
+            } else if (property.type === 'multi_select') {
+              control = select(`property-${property.id}`, property.options, '', true);
+            } else if (property.type === 'checkbox') {
+              control = textInput(`property-${property.id}`, 'checkbox');
+              const row = document.createElement('span');
+              row.className = 'check-field';
+              row.append(control, document.createTextNode('Set this field'));
+              field(property.name, row, true);
+              propertyControls.push({ property, control });
+              return;
+            } else {
+              control = textInput(`property-${property.id}`, property.type === 'number' || property.type === 'date' || property.type === 'url' || property.type === 'email' ? property.type : 'text');
+              if (property.type === 'text') control.maxLength = 2000;
+            }
+            field(property.name, control, property.type === 'text');
+            propertyControls.push({ property, control });
+          });
+          const submit = document.createElement('button');
+          submit.type = 'submit';
+          submit.textContent = 'Create task';
+          form.append(submit);
+        };
+
+        const taskInput = () => {
+          const values = new FormData(form);
+          const properties = {};
+          propertyControls.forEach(({ property, control }) => {
+            if (property.type === 'multi_select') {
+              const selected = Array.from(control.selectedOptions).map((item) => item.value);
+              if (selected.length) properties[property.id] = JSON.stringify(selected);
+            } else if (property.type === 'checkbox') {
+              if (control.checked) properties[property.id] = 'true';
+            } else if (control.value) {
+              properties[property.id] = control.value;
+            }
+          });
+          return {
+            title: values.get('title'),
+            description: values.get('description'),
+            status: values.get('status'),
+            priority: values.get('priority'),
+            labels: String(values.get('labels') || '').split(',').map((label) => label.trim()).filter(Boolean),
+            startAt: values.get('startAt'),
+            dueAt: values.get('dueAt'),
+            properties,
+          };
+        };
+
+        const showFailure = (response, body, retryAction) => {
+          const detail = typeof body.reason === 'string' ? body.reason : 'This Tap action could not run.';
+          if (response.status === 404) {
+            render('rotation', 'This Tap link is not valid', 'Ask the tag owner to program it again.', '', false, '/tagneedsrotation.svg');
+          } else if (response.status === 410) {
+            render('rotation', 'This Tap action is unavailable', detail, '', false, '/tagneedsrotation.svg');
+          } else if (response.status === 422 && prepared && prepared.kind === 'create_task') {
+            render('ready', prepared.actionName, detail);
+          } else {
+            render('error', response.status === 429 ? 'Try again in a moment' : 'The action could not run', detail, '', response.status === 429 || response.status >= 500, '/scanerror.svg');
+          }
+          retry.onclick = retryAction;
+        };
+
+        const execute = async (task = null) => {
           render('running', 'Running action…', 'Keep this page open.');
           try {
             const response = await fetch('/api/v1/taps/execute', {
@@ -275,19 +432,11 @@
               credentials: 'omit',
               cache: 'no-store',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token, requestID }),
+              body: JSON.stringify({ token, requestID, task }),
             });
             const body = await response.json().catch(() => ({}));
             if (!response.ok) {
-              const detail = typeof body.reason === 'string' ? body.reason : 'This Tap action could not run.';
-              if (response.status === 404) {
-                render('rotation', 'This Tap link is not valid', 'Ask the tag owner to program it again.', '', false, '/tagneedsrotation.svg');
-              } else if (response.status === 410) {
-                render('rotation', 'This Tap action is unavailable', detail, '', false, '/tagneedsrotation.svg');
-              } else {
-                const canRetry = response.status === 429 || response.status >= 500;
-                render('error', response.status === 429 ? 'Try again in a moment' : 'The action could not run', detail, '', canRetry, '/scanerror.svg');
-              }
+              showFailure(response, body, () => execute(task));
               return;
             }
             const heading = typeof body.actionName === 'string' ? body.actionName : 'Action complete';
@@ -298,15 +447,46 @@
             render('success', heading, detail, outcome);
           } catch {
             render('error', 'Flowboard could not be reached', 'Check the network, then try again.', '', true, '/scanerror.svg');
+            retry.onclick = () => execute(task);
           }
         };
 
-        retry.addEventListener('click', execute);
+        const prepare = async () => {
+          render('running', 'Opening tag…', 'Loading the task form.');
+          try {
+            const response = await fetch('/api/v1/taps/prepare', {
+              method: 'POST', credentials: 'omit', cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+            });
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              showFailure(response, body, prepare);
+              return;
+            }
+            prepared = body;
+            if (body.kind === 'create_task' && body.task) {
+              render('ready', body.actionName || 'Create task', body.actionDescription || 'Enter the task details.');
+              buildForm(body);
+              form.hidden = false;
+            } else {
+              execute();
+            }
+          } catch {
+            render('error', 'Flowboard could not be reached', 'Check the network, then try again.', '', true, '/scanerror.svg');
+            retry.onclick = prepare;
+          }
+        };
+
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          draft = taskInput();
+          execute(draft);
+        });
         if (!/^fbt_[A-Za-z0-9_-]{32}$/.test(token)) {
           render('rotation', 'This Tap link is not valid', 'Ask the tag owner to program it again.', '', false, '/tagneedsrotation.svg');
           return;
         }
-        execute();
+        prepare();
       })();
     </script>
   </body>

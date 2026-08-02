@@ -31,17 +31,21 @@ include the prefix, creation date, optional expiry date, and last-used date.
 
 ## Tap actions
 
-`POST /taps/execute` is the only API route that accepts a Tap bearer capability
-without a user session. Send a `token` and a UUID `requestID`. A repeated request
-with the same ID returns the first result and does not change a task twice. A
-successful response includes the user-written action name and optional display
-description, plus the server result message.
+`POST /taps/prepare` and `POST /taps/execute` accept a Tap bearer capability
+without a user session. The preparation route returns the board-defined task
+fields and their valid options. For a create-task action, send the scanner's
+task values with the `token` and UUID `requestID` to the execution route. A
+repeated request with the same ID returns the first result and does not change
+a task twice. A successful response includes the user-written action name and
+optional display description, plus the server result message.
 
 Flowboard puts the raw token in the fragment of the URL written to the NFC tag.
 Do not move it into a path or query because those values can enter proxy access
 logs. Board administrators set the public title and description, then create,
-reassign, disable, rotate, expire, and delete Tap actions in board settings. The
-server stores only the token SHA-256 hash and shows each complete tag URL once.
+reassign, disable, rotate, expire, and delete Tap actions in board settings.
+The scanner enters task title, description, status, severity, dates, labels,
+and configured board fields. The server stores only the token SHA-256 hash and
+shows each complete tag URL once.
 
 ## Boards
 

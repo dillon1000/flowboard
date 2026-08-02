@@ -91,8 +91,33 @@ enum TapActionService {
         try await action.update(on: database)
     }
 
-    /// Executes the fixed action without a user session. Token lifecycle checks,
-    /// the task mutation, the use counter, and the audit record share one transaction.
+    /// Returns the board-defined form for a scanned tag without changing state.
+    /// The raw bearer token stays in the POST body and is checked before board data is exposed.
+    static func prepare(
+        _ input: TapPreparationRequest,
+        on database: any Database
+    ) async throws -> TapPreparationResponse {
+        guard TapTokenService.isWellFormed(input.token) else {
+            throw Abort(.notFound, reason: "This Tap link is not valid.")
+        }
+        guard let action = try await TapAction.query(on: database)
+            .filter(\.$tokenHash == TapTokenService.hash(input.token))
+            .with(\.$board)
+            .first()
+        else {
+            throw Abort(.notFound, reason: "This Tap link is not valid.")
+        }
+        try validateAvailability(action, at: Date())
+        return TapPreparationResponse(
+            actionName: action.name,
+            actionDescription: action.displayDescription,
+            kind: action.kind,
+            task: try await taskForm(for: action, on: database)
+        )
+    }
+
+    /// Executes an action without a user session. Token lifecycle checks, the
+    /// scanner-entered task mutation, the use counter, and the audit record share one transaction.
     static func execute(
         _ input: TapExecutionRequest,
         on database: any Database
@@ -122,22 +147,14 @@ enum TapActionService {
             }
 
             let now = Date()
-            guard action.isEnabled else {
-                throw Abort(.gone, reason: "This Tap action is disabled.")
-            }
-            if let expiresAt = action.expiresAt, expiresAt <= now {
-                throw Abort(.gone, reason: "This Tap action has expired.")
-            }
-            if let maxUses = action.maxUses, action.useCount >= maxUses {
-                throw Abort(.gone, reason: "This Tap action has reached its use limit.")
-            }
+            try validateAvailability(action, at: now)
             if let lastUsedAt = action.lastUsedAt,
                 now.timeIntervalSince(lastUsedAt) < Double(action.cooldownSeconds)
             {
                 throw Abort(.tooManyRequests, reason: "This Tap action was just used. Try again shortly.")
             }
 
-            let result = try await apply(action, on: transaction)
+            let result = try await apply(action, taskInput: input.task, on: transaction)
             action.useCount += 1
             action.lastUsedAt = now
             try await action.update(on: transaction)
@@ -159,6 +176,7 @@ enum TapActionService {
 
     private static func apply(
         _ action: TapAction,
+        taskInput: TapTaskInput?,
         on database: any Database
     ) async throws -> (taskID: UUID, message: String) {
         let board = action.board
@@ -169,14 +187,19 @@ enum TapActionService {
 
         switch action.kind {
         case .createTask:
-            let priority = TaskPriority(
-                rawValue: action.configuration.priority ?? TaskPriority.medium.rawValue
-            )
-            guard
-                let title = clean(action.configuration.title),
-                board.accepts(priority: priority)
-            else {
-                throw Abort(.unprocessableEntity, reason: "This Tap action has an invalid task configuration.")
+            let input = try required(taskInput, reason: "Complete the task details before you create it.")
+            let title = try required(clean(input.title), reason: "Task title is required.")
+            guard title.count <= 120 else {
+                throw Abort(.unprocessableEntity, reason: "Task title must contain 120 characters or fewer.")
+            }
+            let description = clean(input.description)
+            guard (description?.count ?? 0) <= 5_000 else {
+                throw Abort(.unprocessableEntity, reason: "Task description must contain 5,000 characters or fewer.")
+            }
+            let status = TaskStatus(rawValue: try required(clean(input.status), reason: "Select a status."))
+            let priority = TaskPriority(rawValue: try required(clean(input.priority), reason: "Select a severity."))
+            guard board.accepts(status: status), board.accepts(priority: priority) else {
+                throw Abort(.unprocessableEntity, reason: "Select a status and severity configured for this board.")
             }
             let boardID = try board.requireID()
             let count = try await Task.query(on: database)
@@ -187,12 +210,15 @@ enum TapActionService {
                 publicID: try await Task.uniquePublicID(on: database),
                 boardID: boardID,
                 title: title,
-                description: clean(action.configuration.description),
+                description: description,
                 status: status,
                 priority: priority,
                 position: (count + 1) * 1_000,
-                labels: Array(action.configuration.labels.prefix(6))
+                labels: cleanLabels(input.labels),
+                startAt: try date(from: input.startAt, field: "Start date"),
+                dueAt: try date(from: input.dueAt, field: "Due date")
             )
+            task.properties = try await properties(from: input.properties, for: board, on: database)
             try await task.create(on: database)
             return (try task.requireID(), "Task created.")
 
@@ -253,22 +279,16 @@ enum TapActionService {
                 rawValue: definition.configuration.priority ?? TaskPriority.medium.rawValue
             )
             guard
-                let title = clean(definition.configuration.title),
-                title.count <= 200,
                 board.accepts(priority: priority)
             else {
-                throw Abort(.unprocessableEntity, reason: "Enter a task title and severity configured for this board.")
-            }
-            let description = clean(definition.configuration.description)
-            guard (description?.count ?? 0) <= 20_000 else {
-                throw Abort(.unprocessableEntity, reason: "Task description must contain 20,000 characters or fewer.")
+                throw Abort(.unprocessableEntity, reason: "Select a default severity configured for this board.")
             }
             configuration = TapActionConfiguration(
-                title: title,
-                description: description,
+                title: nil,
+                description: nil,
                 status: status.rawValue,
                 priority: priority.rawValue,
-                labels: Array(definition.configuration.labels.filter { !$0.isEmpty }.prefix(6))
+                labels: []
             )
             targetTaskID = nil
 
@@ -308,5 +328,120 @@ enum TapActionService {
         guard let value else { return nil }
         let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return cleaned.isEmpty ? nil : cleaned
+    }
+
+    private static func validateAvailability(_ action: TapAction, at now: Date) throws {
+        guard action.isEnabled else {
+            throw Abort(.gone, reason: "This Tap action is disabled.")
+        }
+        if let expiresAt = action.expiresAt, expiresAt <= now {
+            throw Abort(.gone, reason: "This Tap action has expired.")
+        }
+        if let maxUses = action.maxUses, action.useCount >= maxUses {
+            throw Abort(.gone, reason: "This Tap action has reached its use limit.")
+        }
+    }
+
+    private static func taskForm(
+        for action: TapAction,
+        on database: any Database
+    ) async throws -> TapTaskForm? {
+        guard action.kind == .createTask else { return nil }
+        let board = action.board
+        let boardID = try board.requireID()
+        let members = try await BoardMember.query(on: database)
+            .filter(\.$board.$id == boardID)
+            .with(\.$user)
+            .all()
+        guard let owner = try await board.$owner.get(on: database) else {
+            throw Abort(.notFound, reason: "The board owner does not exist.")
+        }
+        var people = [TapTaskOption(id: try owner.requireID().uuidString.lowercased(), name: owner.name)]
+        let knownPeople = Set(people.map { $0.id })
+        people += try members.compactMap { member in
+            let id = try member.user.requireID().uuidString.lowercased()
+            return knownPeople.contains(id) ? nil : TapTaskOption(id: id, name: member.user.name)
+        }
+        let properties = (board.propertyDefinitions ?? []).map { definition in
+            TapTaskProperty(
+                id: definition.id,
+                name: definition.name,
+                type: definition.type,
+                options: definition.type == .person
+                    ? people
+                    : definition.options.map { TapTaskOption(id: $0.id, name: $0.name) }
+            )
+        }
+        let status = board.accepts(status: TaskStatus(rawValue: action.configuration.status))
+            ? action.configuration.status
+            : board.taskStatuses.first?.id ?? TaskStatus.backlog.rawValue
+        let priority = action.configuration.priority.flatMap { value in
+            board.accepts(priority: TaskPriority(rawValue: value)) ? value : nil
+        } ?? board.taskSeverities.first?.id ?? TaskPriority.medium.rawValue
+        return TapTaskForm(
+            status: status,
+            priority: priority,
+            statuses: board.taskStatuses.map { TapTaskOption(id: $0.id, name: $0.name) },
+            priorities: board.taskSeverities.map { TapTaskOption(id: $0.id, name: $0.name) },
+            properties: properties
+        )
+    }
+
+    private static func properties(
+        from input: [String: String]?,
+        for board: Board,
+        on database: any Database
+    ) async throws -> [String: String] {
+        let definitions = board.propertyDefinitions ?? []
+        let rawValues = input ?? [:]
+        let personIDs = Set(
+            definitions.filter { $0.type == .person }.compactMap { definition in
+                rawValues[definition.id].flatMap { UUID(uuidString: $0) }
+            }
+        )
+        if !personIDs.isEmpty {
+            let boardID = try board.requireID()
+            let members = try await BoardMember.query(on: database)
+                .filter(\.$board.$id == boardID)
+                .all()
+            let allowed = Set(members.map(\.$user.id))
+                .union([board.$owner.id].compactMap { $0 })
+            guard personIDs.isSubset(of: allowed) else {
+                throw Abort(.unprocessableEntity, reason: "Select a person who belongs to this board.")
+            }
+        }
+        return try definitions.reduce(into: [:]) { values, definition in
+            guard let raw = clean(rawValues[definition.id]) else { return }
+            guard let normalized = definition.normalizedValue(raw) else {
+                throw Abort(.unprocessableEntity, reason: "Enter a valid value for \(definition.name).")
+            }
+            values[definition.id] = normalized
+        }
+    }
+
+    private static func cleanLabels(_ labels: [String]?) -> [String] {
+        var seen: Set<String> = []
+        return Array((labels ?? []).compactMap { clean($0) }
+            .filter { seen.insert($0.lowercased()).inserted }
+            .prefix(6))
+    }
+
+    private static func date(from value: String?, field: String) throws -> Date? {
+        guard let value = clean(value) else { return nil }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
+        guard formatter.string(from: formatter.date(from: value) ?? .distantPast) == value else {
+            throw Abort(.unprocessableEntity, reason: "Enter a valid \(field.lowercased()).")
+        }
+        return formatter.date(from: value)
+    }
+
+    private static func required<T>(_ value: T?, reason: String) throws -> T {
+        guard let value else { throw Abort(.unprocessableEntity, reason: reason) }
+        return value
     }
 }
