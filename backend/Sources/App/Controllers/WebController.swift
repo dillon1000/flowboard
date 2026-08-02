@@ -45,7 +45,7 @@ struct WebController: RouteCollection {
         response.headers.replaceOrAdd(name: "X-Robots-Tag", value: "noindex, nofollow")
         response.headers.replaceOrAdd(
             name: "Content-Security-Policy",
-            value: "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+            value: "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
         )
         return response
     }
