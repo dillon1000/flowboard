@@ -82,6 +82,12 @@ Generate a public Railway domain, then add the OAuth values from
 to the public HTTPS domain followed by `/oauth/callback`, and register that
 exact URI with the OAuth provider. Do not add `PORT`; Railway supplies it.
 
+For NFC tags, add a short custom domain such as `tap.example.com` to the same
+Railway service. Set `TAP_BASE_URL=https://tap.example.com/t`. Flowboard writes
+that URL plus a 36-character secret fragment to each tag and rejects a complete
+URL that uses 504 UTF-8 bytes or more. If this value is absent, Flowboard uses
+the current public domain followed by `/t`.
+
 Deploy from the Railway dashboard or from the repository root:
 
 ```sh
@@ -107,6 +113,8 @@ not sent to Railway.
   comments, followers, checklists, and protected attachments
 - Board templates, duplication, archive, JSON import and export, and task search
 - Authenticated board sharing with Viewer, Commenter, Editor, and Admin roles
+- NFC Tap actions that create or update tasks through short, unguessable,
+  expiring links, with use limits, cooldowns, reassignment, rotation, and history
 - Custom listboxes, dialogs, confirmations, file controls, and status messages;
   the application does not use native dropdowns, alerts, prompts, or calendars
 - Light and dark themes, keyboard access, reduced motion, and responsive layouts
@@ -135,7 +143,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
 ## Configuration
 
 `backend/.env.example` defines the SQLite path, optional development CORS
-origins, Railway bucket values, and the generic OAuth settings. Production
+origins, the public Tap URL, Railway bucket values, and the generic OAuth settings. Production
 requires the full bucket configuration, while development and tests use local
 files when those values are absent. OAuth stays disabled until all six required
 endpoint and client values are present. Register
@@ -175,6 +183,7 @@ Web pages:
 - `GET /register` and `POST /register`
 - `GET /oauth/start` and `GET /oauth/callback`
 - `POST /logout`
+- `GET /t` for the public, cacheable NFC Tap runner
 - `GET /app/**` for protected application pages
 
 The JSON API is available under `/api/v1`. See [the API guide](backend/API.md)
@@ -188,6 +197,7 @@ for request fields, filters, role rules, and examples.
 - `GET /tasks?page=1&per=100`, with search and workspace filters
 - `POST /tasks`, `GET /tasks/:id`, `PATCH /tasks/:id`, and `DELETE /tasks/:id`
 - `POST /tasks/:id/move`
+- `POST /taps/execute` with a Tap bearer token and idempotency request ID
 - Task comment, checklist, and follower CRUD under `/tasks/:id`
 - `GET /health`
 

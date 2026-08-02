@@ -29,6 +29,18 @@ The response contains the raw `key` once. Flowboard stores its SHA-256 hash and 
 short identifying prefix, so it cannot show the raw value again. List responses
 include the prefix, creation date, optional expiry date, and last-used date.
 
+## Tap actions
+
+`POST /taps/execute` is the only API route that accepts a Tap bearer capability
+without a user session. Send a `token` and a UUID `requestID`. A repeated request
+with the same ID returns the first result and does not change a task twice.
+
+Flowboard puts the raw token in the fragment of the URL written to the NFC tag.
+Do not move it into a path or query because those values can enter proxy access
+logs. Board administrators create, reassign, disable, rotate, expire, and delete
+Tap actions in board settings. The server stores only the token SHA-256 hash and
+shows each complete tag URL once.
+
 ## Boards
 
 | Method | Path | Purpose |
