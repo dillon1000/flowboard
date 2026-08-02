@@ -1,7 +1,7 @@
 <div class="menu color-picker" data-controller="menu color-picker" data-action="click@window->menu#outside keydown.esc@window->menu#close">
-  <input data-menu-target="input" data-color-picker-target="input" type="hidden" name="color" value="gray" />
+  <input data-menu-target="input" type="hidden" name="color" value="gray" data-color-picker-target="input" />
   <button class="select-trigger color-picker-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-haspopup="listbox" aria-expanded="false">
-    <span class="color-picker-swatch" data-menu-target="swatch" data-color-picker-target="swatch" data-color="gray" aria-hidden="true"></span>
+    <span class="color-picker-swatch" data-menu-target="swatch" data-color="gray" data-color-picker-target="swatch" aria-hidden="true"></span>
     <span data-menu-target="value" data-color-picker-target="label">Gray</span>
     <i data-lucide="chevron-down"></i>
   </button>
