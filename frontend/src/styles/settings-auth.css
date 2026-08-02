@@ -107,6 +107,98 @@
   color: var(--text-secondary);
 }
 
+/* Tap capability URLs are shown once, so the provisioning panel keeps the
+   secret, its byte count, and both write paths together. */
+.tap-provision {
+  margin-bottom: 12px;
+  background: var(--ds-blue-200);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-blue-700) 24%, transparent);
+}
+
+.tap-provision-main {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.tap-provision-main > div:first-child strong,
+.tap-provision-main > div:first-child span {
+  display: block;
+}
+
+.tap-provision-main > div:first-child strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tap-provision-main > div:first-child span,
+.tap-provision-status,
+.tap-history-time {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.tap-provision-main > div:first-child span {
+  margin-top: 3px;
+}
+
+.tap-url-secret {
+  display: block;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  font-family: 'Geist Mono Variable', monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.tap-provision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tap-provision-status {
+  margin-left: 4px;
+}
+
+.tap-action-row {
+  flex-wrap: wrap;
+}
+
+.tap-action-row .panel-row-main {
+  min-width: 240px;
+}
+
+.tap-token-prefix {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', monospace;
+  font-size: 11px;
+}
+
+.tap-form-group {
+  min-width: 0;
+}
+
+.tap-history {
+  margin-top: 20px;
+}
+
+.tap-history h3 {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tap-history-time {
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    Auth
    ========================================================================== */

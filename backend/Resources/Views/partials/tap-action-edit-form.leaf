@@ -1,0 +1,112 @@
+<form
+  class="dialog wide"
+  method="post"
+  action="/app/boards/#(boardSettings.id)/tap-actions/#(action.id)/update"
+  data-controller="tap-action-form"
+>
+  <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+  <div class="dialog-header">
+    <div><h2 id="edit-tap-action-#(action.id)">Edit #(action.name)</h2><p>Changes apply to every tag that has this link.</p></div>
+    <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close"><i data-lucide="x"></i></button>
+  </div>
+  <div class="dialog-body">
+    <div class="form-grid">
+      <div class="field wide">
+        <label for="tap-name-#(action.id)">Name</label>
+        <input class="input" id="tap-name-#(action.id)" name="name" value="#(action.name)" maxlength="80" required />
+      </div>
+      <div class="field wide">
+        <span class="field-label">Action</span>
+        <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+          <input data-menu-target="input" data-tap-action-form-target="kind" data-action="change->tap-action-form#update" type="hidden" name="kind" value="#(action.kind)" />
+          <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+            <span data-menu-target="value">#(action.kindName)</span><i data-lucide="chevron-down"></i>
+          </button>
+          <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+            <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="create_task" data-label="Create task" aria-selected="#(action.isCreateTask)">Create task</button>
+            <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="update_task" data-label="Update task" aria-selected="#(action.isUpdateTask)">Update task</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tap-form-group wide" data-tap-action-form-target="createFields"#if(action.isUpdateTask): hidden#endif>
+        <div class="form-grid">
+          <div class="field wide">
+            <label for="tap-title-#(action.id)">Task title</label>
+            <input class="input" id="tap-title-#(action.id)" name="title" value="#(action.title)" maxlength="200" required />
+          </div>
+          <div class="field wide">
+            <label for="tap-description-#(action.id)">Task description</label>
+            <textarea class="textarea" id="tap-description-#(action.id)" name="description" maxlength="20000">#(action.description)</textarea>
+          </div>
+          <div class="field">
+            <span class="field-label">Severity</span>
+            <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+              <input data-menu-target="input" type="hidden" name="priority" value="#(action.severity)" />
+              <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                <span data-menu-target="value">#(action.severityName)</span><i data-lucide="chevron-down"></i>
+              </button>
+              <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                #for(option in action.severityOptions):
+                  <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+                #endfor
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="tap-labels-#(action.id)">Labels</label>
+            <input class="input" id="tap-labels-#(action.id)" name="labels" value="#(action.labels)" maxlength="500" />
+          </div>
+        </div>
+      </div>
+
+      <div class="tap-form-group wide" data-tap-action-form-target="updateFields"#if(action.isCreateTask): hidden#endif>
+        <div class="field">
+          <span class="field-label">Task</span>
+          <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+            <input data-menu-target="input" type="hidden" name="targetTaskID" value="#(action.targetTaskID)" required />
+            <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+              <span data-menu-target="value">#(action.targetTaskName)</span><i data-lucide="chevron-down"></i>
+            </button>
+            <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+              #for(task in action.tasks):
+                <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(task.id)" data-label="#(task.title)" aria-selected="#(task.isSelected)">#(task.title)</button>
+              #endfor
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field wide">
+        <span class="field-label">Resulting status</span>
+        <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+          <input data-menu-target="input" type="hidden" name="status" value="#(action.status)" />
+          <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+            <span data-menu-target="value">#(action.statusName)</span><i data-lucide="chevron-down"></i>
+          </button>
+          <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+            #for(option in action.statusOptions):
+              <button class="menu-option" type="button" data-menu-target="option" data-action="menu#choose" data-value="#(option.value)" data-label="#(option.name)" aria-selected="#(option.isSelected)">#(option.name)</button>
+            #endfor
+          </div>
+        </div>
+      </div>
+      <div class="field" data-controller="date-picker">
+        <label for="tap-expiry-#(action.id)">Expiry</label>
+        <input class="input" id="tap-expiry-#(action.id)" name="expiresAt" value="#(action.expiresAtInput)" data-date-picker-target="input" placeholder="Never" />
+      </div>
+      <div class="field">
+        <label for="tap-uses-#(action.id)">Use limit</label>
+        <input class="input" id="tap-uses-#(action.id)" name="maxUses" type="number" min="1" step="1" value="#(action.maxUses)" placeholder="Unlimited" />
+      </div>
+      <div class="field wide">
+        <label for="tap-cooldown-#(action.id)">Cooldown in seconds</label>
+        <input class="input" id="tap-cooldown-#(action.id)" name="cooldownSeconds" type="number" min="0" max="300" step="1" value="#(action.cooldownSeconds)" required />
+      </div>
+    </div>
+  </div>
+  <div class="dialog-footer">
+    <button class="button" type="button" data-action="dialog#close">Cancel</button>
+    <button class="button primary" type="submit">Save changes</button>
+  </div>
+</form>

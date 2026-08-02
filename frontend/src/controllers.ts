@@ -12,6 +12,7 @@ export {
   PropertyDefinitionController,
 } from './controllers/form_controllers';
 export { TaskPageController } from './controllers/task_page_controller';
+export { TapActionFormController, TapProvisionController } from './controllers/tap_controllers';
 export {
   SearchController,
   SidebarController,

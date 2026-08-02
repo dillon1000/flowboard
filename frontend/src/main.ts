@@ -58,6 +58,8 @@ import {
   SidebarController,
   TaskPageController,
   TaskPreviewController,
+  TapActionFormController,
+  TapProvisionController,
   ThemeController,
   ToastController,
 } from './controllers';
@@ -75,6 +77,8 @@ application.register('search', SearchController);
 application.register('sidebar', SidebarController);
 application.register('task-page', TaskPageController);
 application.register('task-preview', TaskPreviewController);
+application.register('tap-action-form', TapActionFormController);
+application.register('tap-provision', TapProvisionController);
 application.register('theme', ThemeController);
 application.register('toast', ToastController);
 

@@ -196,6 +196,15 @@ struct TapActionTests {
             )
             #expect(create.status == .created)
             #expect(create.headers.first(name: .cacheControl) == "no-store")
+            let createPage = create.body.string
+            let tagURL = try text(
+                between: #"<code class="tap-url-secret" data-tap-provision-target="url">"#,
+                and: "</code>",
+                in: createPage
+            )
+            #expect(tagURL.utf8.count < TapTokenService.maximumURLByteCount)
+            #expect(tagURL.contains("/t#fbt_"))
+            #expect(createPage.contains("Write NFC tag"))
 
             let action = try #require(
                 try await TapAction.query(on: app.db)
@@ -207,6 +216,14 @@ struct TapActionTests {
             #expect(action.kind == .createTask)
             #expect(action.configuration.labels == ["NFC", "inspection"])
             #expect(action.maxUses == 5)
+            #expect(!action.tokenHash.contains(String(tagURL.suffix(36))))
+
+            let laterSettings = try await app.testing().sendRequest(
+                .GET,
+                "app/boards/\(session.boardID)/settings",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(!laterSettings.body.string.contains(tagURL))
 
             let task = Task(
                 boardID: session.boardID,
@@ -313,6 +330,12 @@ struct TapActionTests {
         let marker = #"name="csrf-token" content=""#
         let start = try #require(page.range(of: marker)?.upperBound)
         let end = try #require(page[start...].firstIndex(of: "\""))
+        return String(page[start..<end])
+    }
+
+    private func text(between startMarker: String, and endMarker: String, in page: String) throws -> String {
+        let start = try #require(page.range(of: startMarker)?.upperBound)
+        let end = try #require(page[start...].range(of: endMarker)?.lowerBound)
         return String(page[start..<end])
     }
 }

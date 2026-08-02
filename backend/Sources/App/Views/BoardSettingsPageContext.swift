@@ -16,6 +16,10 @@ struct BoardSettingsPageContext: Encodable {
     let properties: [PropertyDefinitionContext]
     let statuses: [TaskOptionContext]
     let severities: [TaskOptionContext]
+    let defaultTapStatus: String
+    let defaultTapStatusName: String
+    let defaultTapSeverity: String
+    let defaultTapSeverityName: String
     let tapTasks: [TapTaskOptionContext]
     let tapActions: [TapActionContext]
     let tapExecutions: [TapExecutionContext]
@@ -60,8 +64,18 @@ struct BoardSettingsPageContext: Encodable {
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
         self.properties = (board.propertyDefinitions ?? []).map(PropertyDefinitionContext.init)
-        self.statuses = board.taskStatuses.map { TaskOptionContext(option: $0) }
-        self.severities = board.taskSeverities.map { TaskOptionContext(option: $0) }
+        let defaultStatus = board.taskStatuses.first ?? BoardTaskOption.defaultStatuses[0]
+        let defaultSeverity = board.taskSeverities.first ?? BoardTaskOption.defaultSeverities[0]
+        self.statuses = board.taskStatuses.map {
+            TaskOptionContext(option: $0, selectedValue: defaultStatus.id)
+        }
+        self.severities = board.taskSeverities.map {
+            TaskOptionContext(option: $0, selectedValue: defaultSeverity.id)
+        }
+        self.defaultTapStatus = defaultStatus.id
+        self.defaultTapStatusName = defaultStatus.name
+        self.defaultTapSeverity = defaultSeverity.id
+        self.defaultTapSeverityName = defaultSeverity.name
         self.tapTasks = try tapTasks.map { try TapTaskOptionContext(task: $0) }
         self.tapActions = try tapActions.map { try TapActionContext(action: $0, board: board, tasks: tapTasks) }
         self.tapExecutions = tapExecutions.map(TapExecutionContext.init)
@@ -101,6 +115,12 @@ struct TapActionContext: Encodable {
     let summary: String
     let title: String
     let description: String
+    let status: String
+    let statusName: String
+    let severity: String
+    let severityName: String
+    let targetTaskID: String
+    let targetTaskName: String
     let statusOptions: [TaskOptionContext]
     let severityOptions: [TaskOptionContext]
     let tasks: [TapTaskOptionContext]
@@ -142,6 +162,17 @@ struct TapActionContext: Encodable {
         }
         self.title = action.configuration.title ?? ""
         self.description = action.configuration.description ?? ""
+        self.status = action.configuration.status
+        self.statusName = board.statusOption(
+            for: TaskStatus(rawValue: action.configuration.status)
+        ).name
+        let severity = action.configuration.priority ?? TaskPriority.medium.rawValue
+        self.severity = severity
+        self.severityName = board.severityOption(
+            for: TaskPriority(rawValue: severity)
+        ).name
+        self.targetTaskID = action.$targetTask.id?.uuidString ?? ""
+        self.targetTaskName = targetTask?.title ?? "Select a task"
         self.statusOptions = board.taskStatuses.map {
             TaskOptionContext(option: $0, selectedValue: action.configuration.status)
         }

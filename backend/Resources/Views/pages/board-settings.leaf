@@ -18,6 +18,7 @@
                 <a class="nav-link" href="#fields"><i data-lucide="tag"></i><span>Custom fields</span></a>
                 <a class="nav-link" href="#members"><i data-lucide="users"></i><span>Members</span></a>
                 <a class="nav-link" href="#templates"><i data-lucide="copy"></i><span>Templates</span></a>
+                <a class="nav-link" href="#tap-actions"><i data-lucide="tag"></i><span>Tap actions</span></a>
                 <a class="nav-link" href="#data"><i data-lucide="download"></i><span>Data</span></a>
                 <a class="nav-link" href="#danger"><i data-lucide="archive"></i><span>Board actions</span></a>
               </nav>
@@ -305,6 +306,107 @@
                   <button class="button small" type="submit">Add template</button>
                 </form>
               </div>
+            </section>
+
+            <section class="section" id="tap-actions">
+              <div class="section-heading">
+                <div><h2>Tap actions</h2><p>Run a fixed task change from an NFC tag without signing in.</p></div>
+                <div data-controller="dialog">
+                  <button class="button primary" type="button" data-action="dialog#open"><i data-lucide="plus"></i>New Tap action</button>
+                  <div
+                    class="dialog-layer"
+                    data-dialog-target="panel"
+                    data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="new-tap-action-title"
+                    tabindex="-1"
+                    hidden
+                  >
+                    #extend("partials/tap-action-create-form")
+                  </div>
+                </div>
+              </div>
+
+              #if(boardSettings.hasTapError):
+                <p class="error-message">#(boardSettings.tapError)</p>
+              #endif
+
+              #if(boardSettings.hasCreatedTapURL):
+                <div class="panel tap-provision" data-controller="tap-provision">
+                  <div class="tap-provision-main">
+                    <div><strong>Program this tag now</strong><span>This bearer link is shown once. Rotate the action if it is lost or copied.</span></div>
+                    <code class="tap-url-secret" data-tap-provision-target="url">#(boardSettings.createdTapURL)</code>
+                    <div class="tap-provision-actions">
+                      <button class="button" type="button" data-action="tap-provision#copy"><i data-lucide="copy"></i>Copy link</button>
+                      <button class="button primary" type="button" data-tap-provision-target="write" data-action="tap-provision#write" hidden><i data-lucide="tag"></i>Write NFC tag</button>
+                      <span class="tap-provision-status" data-tap-provision-target="status" aria-live="polite">#(boardSettings.createdTapURLByteCount) UTF-8 bytes, below the 504-byte tag limit.</span>
+                    </div>
+                  </div>
+                </div>
+              #endif
+
+              <div class="panel tap-action-list">
+                #if(boardSettings.hasTapActions):
+                  #for(action in boardSettings.tapActions):
+                    <div class="panel-row tap-action-row">
+                      <i data-lucide="tag"></i>
+                      <span class="panel-row-main">
+                        <strong>#(action.name)</strong>
+                        <span>#(action.summary) · #(action.useLimitLabel) · Expires #(action.expiresAtLabel)</span>
+                      </span>
+                      <code class="tap-token-prefix">#(action.prefix)…</code>
+                      <span class="badge#if(action.isEnabled): success#else: subtle#endif">#(action.stateName)</span>
+                      <form method="post" action="/app/boards/#(boardSettings.id)/tap-actions/#(action.id)/toggle">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <button class="button small" type="submit">#if(action.isEnabled):Disable#else:Enable#endif</button>
+                      </form>
+                      <form method="post" action="/app/boards/#(boardSettings.id)/tap-actions/#(action.id)/rotate" data-turbo="false">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <button class="button ghost small" type="submit">Rotate link</button>
+                      </form>
+                      <div data-controller="dialog">
+                        <button class="button ghost small" type="button" data-action="dialog#open">Edit</button>
+                        <div
+                          class="dialog-layer"
+                          data-dialog-target="panel"
+                          data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-labelledby="edit-tap-action-#(action.id)"
+                          tabindex="-1"
+                          hidden
+                        >
+                          #extend("partials/tap-action-edit-form")
+                        </div>
+                      </div>
+                      <form method="post" action="/app/boards/#(boardSettings.id)/tap-actions/#(action.id)/delete">
+                        <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                        <button class="icon-button" type="submit" aria-label="Delete #(action.name)" data-turbo-confirm="Delete this Tap action?"><i data-lucide="x"></i></button>
+                      </form>
+                    </div>
+                  #endfor
+                #else:
+                  <div class="panel-row">
+                    <i data-lucide="tag"></i>
+                    <span class="panel-row-main"><strong>No Tap actions yet</strong><span>Create one, then write its one-time link to an NFC tag.</span></span>
+                  </div>
+                #endif
+              </div>
+
+              #if(boardSettings.hasTapExecutions):
+                <div class="tap-history">
+                  <h3>Recent uses</h3>
+                  <div class="panel">
+                    #for(execution in boardSettings.tapExecutions):
+                      <div class="panel-row">
+                        <span class="panel-row-main"><strong>#(execution.actionName)</strong><span>#(execution.message)</span></span>
+                        <time class="tap-history-time">#(execution.createdAt)</time>
+                      </div>
+                    #endfor
+                  </div>
+                </div>
+              #endif
             </section>
 
             <section class="section" id="data">
