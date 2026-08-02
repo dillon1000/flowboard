@@ -52,6 +52,20 @@ struct CreateTemplateForm: Content {
     let title: String
 }
 
+struct TapActionForm: Content {
+    let name: String
+    let kind: String
+    let targetTaskID: String?
+    let title: String?
+    let description: String?
+    let status: String
+    let priority: String?
+    let labels: String?
+    let expiresAt: String?
+    let maxUses: String?
+    let cooldownSeconds: String?
+}
+
 struct CreateTaskForm: Content {
     let boardID: UUID
     let title: String

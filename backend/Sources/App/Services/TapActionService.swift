@@ -20,22 +20,72 @@ enum TapActionService {
         definition: Definition,
         on database: any Database
     ) async throws -> (action: TapAction, rawToken: String) {
+        let credential = TapTokenService.generate()
+        let action = try await create(
+            board: board,
+            definition: definition,
+            credential: credential,
+            on: database
+        )
+        return (action, credential.raw)
+    }
+
+    /// Stores a caller-generated credential after its public URL is validated.
+    /// This prevents an active action from existing when a tag URL is too long.
+    static func create(
+        board: Board,
+        definition: Definition,
+        credential: (raw: String, hash: String, visiblePrefix: String),
+        on database: any Database
+    ) async throws -> TapAction {
         let cleanDefinition = try await validated(definition, board: board, on: database)
-        let generated = TapTokenService.generate()
         let action = TapAction(
             boardID: try board.requireID(),
             targetTaskID: cleanDefinition.targetTaskID,
             name: cleanDefinition.name,
             kind: cleanDefinition.kind,
             configuration: cleanDefinition.configuration,
-            tokenHash: generated.hash,
-            tokenPrefix: generated.visiblePrefix,
+            tokenHash: credential.hash,
+            tokenPrefix: credential.visiblePrefix,
             expiresAt: cleanDefinition.expiresAt,
             maxUses: cleanDefinition.maxUses,
             cooldownSeconds: cleanDefinition.cooldownSeconds
         )
         try await action.create(on: database)
-        return (action, generated.raw)
+        return action
+    }
+
+    /// Changes the server-defined action without changing the physical tag URL.
+    /// Existing copies of the URL immediately receive the new definition.
+    static func update(
+        _ action: TapAction,
+        board: Board,
+        definition: Definition,
+        on database: any Database
+    ) async throws {
+        let cleanDefinition = try await validated(definition, board: board, on: database)
+        action.name = cleanDefinition.name
+        action.kind = cleanDefinition.kind
+        action.$targetTask.id = cleanDefinition.targetTaskID
+        action.configuration = cleanDefinition.configuration
+        action.expiresAt = cleanDefinition.expiresAt
+        action.maxUses = cleanDefinition.maxUses
+        action.cooldownSeconds = cleanDefinition.cooldownSeconds
+        try await action.update(on: database)
+    }
+
+    /// Replaces the bearer credential while retaining the action and its audit
+    /// history. A new credential starts a new use-count lifecycle.
+    static func rotate(
+        _ action: TapAction,
+        credential: (raw: String, hash: String, visiblePrefix: String),
+        on database: any Database
+    ) async throws {
+        action.tokenHash = credential.hash
+        action.tokenPrefix = credential.visiblePrefix
+        action.useCount = 0
+        action.lastUsedAt = nil
+        try await action.update(on: database)
     }
 
     /// Executes the fixed action without a user session. Token lifecycle checks,

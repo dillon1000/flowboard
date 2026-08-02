@@ -16,6 +16,17 @@ struct BoardSettingsPageContext: Encodable {
     let properties: [PropertyDefinitionContext]
     let statuses: [TaskOptionContext]
     let severities: [TaskOptionContext]
+    let tapTasks: [TapTaskOptionContext]
+    let tapActions: [TapActionContext]
+    let tapExecutions: [TapExecutionContext]
+    let hasTapTasks: Bool
+    let hasTapActions: Bool
+    let hasTapExecutions: Bool
+    let createdTapURL: String
+    let createdTapURLByteCount: Int
+    let hasCreatedTapURL: Bool
+    let tapError: String
+    let hasTapError: Bool
 
     init(
         board: Board,
@@ -24,7 +35,12 @@ struct BoardSettingsPageContext: Encodable {
         templates: [TaskTemplate],
         owner: User,
         firstViewID: UUID?,
-        isOwner: Bool
+        isOwner: Bool,
+        tapTasks: [Task],
+        tapActions: [TapAction],
+        tapExecutions: [TapExecution],
+        createdTapURL: String?,
+        tapError: String?
     ) throws {
         let boardID = try board.requireID()
         self.id = boardID
@@ -46,6 +62,116 @@ struct BoardSettingsPageContext: Encodable {
         self.properties = (board.propertyDefinitions ?? []).map(PropertyDefinitionContext.init)
         self.statuses = board.taskStatuses.map { TaskOptionContext(option: $0) }
         self.severities = board.taskSeverities.map { TaskOptionContext(option: $0) }
+        self.tapTasks = try tapTasks.map { try TapTaskOptionContext(task: $0) }
+        self.tapActions = try tapActions.map { try TapActionContext(action: $0, board: board, tasks: tapTasks) }
+        self.tapExecutions = tapExecutions.map(TapExecutionContext.init)
+        self.hasTapTasks = !tapTasks.isEmpty
+        self.hasTapActions = !tapActions.isEmpty
+        self.hasTapExecutions = !tapExecutions.isEmpty
+        self.createdTapURL = createdTapURL ?? ""
+        self.createdTapURLByteCount = createdTapURL?.utf8.count ?? 0
+        self.hasCreatedTapURL = createdTapURL != nil
+        self.tapError = tapError ?? ""
+        self.hasTapError = tapError != nil
+    }
+}
+
+struct TapTaskOptionContext: Encodable {
+    let id: UUID
+    let title: String
+    let isSelected: Bool
+
+    init(task: Task, selectedID: UUID? = nil) throws {
+        self.id = try task.requireID()
+        self.title = task.title
+        self.isSelected = task.id == selectedID
+    }
+}
+
+struct TapActionContext: Encodable {
+    let id: UUID
+    let name: String
+    let prefix: String
+    let kind: String
+    let kindName: String
+    let isCreateTask: Bool
+    let isUpdateTask: Bool
+    let isEnabled: Bool
+    let stateName: String
+    let summary: String
+    let title: String
+    let description: String
+    let statusOptions: [TaskOptionContext]
+    let severityOptions: [TaskOptionContext]
+    let tasks: [TapTaskOptionContext]
+    let labels: String
+    let expiresAtInput: String
+    let expiresAtLabel: String
+    let maxUses: String
+    let useCount: Int
+    let useLimitLabel: String
+    let cooldownSeconds: Int
+    let lastUsedAt: String
+
+    init(action: TapAction, board: Board, tasks: [Task]) throws {
+        let now = Date()
+        let isExpired = action.expiresAt.map { $0 <= now } ?? false
+        let isExhausted = action.maxUses.map { action.useCount >= $0 } ?? false
+        let targetTask = action.$targetTask.value ?? nil
+        self.id = try action.requireID()
+        self.name = action.name
+        self.prefix = action.tokenPrefix
+        self.kind = action.kind.rawValue
+        self.kindName = action.kind == .createTask ? "Create task" : "Update task"
+        self.isCreateTask = action.kind == .createTask
+        self.isUpdateTask = action.kind == .updateTask
+        self.isEnabled = action.isEnabled
+        self.stateName = if !action.isEnabled {
+            "Disabled"
+        } else if isExpired {
+            "Expired"
+        } else if isExhausted {
+            "Use limit reached"
+        } else {
+            "Active"
+        }
+        self.summary = if action.kind == .createTask {
+            "Create “\(action.configuration.title ?? "task")”"
+        } else {
+            "Set \(targetTask?.title ?? "missing task") to \(board.statusOption(for: TaskStatus(rawValue: action.configuration.status)).name)"
+        }
+        self.title = action.configuration.title ?? ""
+        self.description = action.configuration.description ?? ""
+        self.statusOptions = board.taskStatuses.map {
+            TaskOptionContext(option: $0, selectedValue: action.configuration.status)
+        }
+        self.severityOptions = board.taskSeverities.map {
+            TaskOptionContext(option: $0, selectedValue: action.configuration.priority)
+        }
+        self.tasks = try tasks.map {
+            try TapTaskOptionContext(task: $0, selectedID: action.$targetTask.id)
+        }
+        self.labels = action.configuration.labels.joined(separator: ", ")
+        self.expiresAtInput = action.expiresAt.map(inputDate) ?? ""
+        self.expiresAtLabel = action.expiresAt.map(displayDateOnly) ?? "Never"
+        self.maxUses = action.maxUses.map(String.init) ?? ""
+        self.useCount = action.useCount
+        self.useLimitLabel = action.maxUses.map { "\(action.useCount) of \($0) uses" }
+            ?? "\(action.useCount) uses"
+        self.cooldownSeconds = action.cooldownSeconds
+        self.lastUsedAt = action.lastUsedAt.map(displayDate) ?? "Never"
+    }
+}
+
+struct TapExecutionContext: Encodable {
+    let actionName: String
+    let message: String
+    let createdAt: String
+
+    init(execution: TapExecution) {
+        self.actionName = execution.actionName
+        self.message = execution.message
+        self.createdAt = execution.createdAt.map(displayDate) ?? "Just now"
     }
 }
 

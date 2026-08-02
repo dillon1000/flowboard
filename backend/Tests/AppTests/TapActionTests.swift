@@ -158,6 +158,123 @@ struct TapActionTests {
         }
     }
 
+    @Test("Board administrators can create, reassign, disable, and rotate Tap actions")
+    func managementLifecycle() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let settings = try await app.testing().sendRequest(
+                .GET,
+                "app/boards/\(session.boardID)/settings",
+                headers: ["Cookie": session.cookie]
+            )
+            let csrfToken = try csrfToken(from: settings.body.string)
+            let create = try await app.testing().sendRequest(
+                .POST,
+                "app/boards/\(session.boardID)/tap-actions",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        [
+                            "name": "Dock inspection",
+                            "kind": "create_task",
+                            "targetTaskID": "",
+                            "title": "Inspect the loading dock",
+                            "description": "Created by a physical tag.",
+                            "status": "backlog",
+                            "priority": "high",
+                            "labels": "NFC, inspection",
+                            "expiresAt": "",
+                            "maxUses": "5",
+                            "cooldownSeconds": "2",
+                        ],
+                        as: .urlEncodedForm
+                    )
+                }
+            )
+            #expect(create.status == .created)
+            #expect(create.headers.first(name: .cacheControl) == "no-store")
+
+            let action = try #require(
+                try await TapAction.query(on: app.db)
+                    .filter(\.$board.$id == session.boardID)
+                    .first()
+            )
+            let firstTokenHash = action.tokenHash
+            #expect(action.name == "Dock inspection")
+            #expect(action.kind == .createTask)
+            #expect(action.configuration.labels == ["NFC", "inspection"])
+            #expect(action.maxUses == 5)
+
+            let task = Task(
+                boardID: session.boardID,
+                title: "Reassigned work order",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+            let update = try await app.testing().sendRequest(
+                .POST,
+                "app/boards/\(session.boardID)/tap-actions/\(action.requireID())/update",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        [
+                            "name": "Finish work order",
+                            "kind": "update_task",
+                            "targetTaskID": try task.requireID().uuidString,
+                            "title": "",
+                            "description": "",
+                            "status": "done",
+                            "priority": "medium",
+                            "labels": "",
+                            "expiresAt": "",
+                            "maxUses": "",
+                            "cooldownSeconds": "3",
+                        ],
+                        as: .urlEncodedForm
+                    )
+                }
+            )
+            #expect(update.status == .seeOther)
+            let reassigned = try #require(try await TapAction.find(action.requireID(), on: app.db))
+            #expect(reassigned.kind == .updateTask)
+            #expect(reassigned.$targetTask.id == task.id)
+            #expect(reassigned.tokenHash == firstTokenHash)
+
+            let disabled = try await app.testing().sendRequest(
+                .POST,
+                "app/boards/\(session.boardID)/tap-actions/\(action.requireID())/toggle",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ]
+            )
+            #expect(disabled.status == .seeOther)
+            #expect(!(try #require(try await TapAction.find(action.requireID(), on: app.db))).isEnabled)
+
+            let rotated = try await app.testing().sendRequest(
+                .POST,
+                "app/boards/\(session.boardID)/tap-actions/\(action.requireID())/rotate",
+                headers: [
+                    "Cookie": session.cookie,
+                    "X-CSRF-TOKEN": csrfToken,
+                ]
+            )
+            #expect(rotated.status == .ok)
+            #expect(rotated.headers.first(name: .cacheControl) == "no-store")
+            #expect(
+                try #require(try await TapAction.find(action.requireID(), on: app.db)).tokenHash
+                    != firstTokenHash
+            )
+        }
+    }
+
     private func createTaskDefinition(
         maxUses: Int? = nil,
         cooldownSeconds: Int
@@ -190,5 +307,12 @@ struct TapActionTests {
                 try request.content.encode(input)
             }
         )
+    }
+
+    private func csrfToken(from page: String) throws -> String {
+        let marker = #"name="csrf-token" content=""#
+        let start = try #require(page.range(of: marker)?.upperBound)
+        let end = try #require(page[start...].firstIndex(of: "\""))
+        return String(page[start..<end])
     }
 }

@@ -223,6 +223,16 @@ struct AppPageController: RouteCollection {
     }
 
     func boardSettings(req: Request) async throws -> View {
+        try await renderBoardSettingsPage(for: req)
+    }
+
+    /// Builds board administration and Tap capability state for GET requests and
+    /// direct form responses that must show a newly created bearer URL once.
+    func renderBoardSettingsPage(
+        for req: Request,
+        createdTapURL: String? = nil,
+        tapError: String? = nil
+    ) async throws -> View {
         let common = try await commonContext(for: req)
         let access = try await boardAccess(for: req, permission: .admin)
         let boardID = try access.board.requireID()
@@ -238,6 +248,26 @@ struct AppPageController: RouteCollection {
             .filter(\.$board.$id == boardID)
             .sort(\.$createdAt, .ascending)
             .all()
+        let tapTasks = try await Task.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .filter(\.$isArchived == false)
+            .sort(\.$title, .ascending)
+            .all()
+        let tapActions = try await TapAction.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .with(\.$targetTask)
+            .sort(\.$createdAt, .descending)
+            .all()
+        let tapActionIDs = try tapActions.map { try $0.requireID() }
+        let tapExecutions: [TapExecution] = if tapActionIDs.isEmpty {
+            []
+        } else {
+            try await TapExecution.query(on: req.db)
+                .filter(\.$action.$id ~~ tapActionIDs)
+                .sort(\.$createdAt, .descending)
+                .range(0..<20)
+                .all()
+        }
         let owner = if
             let ownerID = access.board.$owner.id,
             let owner = try await User.find(ownerID, on: req.db)
@@ -259,7 +289,12 @@ struct AppPageController: RouteCollection {
                 templates: templates,
                 owner: owner,
                 firstViewID: firstViewID,
-                isOwner: access.isOwner
+                isOwner: access.isOwner,
+                tapTasks: tapTasks,
+                tapActions: tapActions,
+                tapExecutions: tapExecutions,
+                createdTapURL: createdTapURL,
+                tapError: tapError
             ),
             for: req
         )

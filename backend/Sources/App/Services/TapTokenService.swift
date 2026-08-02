@@ -31,8 +31,9 @@ enum TapTokenService {
     static func isWellFormed(_ rawToken: String) -> Bool {
         guard rawToken.hasPrefix(tokenPrefix) else { return false }
         let payload = rawToken.dropFirst(tokenPrefix.count)
+        let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
         return payload.count == 32 && payload.allSatisfy {
-            $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_"
+            alphabet.contains($0)
         }
     }
 

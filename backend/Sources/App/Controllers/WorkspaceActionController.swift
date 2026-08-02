@@ -25,6 +25,11 @@ struct WorkspaceActionController: RouteCollection {
         routes.post("app", "boards", ":boardID", "templates", ":templateID", "use", use: useTemplate)
         routes.post("app", "boards", ":boardID", "templates", ":templateID", "default", use: setDefaultTemplate)
         routes.post("app", "boards", ":boardID", "templates", ":templateID", "delete", use: deleteTemplate)
+        routes.post("app", "boards", ":boardID", "tap-actions", use: createTapAction)
+        routes.post("app", "boards", ":boardID", "tap-actions", ":tapActionID", "update", use: updateTapAction)
+        routes.post("app", "boards", ":boardID", "tap-actions", ":tapActionID", "toggle", use: toggleTapAction)
+        routes.post("app", "boards", ":boardID", "tap-actions", ":tapActionID", "rotate", use: rotateTapAction)
+        routes.post("app", "boards", ":boardID", "tap-actions", ":tapActionID", "delete", use: deleteTapAction)
 
         routes.post("app", "tasks", use: createTask)
         routes.post("app", "tasks", ":taskID", "update", use: updateTask)
