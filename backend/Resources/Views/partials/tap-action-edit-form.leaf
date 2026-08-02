@@ -12,8 +12,12 @@
   <div class="dialog-body">
     <div class="form-grid">
       <div class="field wide">
-        <label for="tap-name-#(action.id)">Name</label>
+        <label for="tap-name-#(action.id)">Tap title</label>
         <input class="input" id="tap-name-#(action.id)" name="name" value="#(action.name)" maxlength="80" required />
+      </div>
+      <div class="field wide">
+        <label for="tap-display-description-#(action.id)">Tap description</label>
+        <textarea class="textarea" id="tap-display-description-#(action.id)" name="displayDescription" maxlength="280">#(action.displayDescription)</textarea>
       </div>
       <div class="field wide">
         <span class="field-label">Action</span>

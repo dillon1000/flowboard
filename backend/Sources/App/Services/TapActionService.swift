@@ -5,6 +5,7 @@ import Vapor
 enum TapActionService {
     struct Definition: Sendable {
         let name: String
+        let displayDescription: String?
         let kind: TapActionKind
         let targetTaskID: UUID?
         let configuration: TapActionConfiguration
@@ -43,6 +44,7 @@ enum TapActionService {
             boardID: try board.requireID(),
             targetTaskID: cleanDefinition.targetTaskID,
             name: cleanDefinition.name,
+            displayDescription: cleanDefinition.displayDescription,
             kind: cleanDefinition.kind,
             configuration: cleanDefinition.configuration,
             tokenHash: credential.hash,
@@ -65,6 +67,7 @@ enum TapActionService {
     ) async throws {
         let cleanDefinition = try await validated(definition, board: board, on: database)
         action.name = cleanDefinition.name
+        action.displayDescription = cleanDefinition.displayDescription
         action.kind = cleanDefinition.kind
         action.$targetTask.id = cleanDefinition.targetTaskID
         action.configuration = cleanDefinition.configuration
@@ -113,6 +116,7 @@ enum TapActionService {
             {
                 return TapExecutionResponse(
                     actionName: existing.actionName,
+                    actionDescription: existing.actionDescription,
                     message: existing.message
                 )
             }
@@ -142,9 +146,14 @@ enum TapActionService {
                 taskID: result.taskID,
                 requestID: input.requestID,
                 actionName: action.name,
+                actionDescription: action.displayDescription,
                 message: result.message
             ).create(on: transaction)
-            return TapExecutionResponse(actionName: action.name, message: result.message)
+            return TapExecutionResponse(
+                actionName: action.name,
+                actionDescription: action.displayDescription,
+                message: result.message
+            )
         }
     }
 
@@ -218,6 +227,10 @@ enum TapActionService {
         guard let name = clean(definition.name), name.count <= 80 else {
             throw Abort(.unprocessableEntity, reason: "Use a Tap action name between 1 and 80 characters.")
         }
+        let displayDescription = clean(definition.displayDescription)
+        guard (displayDescription?.count ?? 0) <= 280 else {
+            throw Abort(.unprocessableEntity, reason: "Tap description must contain 280 characters or fewer.")
+        }
         guard (0...300).contains(definition.cooldownSeconds) else {
             throw Abort(.unprocessableEntity, reason: "Cooldown must be between 0 and 300 seconds.")
         }
@@ -281,6 +294,7 @@ enum TapActionService {
 
         return Definition(
             name: name,
+            displayDescription: displayDescription,
             kind: definition.kind,
             targetTaskID: targetTaskID,
             configuration: configuration,

@@ -5,387 +5,270 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#ebe9e2" />
-    <title>Flowboard Tap</title>
+    <meta name="theme-color" content="#ffffff" />
+    <title>Tap action · Flowboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>try{const t=localStorage.getItem('flowboard-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch{}</script>
     <style>
       :root {
-        color-scheme: light dark;
-        --paper: #ebe9e2;
-        --panel: #f8f7f2;
-        --ink: #171716;
-        --muted: #6e6c66;
-        --line: rgb(23 23 22 / 12%);
-        --lime: #c8f36a;
-        --green: #276941;
-        --orange: #d85b32;
-        font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", system-ui, sans-serif;
-        background: var(--paper);
-        color: var(--ink);
+        color-scheme: light;
+        --surface: #fff;
+        --surface-sunken: #fafafa;
+        --surface-hover: hsl(0deg 0% 95%);
+        --text: hsl(0deg 0% 9%);
+        --text-secondary: hsl(0deg 0% 40%);
+        --text-tertiary: hsl(0deg 0% 56%);
+        --border: rgb(0 0 0 / 8%);
+        --border-strong: rgb(0 0 0 / 21%);
+        --green-surface: hsl(120deg 60% 95%);
+        --green-text: hsl(133deg 50% 32%);
+        --red-surface: hsl(0deg 100% 96%);
+        --red-text: hsl(358deg 66% 48%);
+        --focus: hsl(211deg 100% 42%);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizelegibility;
+        -webkit-font-smoothing: antialiased;
       }
 
-      * { box-sizing: border-box; }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --surface: #0a0a0a;
+        --surface-sunken: hsl(0deg 0% 7%);
+        --surface-hover: hsl(0deg 0% 12%);
+        --text: hsl(0deg 0% 93%);
+        --text-secondary: hsl(0deg 0% 63%);
+        --text-tertiary: hsl(0deg 0% 56%);
+        --border: rgb(255 255 255 / 14%);
+        --border-strong: rgb(255 255 255 / 24%);
+        --green-surface: hsl(137deg 50% 12%);
+        --green-text: hsl(131deg 43% 57%);
+        --red-surface: hsl(357deg 46% 16%);
+        --red-text: hsl(358deg 100% 69%);
+        --focus: hsl(210deg 100% 66%);
+      }
+
+      *, *::before, *::after { box-sizing: border-box; }
+
+      html { min-width: 320px; background: var(--surface); -webkit-text-size-adjust: 100%; }
 
       body {
         display: grid;
+        min-width: 320px;
         min-height: 100dvh;
-        grid-template-rows: auto 1fr auto;
+        grid-template-rows: 64px 1fr;
         margin: 0;
-        padding: 22px clamp(18px, 5vw, 48px);
-        overflow-x: hidden;
-        background:
-          radial-gradient(circle at 50% 36%, rgb(200 243 106 / 24%), transparent 34%),
-          linear-gradient(var(--paper), var(--paper));
+        color: var(--text);
+        background: var(--surface);
+        font-size: 14px;
+        line-height: 1.5;
       }
 
-      body::before {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        opacity: .22;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.1'/%3E%3C/svg%3E");
-        content: "";
+      .tap-header {
+        display: flex;
+        height: 64px;
+        align-items: center;
+        padding: 0 24px;
       }
 
       .brand {
-        position: relative;
         display: inline-flex;
-        width: max-content;
+        min-height: 40px;
         align-items: center;
         gap: 9px;
-        color: inherit;
-        font-size: 11px;
-        font-weight: 750;
-        letter-spacing: .12em;
-        text-transform: uppercase;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: -.02em;
+        text-decoration: none;
       }
 
       .brand-mark {
         display: grid;
-        width: 27px;
-        height: 27px;
+        width: 28px;
+        height: 28px;
         place-items: center;
-        border-radius: 9px;
-        color: var(--panel);
-        background: var(--ink);
-        font-size: 13px;
-        letter-spacing: 0;
+        border-radius: 6px;
+        background: var(--text);
       }
 
-      .brand-divider { width: 1px; height: 13px; background: var(--line); }
-      .brand-mode { color: var(--muted); }
-
-      .tap-shell {
-        position: relative;
-        display: grid;
-        width: min(100%, 420px);
-        align-self: center;
-        justify-self: center;
-        gap: 30px;
-        padding: clamp(20px, 5vw, 34px);
-        border: 1px solid rgb(255 255 255 / 64%);
-        border-radius: 38px;
-        background: color-mix(in srgb, var(--panel) 88%, transparent);
-        box-shadow: 0 1px 0 rgb(255 255 255 / 70%) inset, 0 28px 80px rgb(44 43 38 / 13%);
-        backdrop-filter: blur(20px);
+      .brand-mark::after {
+        width: 0;
+        height: 0;
+        border-right: 6px solid transparent;
+        border-bottom: 11px solid var(--surface);
+        border-left: 6px solid transparent;
+        content: "";
       }
 
-      .visual-stage {
-        display: grid;
-        min-height: 190px;
-        place-items: center;
-      }
-
-      .scan-target,
-      .success-seal,
-      .state-art {
-        grid-area: 1 / 1;
-        width: 180px;
-        height: 180px;
-        border-radius: 52px;
-      }
-
-      .scan-target {
-        position: relative;
+      main {
         display: grid;
         place-items: center;
-        overflow: hidden;
-        color: #fff;
-        background: var(--ink);
-        box-shadow: 0 16px 36px rgb(23 23 22 / 22%);
+        padding: 40px 24px 104px;
       }
 
-      .scan-target::before,
-      .scan-target::after {
-        position: absolute;
-        width: 116px;
-        height: 116px;
-        border: 1px solid rgb(255 255 255 / 18%);
+      .tap-card { width: min(100%, 360px); }
+
+      .state-icon {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 24px;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--surface-sunken);
+        box-shadow: 0 0 0 1px var(--border);
+      }
+
+      .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border-strong);
+        border-top-color: var(--text);
         border-radius: 50%;
-        content: "";
-        animation: signal 1.8s ease-out infinite;
+        animation: spin .7s linear infinite;
       }
 
-      .scan-target::after { animation-delay: .6s; }
-
-      .scan-core {
-        position: relative;
-        z-index: 1;
-        display: grid;
-        width: 66px;
-        height: 66px;
-        place-items: center;
-        border-radius: 22px;
-        color: #171716;
-        background: var(--lime);
-        box-shadow: 0 0 0 10px rgb(200 243 106 / 10%);
-        font-size: 28px;
-        font-weight: 800;
-        animation: breathe 1.8s ease-in-out infinite;
-      }
-
-      .scan-label {
-        position: absolute;
-        right: 16px;
-        bottom: 15px;
-        left: 16px;
-        color: rgb(255 255 255 / 55%);
-        font-family: ui-monospace, "SFMono-Regular", monospace;
-        font-size: 9px;
-        letter-spacing: .13em;
-        text-align: center;
-        text-transform: uppercase;
-      }
-
-      .success-seal {
-        position: relative;
-        display: none;
-        place-items: center;
-        overflow: hidden;
-        background: var(--lime);
-        box-shadow: 0 16px 36px rgb(39 105 65 / 18%);
-      }
-
-      .success-seal::before {
-        position: absolute;
-        width: 260px;
-        height: 80px;
-        background: rgb(255 255 255 / 27%);
-        content: "";
-        rotate: -28deg;
-      }
+      .check,
+      .state-art { display: none; }
 
       .check {
-        z-index: 1;
-        width: 62px;
-        height: 34px;
-        border-bottom: 9px solid #276941;
-        border-left: 9px solid #276941;
-        transform: translateY(-8px) rotate(-45deg);
+        color: var(--green-text);
+        font-size: 21px;
+        font-weight: 600;
+        line-height: 1;
       }
 
-      .state-art {
-        display: none;
-        padding: 18px;
-        background: var(--ink);
-        box-shadow: 0 16px 36px rgb(23 23 22 / 22%);
-        object-fit: contain;
-      }
+      .state-art { width: 30px; height: 30px; object-fit: contain; }
 
-      .tap-shell[data-state="success"] .scan-target,
-      .tap-shell[data-state="error"] .scan-target,
-      .tap-shell[data-state="rotation"] .scan-target { display: none; }
+      .tap-card[data-state="success"] .state-icon { background: var(--green-surface); }
+      .tap-card[data-state="success"] .spinner { display: none; }
+      .tap-card[data-state="success"] .check { display: block; }
 
-      .tap-shell[data-state="success"] .success-seal { display: grid; animation: arrive .42s cubic-bezier(.2, .85, .2, 1); }
-      .tap-shell[data-state="error"] .state-art,
-      .tap-shell[data-state="rotation"] .state-art { display: block; animation: arrive .42s cubic-bezier(.2, .85, .2, 1); }
-      .tap-shell[data-state="error"] .state-art { background: var(--orange); }
+      .tap-card[data-state="error"] .state-icon,
+      .tap-card[data-state="rotation"] .state-icon { background: #1a1a1a; }
+      .tap-card[data-state="error"] .spinner,
+      .tap-card[data-state="rotation"] .spinner { display: none; }
+      .tap-card[data-state="error"] .state-art,
+      .tap-card[data-state="rotation"] .state-art { display: block; }
 
-      .status { text-align: center; }
-
-      .eyebrow {
-        margin: 0 0 9px;
-        color: var(--green);
-        font-family: ui-monospace, "SFMono-Regular", monospace;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: .14em;
-        text-transform: uppercase;
+      .state-label {
+        margin: 0 0 8px;
+        color: var(--text-tertiary);
+        font-size: 12px;
+        font-weight: 500;
       }
 
       h1 {
         margin: 0;
-        font-size: clamp(25px, 7vw, 32px);
-        font-weight: 720;
-        letter-spacing: -.045em;
-        line-height: 1.08;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -.03em;
+        line-height: 1.2;
         text-wrap: balance;
       }
 
       .message {
-        max-width: 31ch;
-        margin: 11px auto 0;
-        color: var(--muted);
+        margin: 10px 0 0;
+        color: var(--text-secondary);
         font-size: 14px;
         line-height: 1.55;
-        text-wrap: balance;
+        white-space: pre-wrap;
       }
 
-      .progress {
-        width: 72px;
-        height: 3px;
-        margin: 22px auto 0;
-        overflow: hidden;
-        border-radius: 4px;
-        background: var(--line);
+      .result {
+        margin: 24px 0 0;
+        padding: 11px 12px;
+        border-radius: 8px;
+        color: var(--green-text);
+        background: var(--green-surface);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--green-text) 18%, transparent);
+        font-size: 13px;
+        font-weight: 500;
       }
-
-      .progress::after {
-        display: block;
-        width: 36px;
-        height: 100%;
-        border-radius: inherit;
-        background: var(--ink);
-        content: "";
-        animation: progress 1s ease-in-out infinite alternate;
-      }
-
-      .tap-shell:not([data-state="running"]) .progress { display: none; }
 
       button {
-        min-width: 132px;
-        min-height: 44px;
-        margin-top: 22px;
-        padding: 0 20px;
+        display: inline-flex;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 24px;
+        padding: 0 16px;
         border: 0;
-        border-radius: 14px;
-        color: var(--panel);
-        background: var(--ink);
-        box-shadow: 0 8px 22px rgb(23 23 22 / 15%);
-        font: inherit;
-        font-size: 13px;
-        font-weight: 700;
+        border-radius: 6px;
+        color: var(--surface);
+        background: var(--text);
         cursor: pointer;
-        transition: translate .15s ease, box-shadow .15s ease;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1;
       }
 
-      button:hover { translate: 0 -1px; box-shadow: 0 10px 28px rgb(23 23 22 / 20%); }
-      button:active { translate: 0 1px; }
-      button:focus-visible { outline: 3px solid color-mix(in srgb, var(--green) 35%, transparent); outline-offset: 3px; }
+      button:hover { opacity: .88; }
+      button:active { opacity: .8; }
+      button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       [hidden] { display: none !important; }
 
-      .privacy {
-        position: relative;
-        align-self: end;
-        justify-self: center;
-        margin: 20px 0 0;
-        color: var(--muted);
-        font-family: ui-monospace, "SFMono-Regular", monospace;
-        font-size: 9px;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-      }
-
-      .privacy::before {
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        margin-right: 7px;
-        border-radius: 50%;
-        background: var(--green);
-        content: "";
-      }
-
-      @keyframes signal {
-        from { opacity: .9; scale: .25; }
-        to { opacity: 0; scale: 1.45; }
-      }
-
-      @keyframes breathe {
-        50% { scale: 1.06; box-shadow: 0 0 0 16px rgb(200 243 106 / 7%); }
-      }
-
-      @keyframes progress {
-        from { translate: -36px; }
-        to { translate: 72px; }
-      }
-
-      @keyframes arrive {
-        from { opacity: 0; scale: .84; rotate: -4deg; }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
       @media (width <= 480px) {
-        body { padding-block: 18px; }
-        .tap-shell { gap: 24px; border-radius: 30px; }
-        .scan-target, .success-seal, .state-art { width: 164px; height: 164px; border-radius: 45px; }
-        .visual-stage { min-height: 170px; }
+        .tap-header { padding: 0 16px; }
+        main { align-items: start; padding: min(18vh, 112px) 20px 64px; }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root { --paper: #121311; --panel: #1c1d1a; --ink: #f2f2ec; --muted: #a2a39b; --line: rgb(255 255 255 / 12%); --green: #a9d957; }
-        body { background: radial-gradient(circle at 50% 36%, rgb(148 192 72 / 13%), transparent 34%), var(--paper); }
-        .tap-shell { border-color: rgb(255 255 255 / 8%); box-shadow: 0 1px 0 rgb(255 255 255 / 6%) inset, 0 28px 80px rgb(0 0 0 / 28%); }
-        .brand-mark, button, .scan-target, .state-art { color: #171716; background: #f2f2ec; }
-        .scan-target { color: #171716; }
-        .scan-target::before, .scan-target::after { border-color: rgb(23 23 22 / 18%); }
-        .scan-label { color: rgb(23 23 22 / 55%); }
-        .progress::after { background: var(--ink); }
-        .tap-shell[data-state="error"] .state-art { background: var(--orange); }
-        .tap-shell[data-state="rotation"] .state-art { background: #2c2d29; }
+        .spinner { animation-duration: 1.4s; }
       }
     </style>
   </head>
   <body>
-    <header class="brand" aria-label="Flowboard Tap">
-      <span class="brand-mark" aria-hidden="true">F</span>
-      <span>Flowboard</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-mode">Tap</span>
+    <header class="tap-header">
+      <a class="brand" href="/" aria-label="Flowboard home"><span class="brand-mark" aria-hidden="true"></span>Flowboard</a>
     </header>
-    <main class="tap-shell" id="tap" data-state="running" aria-live="polite">
-      <div class="visual-stage" aria-hidden="true">
-        <div class="scan-target">
-          <span class="scan-core">F</span>
-          <span class="scan-label">Verifying secure action</span>
+    <main>
+      <section class="tap-card" id="tap" data-state="running" aria-live="polite" aria-labelledby="title">
+        <div class="state-icon" aria-hidden="true">
+          <span class="spinner"></span>
+          <span class="check">✓</span>
+          <img class="state-art" id="state-art" alt="" />
         </div>
-        <div class="success-seal"><span class="check"></span></div>
-        <img class="state-art" id="state-art" alt="" />
-      </div>
-      <section class="status">
-        <p class="eyebrow" id="eyebrow">Secure Tap</p>
-        <h1 id="title">Running your action</h1>
-        <p class="message" id="message">Keep this page open for a moment.</p>
-        <div class="progress" aria-hidden="true"></div>
+        <p class="state-label" id="state-label">Tap action</p>
+        <h1 id="title">Running action…</h1>
+        <p class="message" id="message">Keep this page open.</p>
+        <p class="result" id="result" hidden></p>
         <button id="retry" type="button" hidden>Try again</button>
         <noscript><p class="message">JavaScript is required to run this Tap action.</p></noscript>
       </section>
     </main>
-    <p class="privacy">The private tag key stays out of the address bar</p>
     <script>
       (() => {
         const token = location.hash.slice(1);
         history.replaceState(null, '', location.pathname + location.search);
         const tap = document.getElementById('tap');
-        const eyebrow = document.getElementById('eyebrow');
+        const label = document.getElementById('state-label');
         const title = document.getElementById('title');
         const message = document.getElementById('message');
+        const result = document.getElementById('result');
         const retry = document.getElementById('retry');
         const art = document.getElementById('state-art');
         const requestID = crypto.randomUUID();
 
-        const render = (state, label, heading, detail, canRetry = false, asset = '') => {
+        const render = (state, heading, detail, outcome = '', canRetry = false, asset = '') => {
           tap.dataset.state = state;
-          eyebrow.textContent = label;
+          label.textContent = state === 'success' ? 'Action complete' : state === 'running' ? 'Tap action' : 'Tap action stopped';
           title.textContent = heading;
           message.textContent = detail;
+          message.hidden = !detail;
+          result.textContent = outcome;
+          result.hidden = !outcome;
           retry.hidden = !canRetry;
           if (asset) art.src = asset;
           else art.removeAttribute('src');
         };
 
         const execute = async () => {
-          render('running', 'Secure Tap', 'Running your action', 'Keep this page open for a moment.');
+          render('running', 'Running action…', 'Keep this page open.');
           try {
             const response = await fetch('/api/v1/taps/execute', {
               method: 'POST',
@@ -397,23 +280,30 @@
             const body = await response.json().catch(() => ({}));
             if (!response.ok) {
               const detail = typeof body.reason === 'string' ? body.reason : 'This Tap action could not run.';
-              if (response.status === 404 || response.status === 410) {
-                render('rotation', 'Tag needs attention', 'Program this tag again', detail, false, '/tagneedsrotation.svg');
+              if (response.status === 404) {
+                render('rotation', 'This Tap link is not valid', 'Ask the tag owner to program it again.', '', false, '/tagneedsrotation.svg');
+              } else if (response.status === 410) {
+                render('rotation', 'This Tap action is unavailable', detail, '', false, '/tagneedsrotation.svg');
               } else {
                 const canRetry = response.status === 429 || response.status >= 500;
-                render('error', 'Scan interrupted', 'The action stopped', detail, canRetry, '/scanerror.svg');
+                render('error', response.status === 429 ? 'Try again in a moment' : 'The action could not run', detail, '', canRetry, '/scanerror.svg');
               }
               return;
             }
-            render('success', 'Action complete', typeof body.actionName === 'string' ? body.actionName : 'Done', typeof body.message === 'string' ? body.message : 'The Tap action ran.');
+            const heading = typeof body.actionName === 'string' ? body.actionName : 'Action complete';
+            const detail = typeof body.actionDescription === 'string' && body.actionDescription.trim()
+              ? body.actionDescription
+              : 'The Tap action is complete.';
+            const outcome = typeof body.message === 'string' ? body.message : 'Done.';
+            render('success', heading, detail, outcome);
           } catch {
-            render('error', 'Connection interrupted', 'Could not reach Flowboard', 'Check the network and try again.', true, '/scanerror.svg');
+            render('error', 'Flowboard could not be reached', 'Check the network, then try again.', '', true, '/scanerror.svg');
           }
         };
 
         retry.addEventListener('click', execute);
         if (!/^fbt_[A-Za-z0-9_-]{32}$/.test(token)) {
-          render('rotation', 'Tag needs attention', 'Program this tag again', 'This Tap link is not valid.', false, '/tagneedsrotation.svg');
+          render('rotation', 'This Tap link is not valid', 'Ask the tag owner to program it again.', '', false, '/tagneedsrotation.svg');
           return;
         }
         execute();

@@ -353,6 +353,7 @@
                       <i data-lucide="tag"></i>
                       <span class="panel-row-main">
                         <strong>#(action.name)</strong>
+                        #if(action.hasDisplayDescription):<span>#(action.displayDescription)</span>#endif
                         <span>#(action.summary) · #(action.useLimitLabel) · Expires #(action.expiresAtLabel)</span>
                       </span>
                       <code class="tap-token-prefix">#(action.prefix)…</code>

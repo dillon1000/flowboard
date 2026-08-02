@@ -105,6 +105,8 @@ struct TapTaskOptionContext: Encodable {
 struct TapActionContext: Encodable {
     let id: UUID
     let name: String
+    let displayDescription: String
+    let hasDisplayDescription: Bool
     let prefix: String
     let kind: String
     let kindName: String
@@ -141,6 +143,8 @@ struct TapActionContext: Encodable {
         let targetTask = action.$targetTask.value ?? nil
         self.id = try action.requireID()
         self.name = action.name
+        self.displayDescription = action.displayDescription ?? ""
+        self.hasDisplayDescription = action.displayDescription != nil
         self.prefix = action.tokenPrefix
         self.kind = action.kind.rawValue
         self.kindName = action.kind == .createTask ? "Create task" : "Update task"

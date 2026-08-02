@@ -90,6 +90,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddTaskCreator())
     app.migrations.add(CreateAPIKeyCredential())
     app.migrations.add(CreateTapActions())
+    app.migrations.add(AddTapActionDisplayDescription())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

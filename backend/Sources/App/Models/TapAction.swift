@@ -34,6 +34,9 @@ final class TapAction: Model, @unchecked Sendable {
     @Field(key: "name")
     var name: String
 
+    @OptionalField(key: "display_description")
+    var displayDescription: String?
+
     @Field(key: "kind")
     var kindValue: String
 
@@ -87,6 +90,7 @@ final class TapAction: Model, @unchecked Sendable {
         boardID: UUID,
         targetTaskID: UUID? = nil,
         name: String,
+        displayDescription: String? = nil,
         kind: TapActionKind,
         configuration: TapActionConfiguration,
         tokenHash: String,
@@ -101,6 +105,7 @@ final class TapAction: Model, @unchecked Sendable {
         self.$board.id = boardID
         self.$targetTask.id = targetTaskID
         self.name = name
+        self.displayDescription = displayDescription
         self.kindValue = kind.rawValue
         self.configuration = configuration
         self.tokenHash = tokenHash
@@ -133,6 +138,9 @@ final class TapExecution: Model, @unchecked Sendable {
     @Field(key: "action_name")
     var actionName: String
 
+    @OptionalField(key: "action_description")
+    var actionDescription: String?
+
     @Field(key: "message")
     var message: String
 
@@ -147,6 +155,7 @@ final class TapExecution: Model, @unchecked Sendable {
         taskID: UUID?,
         requestID: UUID,
         actionName: String,
+        actionDescription: String?,
         message: String
     ) {
         self.id = id
@@ -154,6 +163,7 @@ final class TapExecution: Model, @unchecked Sendable {
         self.$task.id = taskID
         self.requestID = requestID
         self.actionName = actionName
+        self.actionDescription = actionDescription
         self.message = message
     }
 }
@@ -165,5 +175,6 @@ struct TapExecutionRequest: Content {
 
 struct TapExecutionResponse: Content {
     let actionName: String
+    let actionDescription: String?
     let message: String
 }

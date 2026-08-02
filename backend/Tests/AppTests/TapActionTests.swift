@@ -21,7 +21,9 @@ struct TapActionTests {
 
             let first = try await execute(input, on: app)
             #expect(first.status == .ok)
-            #expect(try first.content.decode(TapExecutionResponse.self).message == "Task created.")
+            let firstResult = try first.content.decode(TapExecutionResponse.self)
+            #expect(firstResult.message == "Task created.")
+            #expect(firstResult.actionDescription == "Leave the clipboard at the loading dock.")
 
             let retry = try await execute(input, on: app)
             #expect(retry.status == .ok)
@@ -79,6 +81,7 @@ struct TapActionTests {
                 board: board,
                 definition: TapActionService.Definition(
                     name: "Finish work order",
+                    displayDescription: "The work order is now complete.",
                     kind: .updateTask,
                     targetTaskID: task.requireID(),
                     configuration: configuration,
@@ -216,6 +219,7 @@ struct TapActionTests {
                     try request.content.encode(
                         [
                             "name": "Dock inspection",
+                            "displayDescription": "Leave the clipboard at the loading dock.",
                             "kind": "create_task",
                             "targetTaskID": "",
                             "title": "Inspect the loading dock",
@@ -250,6 +254,7 @@ struct TapActionTests {
             )
             let firstTokenHash = action.tokenHash
             #expect(action.name == "Dock inspection")
+            #expect(action.displayDescription == "Leave the clipboard at the loading dock.")
             #expect(action.kind == .createTask)
             #expect(action.configuration.labels == ["NFC", "inspection"])
             #expect(action.maxUses == 5)
@@ -280,6 +285,7 @@ struct TapActionTests {
                     try request.content.encode(
                         [
                             "name": "Finish work order",
+                            "displayDescription": "This work order is now complete.",
                             "kind": "update_task",
                             "targetTaskID": try task.requireID().uuidString,
                             "title": "",
@@ -298,6 +304,7 @@ struct TapActionTests {
             #expect(update.status == .seeOther)
             let reassigned = try #require(try await TapAction.find(action.requireID(), on: app.db))
             #expect(reassigned.kind == .updateTask)
+            #expect(reassigned.displayDescription == "This work order is now complete.")
             #expect(reassigned.$targetTask.id == task.id)
             #expect(reassigned.tokenHash == firstTokenHash)
 
@@ -335,6 +342,7 @@ struct TapActionTests {
     ) -> TapActionService.Definition {
         TapActionService.Definition(
             name: "Create inspection",
+            displayDescription: "Leave the clipboard at the loading dock.",
             kind: .createTask,
             targetTaskID: nil,
             configuration: TapActionConfiguration(

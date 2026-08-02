@@ -13,8 +13,12 @@
   <div class="dialog-body">
     <div class="form-grid">
       <div class="field wide">
-        <label for="new-tap-name">Name</label>
+        <label for="new-tap-name">Tap title</label>
         <input class="input" id="new-tap-name" name="name" maxlength="80" placeholder="Front desk intake" required />
+      </div>
+      <div class="field wide">
+        <label for="new-tap-display-description">Tap description</label>
+        <textarea class="textarea" id="new-tap-display-description" name="displayDescription" maxlength="280" placeholder="Shown after this tag runs"></textarea>
       </div>
       <div class="field wide">
         <span class="field-label">Action</span>

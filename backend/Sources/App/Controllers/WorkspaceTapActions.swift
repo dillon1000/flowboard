@@ -114,6 +114,7 @@ extension WorkspaceActionController {
         let expiresAt = try tapExpiry(input.expiresAt)
         return TapActionService.Definition(
             name: input.name,
+            displayDescription: input.displayDescription,
             kind: kind,
             targetTaskID: clean(input.targetTaskID).flatMap(UUID.init(uuidString:)),
             configuration: TapActionConfiguration(

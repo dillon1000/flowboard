@@ -54,6 +54,7 @@ struct CreateTemplateForm: Content {
 
 struct TapActionForm: Content {
     let name: String
+    let displayDescription: String?
     let kind: String
     let targetTaskID: String?
     let title: String?
