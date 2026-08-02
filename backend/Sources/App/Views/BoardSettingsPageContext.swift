@@ -111,6 +111,7 @@ struct TapActionContext: Encodable {
     let isCreateTask: Bool
     let isUpdateTask: Bool
     let isEnabled: Bool
+    let isActive: Bool
     let stateName: String
     let summary: String
     let title: String
@@ -146,6 +147,7 @@ struct TapActionContext: Encodable {
         self.isCreateTask = action.kind == .createTask
         self.isUpdateTask = action.kind == .updateTask
         self.isEnabled = action.isEnabled
+        self.isActive = action.isEnabled && !isExpired && !isExhausted
         self.stateName = if !action.isEnabled {
             "Disabled"
         } else if isExpired {

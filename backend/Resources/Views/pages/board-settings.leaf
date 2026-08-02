@@ -356,7 +356,7 @@
                         <span>#(action.summary) · #(action.useLimitLabel) · Expires #(action.expiresAtLabel)</span>
                       </span>
                       <code class="tap-token-prefix">#(action.prefix)…</code>
-                      <span class="badge#if(action.isEnabled): success#else: subtle#endif">#(action.stateName)</span>
+                      <span class="badge#if(action.isActive): success#else: subtle#endif">#(action.stateName)</span>
                       <form method="post" action="/app/boards/#(boardSettings.id)/tap-actions/#(action.id)/toggle">
                         <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
                         <button class="button small" type="submit">#if(action.isEnabled):Disable#else:Enable#endif</button>

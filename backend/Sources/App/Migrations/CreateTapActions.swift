@@ -50,7 +50,7 @@ struct CreateTapActions: AsyncMigration {
             .field("action_name", .string, .required)
             .field("message", .string, .required)
             .field("created_at", .datetime)
-            .unique(on: "request_id")
+            .unique(on: "action_id", "request_id")
             .create()
     }
 

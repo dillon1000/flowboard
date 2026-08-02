@@ -37,6 +37,21 @@ struct TapActionTests {
             )
             #expect(storedAction.useCount == 1)
             #expect(storedAction.lastUsedAt != nil)
+
+            let secondAction = try await TapActionService.create(
+                board: board,
+                definition: createTaskDefinition(cooldownSeconds: 0),
+                on: app.db
+            )
+            let secondResult = try await execute(
+                TapExecutionRequest(
+                    token: secondAction.rawToken,
+                    requestID: input.requestID
+                ),
+                on: app
+            )
+            #expect(secondResult.status == .ok)
+            #expect(try await TapExecution.query(on: app.db).count() == 2)
         }
     }
 
