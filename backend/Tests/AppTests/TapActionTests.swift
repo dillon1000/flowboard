@@ -1,0 +1,194 @@
+@testable import App
+import Fluent
+import Foundation
+import Testing
+import Vapor
+import VaporTesting
+
+@Suite("Flowboard Tap actions")
+struct TapActionTests {
+    @Test("A bearer capability creates one task for a retried request")
+    func createTaskIsIdempotent() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let board = try #require(try await Board.find(session.boardID, on: app.db))
+            let created = try await TapActionService.create(
+                board: board,
+                definition: createTaskDefinition(cooldownSeconds: 0),
+                on: app.db
+            )
+            let input = TapExecutionRequest(token: created.rawToken, requestID: UUID())
+
+            let first = try await execute(input, on: app)
+            #expect(first.status == .ok)
+            #expect(try first.content.decode(TapExecutionResponse.self).message == "Task created.")
+
+            let retry = try await execute(input, on: app)
+            #expect(retry.status == .ok)
+            #expect(
+                try await Task.query(on: app.db)
+                    .filter(\.$board.$id == session.boardID)
+                    .filter(\.$title == "Inspect the loading dock")
+                    .count() == 1
+            )
+            #expect(try await TapExecution.query(on: app.db).count() == 1)
+            let storedAction = try #require(
+                try await TapAction.find(created.action.requireID(), on: app.db)
+            )
+            #expect(storedAction.useCount == 1)
+            #expect(storedAction.lastUsedAt != nil)
+        }
+    }
+
+    @Test("A bearer capability updates its assigned task without authentication")
+    func updateTaskWithoutAuthentication() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let board = try #require(try await Board.find(session.boardID, on: app.db))
+            let task = Task(
+                boardID: session.boardID,
+                title: "Physical work order",
+                status: .backlog,
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+            let configuration = TapActionConfiguration(
+                title: nil,
+                description: nil,
+                status: TaskStatus.done.rawValue,
+                priority: nil,
+                labels: []
+            )
+            let created = try await TapActionService.create(
+                board: board,
+                definition: TapActionService.Definition(
+                    name: "Finish work order",
+                    kind: .updateTask,
+                    targetTaskID: task.requireID(),
+                    configuration: configuration,
+                    expiresAt: nil,
+                    maxUses: nil,
+                    cooldownSeconds: 0
+                ),
+                on: app.db
+            )
+
+            let response = try await execute(
+                TapExecutionRequest(token: created.rawToken, requestID: UUID()),
+                on: app
+            )
+
+            #expect(response.status == .ok)
+            #expect(try response.content.decode(TapExecutionResponse.self).message == "Task updated.")
+            #expect(try #require(try await Task.find(task.requireID(), on: app.db)).status == .done)
+        }
+    }
+
+    @Test("Disabled, expired, and exhausted capabilities cannot change tasks")
+    func lifecycleLimitsStopExecution() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let board = try #require(try await Board.find(session.boardID, on: app.db))
+
+            let disabled = try await TapActionService.create(
+                board: board,
+                definition: createTaskDefinition(cooldownSeconds: 0),
+                on: app.db
+            )
+            disabled.action.isEnabled = false
+            try await disabled.action.update(on: app.db)
+            #expect(
+                try await execute(
+                    TapExecutionRequest(token: disabled.rawToken, requestID: UUID()),
+                    on: app
+                ).status == .gone
+            )
+
+            let expired = try await TapActionService.create(
+                board: board,
+                definition: createTaskDefinition(cooldownSeconds: 0),
+                on: app.db
+            )
+            expired.action.expiresAt = Date(timeIntervalSinceNow: -60)
+            try await expired.action.update(on: app.db)
+            #expect(
+                try await execute(
+                    TapExecutionRequest(token: expired.rawToken, requestID: UUID()),
+                    on: app
+                ).status == .gone
+            )
+
+            let limited = try await TapActionService.create(
+                board: board,
+                definition: createTaskDefinition(maxUses: 1, cooldownSeconds: 0),
+                on: app.db
+            )
+            #expect(
+                try await execute(
+                    TapExecutionRequest(token: limited.rawToken, requestID: UUID()),
+                    on: app
+                ).status == .ok
+            )
+            #expect(
+                try await execute(
+                    TapExecutionRequest(token: limited.rawToken, requestID: UUID()),
+                    on: app
+                ).status == .gone
+            )
+        }
+    }
+
+    @Test("Tap URLs use URL-safe secrets and stay below 504 bytes")
+    func URLLengthLimit() throws {
+        let token = TapTokenService.generate().raw
+        let URL = try TapTokenService.makeURL(
+            rawToken: token,
+            baseURL: "https://tap.flowboard.example/t"
+        )
+
+        #expect(TapTokenService.isWellFormed(token))
+        #expect(URL.utf8.count < 504)
+        #expect(URL.hasSuffix("#\(token)"))
+        #expect(throws: (any Error).self) {
+            try TapTokenService.makeURL(
+                rawToken: token,
+                baseURL: "https://example.com/\(String(repeating: "x", count: 500))"
+            )
+        }
+    }
+
+    private func createTaskDefinition(
+        maxUses: Int? = nil,
+        cooldownSeconds: Int
+    ) -> TapActionService.Definition {
+        TapActionService.Definition(
+            name: "Create inspection",
+            kind: .createTask,
+            targetTaskID: nil,
+            configuration: TapActionConfiguration(
+                title: "Inspect the loading dock",
+                description: "Created from the dock NFC tag.",
+                status: TaskStatus.backlog.rawValue,
+                priority: TaskPriority.high.rawValue,
+                labels: ["NFC"]
+            ),
+            expiresAt: nil,
+            maxUses: maxUses,
+            cooldownSeconds: cooldownSeconds
+        )
+    }
+
+    private func execute(
+        _ input: TapExecutionRequest,
+        on app: Application
+    ) async throws -> TestingHTTPResponse {
+        try await app.testing().sendRequest(
+            .POST,
+            "api/v1/taps/execute",
+            beforeRequest: { request in
+                try request.content.encode(input)
+            }
+        )
+    }
+}

@@ -28,6 +28,7 @@ func routes(_ app: Application) throws {
         )
     }
     try api.grouped(User.sessionAuthenticator()).register(collection: AuthController())
+    try api.register(collection: TapExecutionController())
 
     let protectedAPI = api.grouped(APIAuthenticationMiddleware(), User.guardMiddleware())
     try protectedAPI.register(collection: BoardController())
