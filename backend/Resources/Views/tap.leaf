@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Flowboard Tap</title>
+    <style>
+      :root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; background: #f7f7f5; color: #181817; }
+      * { box-sizing: border-box; }
+      body { display: grid; min-height: 100dvh; place-items: center; margin: 0; padding: 24px; }
+      main { width: min(100%, 400px); padding: 28px; border: 1px solid #deded9; border-radius: 20px; background: #fff; box-shadow: 0 18px 60px rgb(0 0 0 / 8%); text-align: center; }
+      .mark { display: grid; width: 56px; height: 56px; place-items: center; margin: 0 auto 20px; border-radius: 18px; color: #fff; background: #181817; font-size: 26px; font-weight: 700; }
+      h1 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+      p { margin: 9px 0 0; color: #696966; font-size: 14px; line-height: 1.55; }
+      .spinner { width: 22px; height: 22px; margin: 22px auto 0; border: 2px solid #d7d7d2; border-top-color: #181817; border-radius: 50%; animation: spin .7s linear infinite; }
+      button { min-height: 42px; margin-top: 22px; padding: 0 18px; border: 0; border-radius: 10px; color: #fff; background: #181817; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+      [hidden] { display: none; }
+      @keyframes spin { to { transform: rotate(1turn); } }
+      @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 1.4s; } }
+      @media (prefers-color-scheme: dark) {
+        :root { background: #111; color: #f5f5f3; }
+        main { border-color: #353533; background: #1b1b1a; box-shadow: none; }
+        .mark, button { color: #181817; background: #f5f5f3; }
+        p { color: #aaa9a5; }
+        .spinner { border-color: #454542; border-top-color: #f5f5f3; }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-live="polite">
+      <div class="mark" aria-hidden="true">F</div>
+      <h1 id="title">Running Tap action…</h1>
+      <p id="message">Keep this page open for a moment.</p>
+      <div class="spinner" id="spinner" aria-hidden="true"></div>
+      <button id="retry" type="button" hidden>Try again</button>
+      <noscript><p>JavaScript is required to run this Tap action.</p></noscript>
+    </main>
+    <script>
+      (() => {
+        const token = location.hash.slice(1);
+        history.replaceState(null, '', location.pathname + location.search);
+        const title = document.getElementById('title');
+        const message = document.getElementById('message');
+        const spinner = document.getElementById('spinner');
+        const retry = document.getElementById('retry');
+        const requestID = crypto.randomUUID();
+
+        const render = (heading, detail, canRetry = false) => {
+          title.textContent = heading;
+          message.textContent = detail;
+          spinner.hidden = true;
+          retry.hidden = !canRetry;
+        };
+
+        const execute = async () => {
+          spinner.hidden = false;
+          retry.hidden = true;
+          try {
+            const response = await fetch('/api/v1/taps/execute', {
+              method: 'POST',
+              credentials: 'omit',
+              cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token, requestID }),
+            });
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) {
+              const detail = typeof body.reason === 'string' ? body.reason : 'This Tap action could not run.';
+              render(response.status === 410 ? 'Tap action unavailable' : 'Tap action stopped', detail, response.status !== 410);
+              return;
+            }
+            render(typeof body.actionName === 'string' ? body.actionName : 'Done', typeof body.message === 'string' ? body.message : 'The Tap action ran.');
+          } catch {
+            render('No connection', 'Check the network and try again.', true);
+          }
+        };
+
+        retry.addEventListener('click', execute);
+        if (!/^fbt_[A-Za-z0-9_-]{32}$/.test(token)) {
+          render('Tap link is not valid', 'Ask the board administrator to program this tag again.');
+          return;
+        }
+        execute();
+      })();
+    </script>
+  </body>
+</html>

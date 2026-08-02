@@ -9,6 +9,7 @@ struct WebController: RouteCollection {
         routes.get("register", use: registerPage)
         routes.post("register", use: register)
         routes.post("logout", use: logout)
+        routes.get("t", use: tapPage)
 
         let protected = routes.grouped(User.redirectMiddleware(path: "/login"))
         try protected.register(collection: AppPageController())
@@ -29,6 +30,24 @@ struct WebController: RouteCollection {
 
     func registerPage(req: Request) async throws -> View {
         try await req.view.render("register", AuthPageContext(request: req))
+    }
+
+    /// Serves the cacheable, session-free Tap runner. The capability stays in
+    /// the URL fragment, so this request and Railway access logs never receive it.
+    func tapPage(req: Request) async throws -> Response {
+        let page = try await req.view.render("tap")
+        let response = try await page.encodeResponse(for: req)
+        response.headers.replaceOrAdd(
+            name: .cacheControl,
+            value: "public, max-age=3600, stale-while-revalidate=86400"
+        )
+        response.headers.replaceOrAdd(name: "Referrer-Policy", value: "no-referrer")
+        response.headers.replaceOrAdd(name: "X-Robots-Tag", value: "noindex, nofollow")
+        response.headers.replaceOrAdd(
+            name: "Content-Security-Policy",
+            value: "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        )
+        return response
     }
 
     func notFoundPage(req: Request) async throws -> Response {

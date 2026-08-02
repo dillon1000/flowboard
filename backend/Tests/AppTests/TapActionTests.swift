@@ -158,6 +158,24 @@ struct TapActionTests {
         }
     }
 
+    @Test("The public Tap runner is small, cacheable, and session-free")
+    func publicRunner() async throws {
+        try await withApp(configure: configure) { app in
+            let response = try await app.testing().sendRequest(.GET, "t")
+            let page = response.body.string
+
+            #expect(response.status == .ok)
+            #expect(response.headers.first(name: .cacheControl)?.contains("public") == true)
+            #expect(response.headers.first(name: "Referrer-Policy") == "no-referrer")
+            #expect(page.utf8.count < 10_000)
+            #expect(!page.contains("/assets/"))
+            #expect(page.contains("/api/v1/taps/execute"))
+            let fragmentRemoval = try #require(page.range(of: "history.replaceState")?.lowerBound)
+            let executionRequest = try #require(page.range(of: "fetch('/api/v1/taps/execute")?.lowerBound)
+            #expect(fragmentRemoval < executionRequest)
+        }
+    }
+
     @Test("Board administrators can create, reassign, disable, and rotate Tap actions")
     func managementLifecycle() async throws {
         try await withApp(configure: configure) { app in
