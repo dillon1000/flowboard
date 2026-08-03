@@ -259,7 +259,7 @@ struct AppTests {
                 headers: ["Cookie": session.cookie]
             )
             #expect(archivedTasks.status == .ok)
-            expectContains(archivedTasks.body.string, "Archived tasks")
+            expectContains(archivedTasks.body.string, "Archived assignments")
             expectContains(archivedTasks.body.string, "Recover the archived task")
             expectContains(archivedTasks.body.string, ">Restore</button>")
 

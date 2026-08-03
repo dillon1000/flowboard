@@ -16,76 +16,32 @@
 
         <div class="sidebar-section">
           <nav class="main-nav" aria-label="Primary navigation">
-            <a class="nav-link#if(isOverview): active#endif" href="/app"#if(isOverview): aria-current="page"#endif title="Overview">
-              <i data-lucide="layout-dashboard"></i><span>Overview</span>
+            <a class="nav-link#if(isOverview): active#endif" href="/app"#if(isOverview): aria-current="page"#endif title="This week">
+              <i data-lucide="calendar-days"></i><span>This week</span>
             </a>
-            <a class="nav-link#if(isActiveTasks): active#endif" href="/app/tasks"#if(isActiveTasks): aria-current="page"#endif title="All tasks">
-              <i data-lucide="check-square"></i><span>All tasks</span>
+            <a class="nav-link#if(isActiveTasks): active#endif" href="/app/tasks"#if(isActiveTasks): aria-current="page"#endif title="All assignments">
+              <i data-lucide="check-square"></i><span>All assignments</span>
             </a>
-            <a class="nav-link#if(isArchivedTasks): active#endif" href="/app/tasks/archived"#if(isArchivedTasks): aria-current="page"#endif title="Archived tasks">
-              <i data-lucide="archive"></i><span>Archived tasks</span>
+            <a class="nav-link#if(isArchivedTasks): active#endif" href="/app/tasks/archived"#if(isArchivedTasks): aria-current="page"#endif title="Archived assignments">
+              <i data-lucide="archive"></i><span>Archived assignments</span>
             </a>
           </nav>
         </div>
 
+        #if(!isOverview):
         <div class="boards-nav">
           <div class="nav-section-header" data-controller="dialog">
-            <span>Boards</span>
+            <span>Courses</span>
             <button
               class="icon-button"
               type="button"
-              aria-label="Create board"
-              title="Create board"
+              aria-label="Add course"
+              title="Add course"
               data-action="dialog#open"
             ><i data-lucide="plus"></i></button>
-
-            <div
-              class="dialog-layer"
-              data-dialog-target="panel"
-              data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="new-board-title"
-              tabindex="-1"
-              hidden
-            >
-              <form class="dialog" method="post" action="/app/boards">
-                <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
-                <div class="dialog-header">
-                  <div>
-                    <h2 id="new-board-title">Create board</h2>
-                    <p>Start with Board, Table, Calendar, and Gallery views.</p>
-                  </div>
-                  <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close">
-                    <i data-lucide="x"></i>
-                  </button>
-                </div>
-                <div class="dialog-body">
-                  <div class="field">
-                    <label for="board-name">Name</label>
-                    <input
-                      class="input"
-                      id="board-name"
-                      name="name"
-                      minlength="2"
-                      maxlength="80"
-                      required
-                      data-dialog-target="initial"
-                    />
-                  </div>
-                  <div class="field">
-                    <label for="board-description">Description</label>
-                    <textarea class="textarea" id="board-description" name="description" maxlength="500"></textarea>
-                  </div>
-                </div>
-                <div class="dialog-footer">
-                  <button class="button" type="button" data-action="dialog#close">Cancel</button>
-                  <button class="button primary" type="submit">Create board</button>
-                </div>
-              </form>
-            </div>
+            #extend("partials/course-create-dialog")
           </div>
-          <nav aria-label="Boards">
+          <nav aria-label="Courses">
             #for(navBoard in common.boards):
               #if(!navBoard.isArchived):
                 <a class="nav-link" href="#(navBoard.href)" title="#(navBoard.name)">
@@ -97,6 +53,7 @@
             #endfor
           </nav>
         </div>
+        #endif
 
         <div class="sidebar-spacer"></div>
         #extend("partials/build-signature")

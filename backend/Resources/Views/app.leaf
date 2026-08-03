@@ -12,7 +12,7 @@
     <script>try{const t=localStorage.getItem('flowboard-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.sidebar=localStorage.getItem('flowboard-sidebar')==='collapsed'?'collapsed':'expanded'}catch{}</script>
     #extend("partials/assets")
   </head>
-  <body data-controller="sidebar" data-action="keydown@window->sidebar#shortcut">
+  <body class="#if(isOverview):study-overview-page#endif" data-controller="sidebar" data-action="keydown@window->sidebar#shortcut">
     <div class="app-shell">
       #extend("partials/sidebar")
 

@@ -1,0 +1,52 @@
+            <div
+              class="dialog-layer"
+              data-dialog-target="panel"
+              data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="new-course-title"
+              tabindex="-1"
+              hidden
+            >
+              <form class="dialog" method="post" action="/app/boards">
+                <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                <div class="dialog-header">
+                  <div>
+                    <h2 id="new-course-title">Add course</h2>
+                    <p>Create one place for assignments, notes, and deadlines.</p>
+                  </div>
+                  <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="dialog-body">
+                  <div class="field">
+                    <label for="course-name">Course name</label>
+                    <input
+                      class="input"
+                      id="course-name"
+                      name="name"
+                      minlength="2"
+                      maxlength="80"
+                      placeholder="MATH 241"
+                      required
+                      data-dialog-target="initial"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="course-description">Description</label>
+                    <textarea
+                      class="textarea"
+                      id="course-description"
+                      name="description"
+                      maxlength="500"
+                      placeholder="Calculus II · Fall 2026"
+                    ></textarea>
+                  </div>
+                </div>
+                <div class="dialog-footer">
+                  <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                  <button class="button primary" type="submit">Add course</button>
+                </div>
+              </form>
+            </div>

@@ -1,103 +1,227 @@
         #if(isOverview):
-          <div class="page">
-            <header class="page-header">
-              <div class="page-title">
-                <h1>Overview</h1>
-                <p>Boards, deadlines, and recent work in one place.</p>
-              </div>
-            </header>
-
-            <section class="stats" aria-label="Workspace summary">
-              <div class="stat">
-                <span><i data-lucide="check-square"></i>Open tasks</span>
-                <strong>#(overview.totalTasks)</strong>
-              </div>
-              <div class="stat">
-                <span><i data-lucide="check"></i>Completed</span>
-                <strong>#(overview.completedTasks)</strong>
-              </div>
-              <div class="stat">
-                <span><i data-lucide="calendar-days"></i>With due dates</span>
-                <strong>#(overview.dueTasks)</strong>
-              </div>
-              <div class="stat">
-                <span><i data-lucide="folder"></i>Active boards</span>
-                <strong>#(overview.boardCount)</strong>
-              </div>
-            </section>
-
-            <div class="overview-grid">
-            <section class="section">
-              <div class="section-heading">
-                <div>
-                  <h2>Boards</h2>
-                  <p>Every board you own or have been given access to.</p>
+          <div class="page study-page">
+            <div class="study-planner">
+              <aside class="study-course-panel" aria-label="Course filters">
+                <div class="study-course-heading" data-controller="dialog">
+                  <h1>Courses</h1>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    aria-label="Add course"
+                    title="Add course"
+                    data-action="dialog#open"
+                  ><i data-lucide="plus"></i></button>
+                  #extend("partials/course-create-dialog")
                 </div>
-              </div>
-              <div class="board-list">
-                #for(navBoard in common.boards):
-                  #if(!navBoard.isArchived):
-                    <a class="board-card" href="#(navBoard.href)">
-                      <span class="board-card-head">
-                        <span class="board-card-icon" aria-hidden="true"><i data-lucide="folder"></i></span>
-                        <h3>#(navBoard.name)</h3>
-                      </span>
-                      <p>#(navBoard.description)</p>
-                      <span class="board-card-meta">
-                        <span><i data-lucide="check-square"></i><span class="tabular">#(navBoard.taskCount)</span> tasks</span>
-                        <span><i data-lucide="check"></i><span class="tabular">#(navBoard.completedCount)</span> done</span>
-                      </span>
-                    </a>
-                  #endif
-                #endfor
-              </div>
-            </section>
 
-            <section class="section overview-rail">
-              <div class="section-heading">
-                <div>
-                  <h2>Recent tasks</h2>
-                </div>
-                <a class="button small" href="/app/tasks">View all</a>
-              </div>
-              #if(overview.hasRecentTasks):
-                <div class="panel">
-                  #for(task in overview.recentTasks):
-                    <a
-                      class="panel-row"
-                      href="#(task.href)"
-                      data-preview-title="#(task.title)"
-                      data-preview-board="#(task.boardName)"
-                      data-preview-status="#(task.statusName)"
-                      data-preview-status-value="#(task.statusValue)"
-                      data-preview-status-class="#(task.statusColorClass)"
-                      data-preview-status-color="#(task.statusCustomColor)"
-                      data-preview-priority="#(task.priorityName)"
-                      data-preview-priority-value="#(task.priorityValue)"
-                      data-preview-priority-class="#(task.priorityColorClass)"
-                      data-preview-priority-color="#(task.priorityCustomColor)"
-                      data-preview-assignee="#(task.assigneeName)"
-                      data-preview-due="#(task.dueDisplay)"
-                      data-preview-body="#(task.description)"
-                    >
-                      <span class="panel-row-main">
-                        <strong>#(task.title)</strong>
-                        <span>#(task.boardName) · #(task.updatedDisplay)</span>
-                      </span>
-                      <span class="badge status #(task.statusColorClass)" style="#(task.statusColorStyle)">#(task.statusName)</span>
+                <nav class="study-course-list" aria-label="Courses">
+                  <a class="study-course-link#if(overview.isAllCoursesSelected): active#endif" href="/app"#if(overview.isAllCoursesSelected): aria-current="page"#endif>
+                    <i data-lucide="layers"></i>
+                    <span>All courses</span>
+                  </a>
+                  #for(courseFilter in overview.courseFilters):
+                    <a class="study-course-link#if(courseFilter.isSelected): active#endif" href="#(courseFilter.href)"#if(courseFilter.isSelected): aria-current="page"#endif>
+                      <span class="study-course-dot #(courseFilter.colorClass)" aria-hidden="true"></span>
+                      <span>#(courseFilter.name)</span>
                     </a>
                   #endfor
-                </div>
-              #else:
-                <div class="empty-state">
-                  <div>
-                    <span class="empty-state-icon" aria-hidden="true"><i data-lucide="check-square"></i></span>
-                    <h2>No tasks yet</h2>
-                    <p>Open a board and create the first task to see recent activity here.</p>
+                </nav>
+              </aside>
+
+              <section class="study-week" aria-labelledby="study-week-title">
+                <header class="study-week-header">
+                  <div class="study-week-title">
+                    <h1 id="study-week-title">This week</h1>
+                    <p>#(overview.weekLabel)</p>
+                    <div class="study-week-actions">
+                      <a class="button primary large" href="/app/tasks">
+                        <i data-lucide="calendar-days"></i>Plan this week
+                      </a>
+                      #if(overview.hasCourses):
+                        <div data-controller="dialog">
+                          <button class="button large" type="button" data-action="dialog#open">
+                            <i data-lucide="plus"></i>Add assignment
+                          </button>
+                          <div
+                            class="dialog-layer"
+                            data-dialog-target="panel"
+                            data-action="click->dialog#backdrop keydown.esc@window->dialog#close"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="new-assignment-title"
+                            tabindex="-1"
+                            hidden
+                          >
+                            <form class="dialog wide" method="post" action="/app/tasks">
+                              <input type="hidden" name="_csrf" value="#(common.csrfToken)" />
+                              <input type="hidden" name="returnTo" value="#(overview.returnHref)" />
+                              <div class="dialog-header">
+                                <div>
+                                  <h2 id="new-assignment-title">Add assignment</h2>
+                                  <p>Put the deadline on your week, then add details when you need them.</p>
+                                </div>
+                                <button class="icon-button" type="button" data-action="dialog#close" aria-label="Close">
+                                  <i data-lucide="x"></i>
+                                </button>
+                              </div>
+                              <div class="dialog-body">
+                                <div class="form-grid">
+                                  <div class="field wide">
+                                    <label for="assignment-title">Title</label>
+                                    <input
+                                      class="input"
+                                      id="assignment-title"
+                                      name="title"
+                                      maxlength="120"
+                                      placeholder="Finish calculus problem set"
+                                      required
+                                      data-dialog-target="initial"
+                                    />
+                                  </div>
+                                  <div class="field">
+                                    <span class="field-label">Course</span>
+                                    <div class="menu" data-controller="menu" data-action="click@window->menu#outside keydown.esc@window->menu#close">
+                                      <input data-menu-target="input" type="hidden" name="boardID" value="#(overview.defaultCourseID)" />
+                                      <button class="select-trigger" type="button" data-menu-target="trigger" data-action="menu#toggle" aria-expanded="false">
+                                        <span data-menu-target="value">#(overview.defaultCourseName)</span><i data-lucide="chevron-down"></i>
+                                      </button>
+                                      <div class="menu-panel" data-menu-target="panel" role="listbox" hidden>
+                                        #for(courseOption in overview.courseFilters):
+                                          <button
+                                            class="menu-option"
+                                            type="button"
+                                            data-menu-target="option"
+                                            data-action="menu#choose"
+                                            data-value="#(courseOption.id)"
+                                            data-label="#(courseOption.name)"
+                                            aria-selected="#(courseOption.isSelected)"
+                                          >#(courseOption.name)</button>
+                                        #endfor
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="field" data-controller="date-picker">
+                                    <label for="assignment-due">Due date</label>
+                                    <input class="input" id="assignment-due" name="dueAt" data-date-picker-target="input" />
+                                  </div>
+                                  <div class="field wide">
+                                    <label for="assignment-description">Notes</label>
+                                    <textarea
+                                      class="textarea"
+                                      id="assignment-description"
+                                      name="description"
+                                      maxlength="5000"
+                                      placeholder="Pages, rubric notes, or a link to the brief"
+                                    ></textarea>
+                                  </div>
+                                  <div class="field wide">
+                                    <label for="assignment-labels">Type</label>
+                                    <input class="input" id="assignment-labels" name="labels" placeholder="Lab report, Reading, Discussion" />
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="dialog-footer">
+                                <button class="button" type="button" data-action="dialog#close">Cancel</button>
+                                <button class="button primary" type="submit">Add assignment</button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      #else:
+                        <button class="button large" type="button" disabled><i data-lucide="plus"></i>Add assignment</button>
+                      #endif
+                    </div>
                   </div>
+
+                  <section class="study-workload" aria-labelledby="study-workload-title">
+                    <div class="study-workload-chart">
+                      <h2 id="study-workload-title">Workload <i data-lucide="info"></i></h2>
+                      <div class="study-workload-bars">
+                        #for(workloadDay in overview.workloadDays):
+                          <span class="study-workload-column">
+                            <span class="study-workload-bar #(workloadDay.barClass)" role="img" aria-label="#(workloadDay.accessibilityLabel)"></span>
+                            <span>#(workloadDay.dayLabel)</span>
+                          </span>
+                        #endfor
+                      </div>
+                    </div>
+                    <div class="study-workload-summary">
+                      <strong>#(overview.balanceName)</strong>
+                      <span>#(overview.balanceDescription)</span>
+                    </div>
+                  </section>
+                </header>
+
+                <div class="study-days" aria-label="Assignments due #(overview.weekLabel)">
+                  #for(studyDay in overview.days):
+                    <section class="study-day#if(studyDay.isToday): today#endif">
+                      <div class="study-day-date">
+                        <span>#(studyDay.weekdayLabel)</span>
+                        <strong>#(studyDay.dateLabel)</strong>
+                        #if(studyDay.isToday):<small>Today</small>#endif
+                      </div>
+                      <div class="study-day-content">
+                        #if(studyDay.hasAssignments):
+                          #for(assignment in studyDay.assignments):
+                            <a
+                              class="study-assignment"
+                              href="#(assignment.href)"
+                              data-preview-title="#(assignment.title)"
+                              data-preview-board="#(assignment.courseName)"
+                              data-preview-status="#(assignment.statusName)"
+                              data-preview-status-value="#(assignment.statusValue)"
+                              data-preview-status-class="#(assignment.statusColorClass)"
+                              data-preview-status-color="#(assignment.statusCustomColor)"
+                              data-preview-priority="#(assignment.priorityName)"
+                              data-preview-priority-value="#(assignment.priorityValue)"
+                              data-preview-priority-class="#(assignment.priorityColorClass)"
+                              data-preview-priority-color="#(assignment.priorityCustomColor)"
+                              data-preview-assignee="#(assignment.assigneeName)"
+                              data-preview-due="#(assignment.dueDisplay)"
+                              data-preview-body="#(assignment.description)"
+                            >
+                              <span class="study-assignment-main">
+                                <span class="study-assignment-course">
+                                  <span class="study-course-dot #(assignment.courseColorClass)" aria-hidden="true"></span>
+                                  #(assignment.courseName)
+                                </span>
+                                <strong>#(assignment.title)</strong>
+                              </span>
+                              <span class="study-assignment-meta">
+                                <span>#(assignment.dueTime)</span>
+                                <small>Due</small>
+                              </span>
+                              <span class="study-assignment-type">
+                                <i data-lucide="#(assignment.typeIcon)"></i>#(assignment.typeName)
+                              </span>
+                              <span class="study-assignment-meta">
+                                <span><i data-lucide="clock-3"></i>#(assignment.effortLabel)</span>
+                                <small>Est. effort</small>
+                              </span>
+                            </a>
+                          #endfor
+                        #else:
+                          <span class="study-no-assignments">No assignments</span>
+                        #endif
+                      </div>
+                      <span class="study-day-load #(studyDay.workloadClass)">
+                        <span class="study-day-load-label">
+                          <span class="study-course-dot" aria-hidden="true"></span>#(studyDay.workloadLabel)
+                        </span>
+                        <i data-lucide="chevron-down" aria-hidden="true"></i>
+                      </span>
+                    </section>
+                  #endfor
                 </div>
-              #endif
-            </section>
+
+                <footer class="study-week-footer">
+                  #if(overview.hasUnscheduledAssignments):
+                    <a href="/app/tasks"><i data-lucide="calendar-days"></i>#(overview.unscheduledAssignmentCount) assignments still need a due date</a>
+                  #else:
+                    <span><i data-lucide="calendar-days"></i>Date-only deadlines appear as 11:59 PM</span>
+                  #endif
+                </footer>
+              </section>
             </div>
           </div>
         #endif

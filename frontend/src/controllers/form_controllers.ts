@@ -386,6 +386,7 @@ export class DatePickerController extends Controller {
   private picker?: FlatpickrInstance;
 
   connect(): void {
+    const label = this.inputTarget.labels?.[0]?.textContent?.trim();
     this.picker = flatpickr(this.inputTarget, {
       allowInput: false,
       altInput: true,
@@ -396,6 +397,12 @@ export class DatePickerController extends Controller {
       nextArrow: '<span aria-hidden="true">→</span>',
       prevArrow: '<span aria-hidden="true">←</span>',
     });
+
+    // Flatpickr hides the labeled input and creates a visible replacement. Copy
+    // the label so assistive technology can still identify the date control.
+    if (label && this.picker.altInput) {
+      this.picker.altInput.setAttribute('aria-label', label);
+    }
   }
 
   disconnect(): void {

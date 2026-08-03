@@ -246,7 +246,11 @@ extension WorkspaceActionController {
     }
 
     func safeReturn(_ value: String?, fallback: String) -> String {
-        guard let value, value.hasPrefix("/app/"), !value.hasPrefix("//") else {
+        guard
+            let value,
+            value == "/app" || value.hasPrefix("/app?") || value.hasPrefix("/app/"),
+            !value.hasPrefix("//")
+        else {
             return fallback
         }
         return value

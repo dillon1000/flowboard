@@ -122,11 +122,14 @@ export class SidebarController extends Controller {
 
   private applyCollapsed(collapsed: boolean): void {
     document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'expanded';
+    // The weekly planner owns a fixed icon rail, while other pages continue to
+    // use the user's saved sidebar width.
+    const compactBrand = collapsed || document.body.classList.contains('study-overview-page');
     this.collapseLabelTargets.forEach((element) => {
       element.textContent = this.collapseLabel(collapsed);
     });
     this.brandLogoTargets.forEach((element) => {
-      this.updateBrandLogo(element, collapsed);
+      this.updateBrandLogo(element, compactBrand);
     });
   }
 

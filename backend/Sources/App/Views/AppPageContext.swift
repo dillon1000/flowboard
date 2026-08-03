@@ -95,11 +95,12 @@ struct BoardNavigationContext: Encodable {
     let name: String
     let description: String
     let href: String
+    let courseColorClass: String
     let taskCount: Int
     let completedCount: Int
     let isArchived: Bool
 
-    init(board: Board, firstViewID: UUID?) throws {
+    init(board: Board, firstViewID: UUID?, courseColorClass: String) throws {
         let id = try board.requireID()
         self.id = id
         self.name = board.name
@@ -109,6 +110,7 @@ struct BoardNavigationContext: Encodable {
         } else {
             "/app/boards/\(id)"
         }
+        self.courseColorClass = courseColorClass
         self.taskCount = board.tasks.filter { !$0.isArchived }.count
         self.completedCount = board.tasks.filter {
             !$0.isArchived && board.isCompleted($0.status)
@@ -118,27 +120,265 @@ struct BoardNavigationContext: Encodable {
 }
 
 struct OverviewPageContext: Encodable {
-    let totalTasks: Int
-    let completedTasks: Int
-    let dueTasks: Int
-    let boardCount: Int
-    let recentTasks: [TaskCardContext]
-    let hasRecentTasks: Bool
+    let weekLabel: String
+    let courseFilters: [StudyCourseContext]
+    let isAllCoursesSelected: Bool
+    let defaultCourseID: String
+    let defaultCourseName: String
+    let hasCourses: Bool
+    let returnHref: String
+    let days: [StudyDayContext]
+    let workloadDays: [StudyWorkloadDayContext]
+    let balanceName: String
+    let balanceDescription: String
+    let unscheduledAssignmentCount: Int
+    let hasUnscheduledAssignments: Bool
 
     init(
-        totalTasks: Int,
-        completedTasks: Int,
-        dueTasks: Int,
-        boardCount: Int,
-        recentTasks: [TaskCardContext]
+        tasks: [TaskCardContext],
+        courses: [BoardNavigationContext],
+        selectedCourseID: UUID?,
+        referenceDate: Date = Date()
     ) {
-        self.totalTasks = totalTasks
-        self.completedTasks = completedTasks
-        self.dueTasks = dueTasks
-        self.boardCount = boardCount
-        self.recentTasks = recentTasks
-        self.hasRecentTasks = !recentTasks.isEmpty
+        let calendar = studyCalendar()
+        let today = calendar.startOfDay(for: referenceDate)
+        let daysSinceMonday = (calendar.component(.weekday, from: today) + 5) % 7
+        let weekStart = calendar.date(byAdding: .day, value: -daysSinceMonday, to: today) ?? today
+        let weekDates = (0..<7).compactMap {
+            calendar.date(byAdding: .day, value: $0, to: weekStart)
+        }
+        let activeCourses = courses.filter { !$0.isArchived }
+        let courseColors = Dictionary(
+            uniqueKeysWithValues: activeCourses.map { ($0.id, $0.courseColorClass) }
+        )
+        let taskContexts = tasks.filter { task in
+            selectedCourseID == nil || task.boardID == selectedCourseID
+        }
+
+        self.weekLabel = studyWeekLabel(start: weekStart, calendar: calendar)
+        self.courseFilters = activeCourses.map {
+            StudyCourseContext(course: $0, selectedCourseID: selectedCourseID)
+        }
+        self.isAllCoursesSelected = selectedCourseID == nil
+        let defaultCourse = activeCourses.first {
+            $0.id == selectedCourseID
+        } ?? activeCourses.first
+        self.defaultCourseID = defaultCourse?.id.uuidString ?? ""
+        self.defaultCourseName = defaultCourse?.name ?? "Choose a course"
+        self.hasCourses = defaultCourse != nil
+        self.returnHref = selectedCourseID.map { "/app?course=\($0.uuidString)" } ?? "/app"
+        self.days = weekDates.map { date in
+            let dateKey = inputDate(date)
+            let matchingTasks = taskContexts
+                .filter { $0.dueInput == dateKey }
+                .sorted(by: studyTaskOrder)
+            return StudyDayContext(
+                date: date,
+                isToday: calendar.isDate(date, inSameDayAs: today),
+                tasks: matchingTasks,
+                courseColors: courseColors
+            )
+        }
+        self.workloadDays = days.map(StudyWorkloadDayContext.init)
+        let totalHours = days.reduce(0) { $0 + $1.workloadHours }
+        if totalHours >= 18 {
+            self.balanceName = "Heavy week"
+            self.balanceDescription = "Protect time for the busiest days."
+        } else if totalHours >= 8 {
+            self.balanceName = "Balanced"
+            self.balanceDescription = "Good mix across the week."
+        } else {
+            self.balanceName = "Light week"
+            self.balanceDescription = "Room to work ahead."
+        }
+        self.unscheduledAssignmentCount = taskContexts.filter { !$0.hasDueDate }.count
+        self.hasUnscheduledAssignments = unscheduledAssignmentCount > 0
     }
+}
+
+struct StudyCourseContext: Encodable {
+    let id: UUID
+    let name: String
+    let href: String
+    let colorClass: String
+    let isSelected: Bool
+
+    init(course: BoardNavigationContext, selectedCourseID: UUID?) {
+        self.id = course.id
+        self.name = course.name
+        self.href = "/app?course=\(course.id.uuidString)"
+        self.colorClass = course.courseColorClass
+        self.isSelected = course.id == selectedCourseID
+    }
+}
+
+struct StudyDayContext: Encodable {
+    let weekdayLabel: String
+    let dateLabel: String
+    let isToday: Bool
+    let assignments: [StudyAssignmentContext]
+    let assignmentCount: Int
+    let hasAssignments: Bool
+    let workloadHours: Int
+    let workloadLabel: String
+    let workloadClass: String
+
+    init(
+        date: Date,
+        isToday: Bool,
+        tasks: [TaskCardContext],
+        courseColors: [UUID: String]
+    ) {
+        self.weekdayLabel = studyDateLabel(date, format: "EEE")
+        self.dateLabel = studyDateLabel(date, format: "MMM d")
+        self.isToday = isToday
+        self.assignments = tasks.map {
+            StudyAssignmentContext(
+                task: $0,
+                courseColorClass: courseColors[$0.boardID] ?? "course-blue"
+            )
+        }
+        self.assignmentCount = assignments.count
+        self.hasAssignments = !assignments.isEmpty
+        self.workloadHours = assignments.reduce(0) { $0 + $1.effortHours }
+        switch workloadHours {
+        case 0...2:
+            self.workloadLabel = "Light"
+            self.workloadClass = "light"
+        default:
+            self.workloadLabel = "Heavy"
+            self.workloadClass = "heavy"
+        }
+    }
+}
+
+struct StudyAssignmentContext: Encodable {
+    let href: String
+    let title: String
+    let courseName: String
+    let courseColorClass: String
+    let dueTime: String
+    let typeName: String
+    let typeIcon: String
+    let effortHours: Int
+    let effortLabel: String
+    let statusName: String
+    let statusValue: String
+    let statusColorClass: String
+    let statusCustomColor: String
+    let priorityName: String
+    let priorityValue: String
+    let priorityColorClass: String
+    let priorityCustomColor: String
+    let assigneeName: String
+    let dueDisplay: String
+    let description: String
+
+    init(task: TaskCardContext, courseColorClass: String) {
+        let assignmentType = studyAssignmentType(title: task.title, labels: task.labels)
+        self.href = task.href
+        self.title = task.title
+        self.courseName = task.boardName
+        self.courseColorClass = courseColorClass
+        self.dueTime = "11:59 PM"
+        self.typeName = assignmentType.name
+        self.typeIcon = assignmentType.icon
+        self.effortHours = studyEffortHours(priority: task.priorityValue)
+        self.effortLabel = "\(effortHours)h"
+        self.statusName = task.statusName
+        self.statusValue = task.statusValue
+        self.statusColorClass = task.statusColorClass
+        self.statusCustomColor = task.statusCustomColor
+        self.priorityName = task.priorityName
+        self.priorityValue = task.priorityValue
+        self.priorityColorClass = task.priorityColorClass
+        self.priorityCustomColor = task.priorityCustomColor
+        self.assigneeName = task.assigneeName
+        self.dueDisplay = task.dueDisplay
+        self.description = task.description
+    }
+}
+
+struct StudyWorkloadDayContext: Encodable {
+    let dayLabel: String
+    let barClass: String
+    let accessibilityLabel: String
+
+    init(day: StudyDayContext) {
+        self.dayLabel = String(day.weekdayLabel.prefix(1))
+        self.barClass = switch day.workloadHours {
+        case 0: "empty"
+        case 1...2: "light"
+        case 3: "medium"
+        default: "heavy"
+        }
+        self.accessibilityLabel = "\(day.weekdayLabel): \(day.workloadLabel), \(day.workloadHours) estimated hours"
+    }
+}
+
+private func studyCalendar() -> Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.locale = Locale(identifier: "en_US_POSIX")
+    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+    calendar.firstWeekday = 2
+    calendar.minimumDaysInFirstWeek = 4
+    return calendar
+}
+
+private func studyWeekLabel(start: Date, calendar: Calendar) -> String {
+    let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+    let startMonth = calendar.component(.month, from: start)
+    let endMonth = calendar.component(.month, from: end)
+    if startMonth == endMonth {
+        return "\(studyDateLabel(start, format: "MMMM d"))–\(studyDateLabel(end, format: "d"))"
+    }
+    return "\(studyDateLabel(start, format: "MMM d"))–\(studyDateLabel(end, format: "MMM d"))"
+}
+
+private func studyDateLabel(_ date: Date, format: String) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = format
+    return formatter.string(from: date)
+}
+
+private func studyTaskOrder(_ left: TaskCardContext, _ right: TaskCardContext) -> Bool {
+    let order = ["urgent": 0, "high": 1, "medium": 2, "low": 3]
+    let leftOrder = order[left.priorityValue] ?? 2
+    let rightOrder = order[right.priorityValue] ?? 2
+    return leftOrder == rightOrder
+        ? left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
+        : leftOrder < rightOrder
+}
+
+private func studyEffortHours(priority: String) -> Int {
+    switch priority {
+    case "low": 1
+    case "high": 3
+    case "urgent": 4
+    default: 2
+    }
+}
+
+private func studyAssignmentType(title: String, labels: [String]) -> (name: String, icon: String) {
+    let value = title.lowercased()
+    if value.contains("lab") {
+        return ("Lab Report", "file-text")
+    }
+    if value.contains("read") || value.contains("chapter") {
+        return ("Reading", "book-open")
+    }
+    if value.contains("discussion") {
+        return ("Discussion", "message-square")
+    }
+    if value.contains("flash") {
+        return ("Flashcards", "copy")
+    }
+    if value.contains("problem") || value.contains("worksheet") {
+        return ("Problem Set", "file-text")
+    }
+    return (labels.first ?? "Assignment", "check-square")
 }
 
 struct BoardPageContext: Encodable {

@@ -2,21 +2,21 @@
           <div class="page">
             <header class="page-header">
               <div class="page-title">
-                <h1>#if(isArchivedTasks):Archived tasks#else:#if(tasks.query):Search results#else:All tasks#endif#endif</h1>
-                <p>#if(isArchivedTasks):Restore tasks that you want to return to active views.#else:#if(tasks.query):Tasks matching “#(tasks.query)”.#else:Every active task you can access.#endif#endif</p>
+                <h1>#if(isArchivedTasks):Archived assignments#else:#if(tasks.query):Search results#else:All assignments#endif#endif</h1>
+                <p>#if(isArchivedTasks):Restore assignments that you want to plan again.#else:#if(tasks.query):Assignments matching “#(tasks.query)”.#else:Every active assignment across your courses.#endif#endif</p>
               </div>
               <div class="page-actions">
                 #if(isArchivedTasks):
-                  <a class="button" href="/app/tasks"><i data-lucide="check-square"></i>All tasks</a>
+                  <a class="button" href="/app/tasks"><i data-lucide="check-square"></i>All assignments</a>
                 #else:
-                  <a class="button" href="/app/tasks/archived"><i data-lucide="archive"></i>Archived tasks</a>
+                  <a class="button" href="/app/tasks/archived"><i data-lucide="archive"></i>Archived assignments</a>
                 #endif
               </div>
             </header>
             #if(tasks.hasTasks):
               <div class="table-wrap">
                 <table class="data-table">
-                  <thead><tr><th>Task</th><th>Board</th><th>Status</th><th>Severity</th><th>Assignee</th><th>Due</th>#if(isArchivedTasks):<th>Action</th>#endif</tr></thead>
+                  <thead><tr><th>Assignment</th><th>Course</th><th>Status</th><th>Severity</th><th>Assignee</th><th>Due</th>#if(isArchivedTasks):<th>Action</th>#endif</tr></thead>
                   <tbody>
                     #for(task in tasks.tasks):
                       <tr
@@ -61,8 +61,8 @@
               <div class="empty-state">
                 <div>
                   <span class="empty-state-icon" aria-hidden="true"><i data-lucide="#if(isArchivedTasks):archive#else:search#endif"></i></span>
-                  <h2>#if(isArchivedTasks):No archived tasks#else:No tasks found#endif</h2>
-                  <p>#if(isArchivedTasks):Tasks that you archive will appear here.#else:Try a different search, or create a task from one of your boards.#endif</p>
+                  <h2>#if(isArchivedTasks):No archived assignments#else:No assignments found#endif</h2>
+                  <p>#if(isArchivedTasks):Assignments that you archive will appear here.#else:Try a different search, or add an assignment from this week.#endif</p>
                 </div>
               </div>
             #endif

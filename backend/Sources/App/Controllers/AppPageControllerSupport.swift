@@ -16,15 +16,28 @@ extension AppPageController {
             .sort(\.$createdAt, .ascending)
             .all()
 
+        // Course colors follow creation order so the same course keeps its visual
+        // identity across the sidebar, weekly agenda, and workload list.
+        let courseColorClasses = [
+            "course-blue",
+            "course-green",
+            "course-purple",
+            "course-amber",
+            "course-red",
+        ]
         var boardContexts: [BoardNavigationContext] = []
-        for board in boards {
+        for (index, board) in boards.enumerated() {
             let boardID = try board.requireID()
             let firstView = try await BoardView.query(on: req.db)
                 .filter(\.$board.$id == boardID)
                 .sort(\.$position, .ascending)
                 .first()
             boardContexts.append(
-                try BoardNavigationContext(board: board, firstViewID: firstView?.requireID())
+                try BoardNavigationContext(
+                    board: board,
+                    firstViewID: firstView?.requireID(),
+                    courseColorClass: courseColorClasses[index % courseColorClasses.count]
+                )
             )
         }
         return CommonPageContext(

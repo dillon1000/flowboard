@@ -16,8 +16,18 @@ extension WorkspaceActionController {
         guard !title.isEmpty else {
             throw Abort(.unprocessableEntity, reason: "Task title is required.")
         }
-        let status = TaskStatus(rawValue: input.status ?? TaskStatus.backlog.rawValue)
-        let priority = TaskPriority(rawValue: input.priority ?? TaskPriority.medium.rawValue)
+        // Compact assignment forms omit workflow controls. In that case the
+        // course's first configured choices provide valid, predictable defaults.
+        let status = TaskStatus(
+            rawValue: input.status
+                ?? access.board.taskStatuses.first?.id
+                ?? TaskStatus.backlog.rawValue
+        )
+        let priority = TaskPriority(
+            rawValue: input.priority
+                ?? access.board.taskSeverities.first?.id
+                ?? TaskPriority.medium.rawValue
+        )
         guard access.board.accepts(status: status), access.board.accepts(priority: priority) else {
             throw Abort(.unprocessableEntity, reason: "Select a status and severity configured for this board.")
         }

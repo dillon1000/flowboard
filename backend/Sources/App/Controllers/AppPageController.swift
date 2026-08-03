@@ -19,31 +19,23 @@ struct AppPageController: RouteCollection {
     func overview(req: Request) async throws -> View {
         let common = try await commonContext(for: req)
         let boardIDs = common.boards.map(\.id)
-        let recentTasks = try await taskQuery(boardIDs: boardIDs, on: req.db)
-            .sort(\.$updatedAt, .descending)
-            .range(0..<8)
-            .all()
-        let taskContexts = try await makeTaskContexts(recentTasks, on: req.db)
-        let allTasks = try await Task.query(on: req.db)
-            .filter(\.$board.$id ~~ boardIDs)
-            .filter(\.$isArchived == false)
-            .with(\.$board)
+        let requestedCourseID = (try? req.query.get(String.self, at: "course"))
+            .flatMap(UUID.init(uuidString:))
+        let selectedCourseID = requestedCourseID.flatMap { courseID in
+            common.boards.contains { $0.id == courseID && !$0.isArchived } ? courseID : nil
+        }
+        let tasks = try await taskQuery(boardIDs: boardIDs, on: req.db)
+            .sort(\.$dueAt, .ascending)
             .all()
 
         return try await render(
             common: common,
-            pageTitle: "Overview",
+            pageTitle: "This week",
             pageKind: .overview,
             overview: OverviewPageContext(
-                totalTasks: allTasks.count,
-                completedTasks: allTasks.filter {
-                    $0.$board.value?.isCompleted($0.status) ?? ($0.status == .done)
-                }.count,
-                dueTasks: allTasks.filter {
-                    $0.dueAt != nil && !($0.$board.value?.isCompleted($0.status) ?? ($0.status == .done))
-                }.count,
-                boardCount: common.boards.filter { !$0.isArchived }.count,
-                recentTasks: taskContexts
+                tasks: try await makeTaskContexts(tasks, on: req.db),
+                courses: common.boards,
+                selectedCourseID: selectedCourseID
             ),
             for: req
         )
@@ -64,7 +56,7 @@ struct AppPageController: RouteCollection {
         let tasks = try await query.all()
         return try await render(
             common: common,
-            pageTitle: queryText.isEmpty ? "All tasks" : "Search",
+            pageTitle: queryText.isEmpty ? "All assignments" : "Search",
             pageKind: .tasks,
             tasks: TasksPageContext(query: queryText, tasks: try await makeTaskContexts(tasks, on: req.db)),
             for: req
@@ -90,7 +82,7 @@ struct AppPageController: RouteCollection {
 
         return try await render(
             common: common,
-            pageTitle: "Archived tasks",
+            pageTitle: "Archived assignments",
             pageKind: .archivedTasks,
             tasks: TasksPageContext(query: "", tasks: taskContexts),
             for: req
