@@ -232,6 +232,10 @@
   overscroll-behavior-y: contain;
 }
 
+.column-tasks[data-drop-target='true'] {
+  background: var(--surface-hover);
+}
+
 .column-tasks:empty::after {
   display: grid;
   min-height: 76px;
@@ -244,6 +248,7 @@
 }
 
 .task-card {
+  position: relative;
   display: block;
   padding: 12px;
   border-radius: var(--radius-medium);
@@ -253,6 +258,30 @@
   cursor: grab;
   text-decoration: none;
   transition: box-shadow var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.task-card[data-moving='true'] {
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.task-card.drop-before::before,
+.task-card.drop-after::after {
+  position: absolute;
+  right: 4px;
+  left: 4px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--ds-blue-700);
+  content: '';
+}
+
+.task-card.drop-before::before {
+  top: -5px;
+}
+
+.task-card.drop-after::after {
+  bottom: -5px;
 }
 
 .task-card:hover {

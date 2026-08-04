@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { BoardPageContext } from '$lib/types';
+  import type { BoardPageContext, TaskColumnContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { ArrowDownUp, CalendarDays, ChevronLeft, ChevronRight, Columns3, Filter, GalleryHorizontalEnd, Plus, Settings, Table2 } from '@lucide/svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
@@ -11,8 +11,19 @@
 
   let { board } = $props<{ board: BoardPageContext }>();
   let createTaskOpen = $state(false);
-  let draggedTaskID = $state<string | null>(null);
   let requestError = $state('');
+  let columns = $state<TaskColumnContext[]>([]);
+  let draggedTask = $state<{ id: string; status: string; index: number } | null>(null);
+  let dropTarget = $state<{ taskID: string | null; position: 'before' | 'after'; status: string; index: number } | null>(null);
+  let movingTaskID = $state<string | null>(null);
+
+  $effect(() => {
+    columns = cloneColumns(board.columns);
+  });
+
+  function cloneColumns(source: TaskColumnContext[]): TaskColumnContext[] {
+    return source.map((column) => ({ ...column, tasks: column.tasks.map((task) => ({ ...task })) }));
+  }
 
   function viewIcon(type: string): typeof Columns3 {
     if (type === 'table') return Table2;
@@ -21,21 +32,77 @@
     return Columns3;
   }
 
-  async function dropTask(status: string, targetIndex: number, completed: boolean): Promise<void> {
-    if (!draggedTaskID || !board.canDrag) return;
+  function startDrag(taskID: string, status: string, index: number, event: DragEvent): void {
+    if (!board.canDrag || movingTaskID) return;
+    draggedTask = { id: taskID, status, index };
+    event.dataTransfer?.setData('text/plain', taskID);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  function dragOverTask(event: DragEvent, status: string, index: number, taskID: string): void {
+    if (!draggedTask) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
+    dropTarget = { taskID, position, status, index: index + (position === 'after' ? 1 : 0) };
+  }
+
+  function dragOverColumn(event: DragEvent, status: string, taskCount: number): void {
+    if (!draggedTask) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    dropTarget = { taskID: null, position: 'after', status, index: taskCount };
+  }
+
+  function finishDrag(): void {
+    draggedTask = null;
+    dropTarget = null;
+  }
+
+  async function dropTask(event: DragEvent, status: string, rawTargetIndex: number): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!draggedTask || !board.canDrag || movingTaskID) return;
+    const source = draggedTask;
+    const targetIndex = source.status === status && source.index < rawTargetIndex
+      ? rawTargetIndex - 1
+      : rawTargetIndex;
+    finishDrag();
+    if (source.status === status && source.index === targetIndex) return;
+
+    const snapshot = cloneColumns(columns);
+    const sourceColumn = columns.find((column) => column.value === source.status);
+    const destinationColumn = columns.find((column) => column.value === status);
+    const sourceTaskIndex = sourceColumn?.tasks.findIndex((task) => task.id === source.id) ?? -1;
+    if (!sourceColumn || !destinationColumn || sourceTaskIndex < 0) return;
+    const sourceWasCompleted = sourceColumn.isCompleted;
+    const [task] = sourceColumn.tasks.splice(sourceTaskIndex, 1);
+    const movedTask = {
+      ...task,
+      statusValue: destinationColumn.value,
+      statusName: destinationColumn.name,
+      statusColorClass: destinationColumn.dotClass,
+      statusColorStyle: destinationColumn.dotStyle
+    };
+    destinationColumn.tasks.splice(Math.min(targetIndex, destinationColumn.tasks.length), 0, movedTask);
+    columns = [...columns];
+    movingTaskID = source.id;
     requestError = '';
     try {
-      await api(`/api/v1/tasks/${draggedTaskID}/move`, {
+      await api(`/api/v1/tasks/${source.id}/move`, {
         method: 'POST',
         body: JSON.stringify({ status, targetIndex })
       });
-      if (completed) confetti({ particleCount: 70, spread: 65, origin: { y: 0.75 } });
+      if (!sourceWasCompleted && destinationColumn.isCompleted) confetti({ particleCount: 70, spread: 65, origin: { y: 0.75 } });
       await invalidateAll();
       showToast('Task moved');
     } catch (cause) {
+      columns = snapshot;
       requestError = messageFor(cause);
     } finally {
-      draggedTaskID = null;
+      movingTaskID = null;
     }
   }
 </script>
@@ -63,15 +130,24 @@
   </div>
 
   {#if requestError}<p class="error-message board-error" role="alert">{requestError}</p>{/if}
-  <div class:flush={board.activeView.isBoard} class="board-canvas">
+  <div class:flush={board.activeView.isBoard} class="board-canvas" aria-busy={movingTaskID ? 'true' : 'false'}>
     {#if board.activeView.isBoard}
       <div class="kanban">
-        {#each board.columns as column (column.value)}
+        {#each columns as column (column.value)}
           <section class="kanban-column">
-            <header class="column-header"><span class={`column-dot ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span><strong>{column.name}</strong><span class="count">{column.count}</span></header>
-            <div class="column-tasks" role="list" ondragover={(event) => event.preventDefault()} ondrop={() => dropTask(column.value, column.tasks.length, column.isCompleted)}>
-              {#each column.tasks as task (task.id)}
-                <TaskCard {task} draggable={board.canDrag} ondragstart={() => (draggedTaskID = task.id)} />
+            <header class="column-header"><span class={`column-dot ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span><strong>{column.name}</strong><span class="count">{column.tasks.length}</span></header>
+            <div class="column-tasks" role="list" data-drop-target={dropTarget?.status === column.value && dropTarget.taskID === null ? 'true' : undefined} ondragover={(event) => dragOverColumn(event, column.value, column.tasks.length)} ondrop={(event) => dropTask(event, column.value, column.tasks.length)}>
+              {#each column.tasks as task, index (task.id)}
+                <TaskCard
+                  {task}
+                  draggable={board.canDrag && !movingTaskID}
+                  moving={movingTaskID === task.id}
+                  dropPosition={dropTarget?.taskID === task.id ? dropTarget.position : null}
+                  ondragstart={(event) => startDrag(task.id, column.value, index, event)}
+                  ondragend={finishDrag}
+                  ondragover={(event) => dragOverTask(event, column.value, index, task.id)}
+                  ondrop={(event) => dropTask(event, column.value, dropTarget?.taskID === task.id ? dropTarget.index : index)}
+                />
               {/each}
             </div>
           </section>
