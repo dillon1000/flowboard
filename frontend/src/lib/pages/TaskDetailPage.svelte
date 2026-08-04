@@ -1,9 +1,8 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
+  import { renderMarkdown } from '$lib/markdown';
   import type { AvatarContext, ChecklistContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
-  import { marked } from 'marked';
-  import sanitizeHtml from 'sanitize-html';
   import confetti from 'canvas-confetti';
   import { Archive, Bell, CalendarDays, Check, Download, Paperclip, Plus, Trash2, Upload, User, X } from '@lucide/svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -23,16 +22,6 @@
     detail.checklist.filter((item: ChecklistContext) => item.isCompleted).length
   );
   const descriptionHTML = $derived(renderMarkdown(detail.task.description));
-
-  /** Converts Markdown to a small safe HTML subset before Svelte inserts it. */
-  function renderMarkdown(value: string): string {
-    const rendered = marked.parse(value, { async: false }) as string;
-    return sanitizeHtml(rendered, {
-      allowedTags: ['p', 'br', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'blockquote', 'a', 'h1', 'h2', 'h3'],
-      allowedAttributes: { a: ['href', 'title', 'target', 'rel'] },
-      allowedSchemes: ['http', 'https', 'mailto']
-    });
-  }
 
   function apiDate(value: FormDataEntryValue | null): string | null {
     const date = String(value ?? '');
