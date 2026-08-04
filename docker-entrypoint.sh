@@ -15,11 +15,39 @@ do
     fi
 done
 
-# An explicit command supports local development and maintenance tasks. The
-# default production path applies pending migrations before it starts serving.
+# An explicit command supports local development and Vapor maintenance tasks.
+# The default path migrates once, then starts Vapor privately and SvelteKit publicly.
 if [ "$#" -gt 0 ]; then
     exec gosu vapor ./App "$@"
 fi
 
 gosu vapor ./App migrate --yes --env production
-exec gosu vapor ./App serve --env production --hostname 0.0.0.0 --port "${PORT:-8080}"
+
+backend_port="${BACKEND_PORT:-8081}"
+public_port="${PORT:-8080}"
+gosu vapor ./App serve --env production --hostname 127.0.0.1 --port "$backend_port" &
+backend_pid=$!
+
+gosu vapor env \
+    HOST=0.0.0.0 \
+    PORT="$public_port" \
+    BACKEND_URL="http://127.0.0.1:$backend_port" \
+    BODY_SIZE_LIMIT=11M \
+    PROTOCOL_HEADER=x-forwarded-proto \
+    HOST_HEADER=x-forwarded-host \
+    ADDRESS_HEADER=x-forwarded-for \
+    XFF_DEPTH=1 \
+    node frontend/build &
+frontend_pid=$!
+
+# Stop both servers when Railway stops the container or either server exits.
+shutdown() {
+    kill -TERM "$backend_pid" "$frontend_pid" 2>/dev/null || true
+    wait "$backend_pid" "$frontend_pid" 2>/dev/null || true
+}
+trap shutdown INT TERM EXIT
+
+while kill -0 "$backend_pid" 2>/dev/null && kill -0 "$frontend_pid" 2>/dev/null; do
+    sleep 1
+done
+exit 1

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# Build the browser bundle with the same pnpm version used by this checkout.
+# Build the SvelteKit SSR server with the same pnpm version used by this checkout.
 FROM node:22-bookworm-slim AS frontend
 
 RUN corepack enable \
@@ -13,8 +13,8 @@ RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-pnpm,target=/ro
     pnpm install --frozen-lockfile
 
 COPY frontend/ ./
-RUN mkdir -p /workspace/backend/Public \
-    && pnpm build
+RUN pnpm build \
+    && pnpm prune --prod
 
 # Build a release Vapor executable and stage only its runtime files.
 FROM swift:6.3-noble AS build
@@ -33,8 +33,6 @@ RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swiftpm,target=
 
 COPY backend/Sources ./Sources
 COPY backend/Tests ./Tests
-COPY backend/Resources ./Resources
-COPY --from=frontend /workspace/backend/Public ./Public
 
 RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swift-build,target=/build/.build \
     swift build -c release \
@@ -45,7 +43,6 @@ RUN --mount=type=cache,id=s/bf757565-64b8-44aa-9933-d12094ddf373-swift-build,tar
     && cp "$(swift build -c release --show-bin-path)/App" /staging/App \
     && find -L "$(swift build -c release --show-bin-path)" \
         -regex '.*\.resources$' -exec cp -Ra {} /staging \; \
-    && cp -R Resources Public /staging/ \
     && cp /usr/libexec/swift/linux/swift-backtrace-static /staging/
 
 # Run the server with the libraries that Vapor, Fluent SQLite, and Swift need.
@@ -69,6 +66,10 @@ RUN useradd --user-group --create-home --system \
 WORKDIR /app
 
 COPY --from=build --chown=vapor:vapor /staging /app
+COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend --chown=vapor:vapor /workspace/frontend/build /app/frontend/build
+COPY --from=frontend --chown=vapor:vapor /workspace/frontend/package.json /app/frontend/package.json
+COPY --from=frontend --chown=vapor:vapor /workspace/frontend/node_modules /app/frontend/node_modules
 COPY --chown=vapor:vapor docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # SQLite and legacy attachments share one mount. New production attachments use
@@ -77,7 +78,7 @@ RUN mkdir -p /data/uploads \
     && chown -R vapor:vapor /data \
     && ln -s /data/uploads /app/Uploads \
     && chmod +x /app/docker-entrypoint.sh \
-    && chmod -R a-w /app/Resources /app/Public
+    && chmod -R a-w /app/frontend
 
 ENV DATABASE_PATH=/data/flowboard.sqlite
 ENV SWIFT_BACKTRACE=enable=yes,sanitize=yes,threads=all,images=all,interactive=no,swift-backtrace=./swift-backtrace-static
