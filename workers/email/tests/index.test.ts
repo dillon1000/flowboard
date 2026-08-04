@@ -64,6 +64,10 @@ describe('flowboard email worker', () => {
     expect(getSentMessage()).toMatchObject({
       html: expect.stringContaining('https://app.example/tasks/finish-the-report-abc123')
     });
+    expect(getSentMessage()).toMatchObject({
+      html: expect.stringContaining('FLOWBOARD'),
+      text: expect.stringContaining('Finish the report')
+    });
   });
 
   it('rejects stale signatures before parsing the payload', async () => {
@@ -80,8 +84,8 @@ describe('flowboard email worker', () => {
     expect(response.status).toBe(401);
   });
 
-  it('escapes user content in HTML templates', () => {
-    const result = renderNotification({
+  it('escapes user content in HTML templates', async () => {
+    const result = await renderNotification({
       eventID: 'event-1',
       type: 'task_comment_added',
       to: 'person@example.com',

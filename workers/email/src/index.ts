@@ -1,3 +1,6 @@
+import { renderNotification } from './email';
+export { renderNotification } from './email';
+
 const MAX_REQUEST_BYTES = 32 * 1024;
 const MAX_DATA_FIELDS = 16;
 const MAX_DATA_VALUE_LENGTH = 4_000;
@@ -18,17 +21,11 @@ export type EmailWorkerEnv = Env & {
   SENDER_NAME: string;
 };
 
-type NotificationPayload = {
+export type NotificationPayload = {
   eventID: string;
   type: NotificationType;
   to: string;
   data: Record<string, string>;
-};
-
-type NotificationTemplate = {
-  subject: string;
-  text: string;
-  html: string;
 };
 
 type WorkerError = {
@@ -96,7 +93,7 @@ export async function handleRequest(
     return errorResponse(400, 'invalid_payload');
   }
 
-  const template = renderNotification(payload);
+  const template = await renderNotification(payload);
   try {
     const result = await env.EMAIL.send({
       to: payload.to,
@@ -137,67 +134,6 @@ export async function createSignature(
   const input = new TextEncoder().encode(`${timestamp}.${body}`);
   const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, input));
   return Array.from(signature, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-export function renderNotification(payload: NotificationPayload): NotificationTemplate {
-  const recipientName = dataValue(payload.data, 'recipientName') || 'there';
-  const actorName = dataValue(payload.data, 'actorName') || 'A Flowboard user';
-  const appURL = dataValue(payload.data, 'appURL') || dataValue(payload.data, 'taskURL');
-
-  switch (payload.type) {
-    case 'welcome': {
-      const subject = 'Welcome to Flowboard';
-      const text = `Hi ${recipientName},\n\nYour Flowboard account is ready.`;
-      return template(subject, text, [
-        `<p>Hi ${escapeHTML(recipientName)},</p>`,
-        '<p>Your Flowboard account is ready.</p>',
-        linkParagraph(appURL, 'Open Flowboard')
-      ]);
-    }
-    case 'board_member_added': {
-      const boardName = dataValue(payload.data, 'boardName') || 'a board';
-      const role = dataValue(payload.data, 'role') || 'member';
-      const subject = safeLine(`You joined ${boardName}`);
-      const text = `Hi ${recipientName},\n\n${actorName} added you to ${boardName} as a ${role}.`;
-      return template(subject, text, [
-        `<p>Hi ${escapeHTML(recipientName)},</p>`,
-        `<p>${escapeHTML(actorName)} added you to <strong>${escapeHTML(boardName)}</strong> as a ${escapeHTML(role)}.</p>`,
-        linkParagraph(appURL, 'Open the board')
-      ]);
-    }
-    case 'task_comment_added': {
-      const taskTitle = dataValue(payload.data, 'taskTitle') || 'your task';
-      const boardName = dataValue(payload.data, 'boardName');
-      const commentPreview = dataValue(payload.data, 'commentPreview');
-      const subject = safeLine(`${actorName} commented on ${taskTitle}`);
-      const text = [
-        `Hi ${recipientName},`,
-        '',
-        `${actorName} commented on ${taskTitle}${boardName ? ` in ${boardName}` : ''}:`,
-        '',
-        commentPreview,
-        '',
-        appURL ? `Open the task: ${appURL}` : ''
-      ].join('\n');
-      return template(subject, text, [
-        `<p>Hi ${escapeHTML(recipientName)},</p>`,
-        `<p>${escapeHTML(actorName)} commented on <strong>${escapeHTML(taskTitle)}</strong>${boardName ? ` in ${escapeHTML(boardName)}` : ''}:</p>`,
-        `<blockquote>${escapeHTML(commentPreview)}</blockquote>`,
-        linkParagraph(appURL, 'Open the task')
-      ]);
-    }
-    case 'task_assigned': {
-      const taskTitle = dataValue(payload.data, 'taskTitle') || 'a task';
-      const boardName = dataValue(payload.data, 'boardName');
-      const subject = safeLine(`You were assigned ${taskTitle}`);
-      const text = `Hi ${recipientName},\n\n${actorName} assigned you ${taskTitle}${boardName ? ` in ${boardName}` : ''}.${appURL ? `\n\nOpen the task: ${appURL}` : ''}`;
-      return template(subject, text, [
-        `<p>Hi ${escapeHTML(recipientName)},</p>`,
-        `<p>${escapeHTML(actorName)} assigned you <strong>${escapeHTML(taskTitle)}</strong>${boardName ? ` in ${escapeHTML(boardName)}` : ''}.</p>`,
-        linkParagraph(appURL, 'Open the task')
-      ]);
-    }
-  }
 }
 
 async function verifySignature(
@@ -273,43 +209,6 @@ function parseNotificationPayload(input: unknown): NotificationPayload {
   }
 
   return { eventID, type, to: to.trim(), data: normalizedData };
-}
-
-function template(subject: string, text: string, paragraphs: string[]): NotificationTemplate {
-  const body = paragraphs.filter(Boolean).join('');
-  return {
-    subject,
-    text,
-    html: `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#202124"><main style="max-width:600px;margin:24px auto">${body}</main></body></html>`
-  };
-}
-
-function linkParagraph(url: string, label: string): string {
-  if (!/^https?:\/\//i.test(url)) {
-    return '';
-  }
-  return `<p><a href="${escapeHTML(url)}">${escapeHTML(label)}</a></p>`;
-}
-
-function escapeHTML(value: string): string {
-  return value.replace(/[&<>'"]/g, (character) => {
-    const entities: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;'
-    };
-    return entities[character] ?? character;
-  });
-}
-
-function safeLine(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
-}
-
-function dataValue(data: Record<string, string>, key: string): string {
-  return data[key] ?? '';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
