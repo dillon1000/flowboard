@@ -1,18 +1,23 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { OverviewPageContext, TaskResponse } from '$lib/types';
+  import type { OverviewPageContext, StudyCourseContext, TaskResponse } from '$lib/types';
   import { CalendarDays, CheckSquare, ChevronDown, Clock3, FileText, Info, Layers, Plus, X } from '@lucide/svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
+  import DatePicker from '$lib/components/DatePicker.svelte';
+  import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
 
   let { overview } = $props<{ overview: OverviewPageContext }>();
   let createBoardOpen = $state(false);
   let createTaskOpen = $state(false);
   let pending = $state(false);
   let requestError = $state('');
+  const courseOptions = $derived<SelectMenuOption[]>(
+    overview.courseFilters.map((course: StudyCourseContext) => ({ value: course.id, label: course.name }))
+  );
 
   async function createAssignment(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -131,8 +136,8 @@
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
         <div class="form-grid">
           <div class="field wide"><label for="assignment-title">Title</label><input class="input" id="assignment-title" name="title" maxlength="120" required data-dialog-focus /></div>
-          <div class="field"><label for="assignment-course">Course</label><select class="input" id="assignment-course" name="boardID" value={overview.defaultCourseID}>{#each overview.courseFilters as course}<option value={course.id}>{course.name}</option>{/each}</select></div>
-          <div class="field"><label for="assignment-due">Due date</label><input class="input" id="assignment-due" type="date" name="dueAt" /></div>
+          <div class="field"><label for="assignment-course">Course</label><SelectMenu id="assignment-course" name="boardID" value={overview.defaultCourseID} options={courseOptions} ariaLabel="Course" /></div>
+          <div class="field"><label for="assignment-due">Due date</label><DatePicker id="assignment-due" name="dueAt" label="Due date" /></div>
           <div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="5000"></textarea></div>
           <div class="field wide"><label for="assignment-labels">Type</label><input class="input" id="assignment-labels" name="labels" maxlength="500" placeholder="Lab report, Reading, Discussion" /></div>
         </div>
