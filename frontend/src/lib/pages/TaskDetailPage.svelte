@@ -1,10 +1,13 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { AvatarContext, ChecklistContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
+  import type { AvatarContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { Archive, Bell, CalendarDays, Check, Download, Paperclip, Plus, Trash2, Upload, User, X } from '@lucide/svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import DatePicker from '$lib/components/DatePicker.svelte';
+  import PromoteMenu from '$lib/components/PromoteMenu.svelte';
+  import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { onMount } from 'svelte';
   import { showToast } from '$lib/ui/toast';
@@ -33,6 +36,16 @@
   const completedChecklist = $derived(
     checklist.filter((item: ChecklistContext) => item.isCompleted).length
   );
+  const statusMenuOptions = $derived<SelectMenuOption[]>(
+    detail.task.statusOptions.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
+  );
+  const severityMenuOptions = $derived<SelectMenuOption[]>(
+    detail.task.severityOptions.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
+  );
+  const assigneeMenuOptions = $derived<SelectMenuOption[]>([
+    { value: '', label: 'Unassigned' },
+    ...detail.members.map((member: MemberOptionContext) => ({ value: member.id, label: `${member.name} · ${member.email}` }))
+  ]);
   const commentDraftKey = $derived(`flowboard-comment-draft:${detail.task.id}`);
 
   $effect(() => {
@@ -260,7 +273,7 @@
       </div>
     </div>
     <div class="page-actions">
-      {#if detail.canEdit}<label class="task-status-control"><span class="sr-only">Change status</span><select class="input task-status-select" value={detail.task.statusValue} onchange={(event) => changeStatus(event.currentTarget.value)} disabled={pending}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></label>{/if}
+      {#if detail.canEdit}<PromoteMenu value={detail.task.statusValue} options={detail.task.statusOptions} disabled={pending} onchange={changeStatus} />{/if}
       <button class="button" type="button" onclick={toggleFollow} disabled={pending}><Bell size={15} />{detail.isFollowing ? 'Unfollow' : 'Follow'}<span class="badge count tabular">{detail.followerCount}</span></button>
       {#if detail.canEdit}<button class="button" type="button" onclick={() => (editOpen = true)}>Edit task</button>{/if}
     </div>
@@ -297,13 +310,30 @@
     <aside class="task-sidebar">
       <div class="card"><div class="card-header"><h2>Properties</h2></div><dl class="property-list"><div class="property-row"><dt>Status</dt><dd><span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span></dd></div><div class="property-row"><dt>Severity</dt><dd><span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span></dd></div><div class="property-row"><dt>Assignee</dt><dd>{detail.task.assigneeName}</dd></div><div class="property-row"><dt>Creator</dt><dd>{detail.creatorName}</dd></div><div class="property-row"><dt>Start</dt><dd class="muted">{detail.task.startDisplay}</dd></div><div class="property-row"><dt>Due</dt><dd>{detail.task.dueDisplay}</dd></div>{#each detail.properties as property}<div class="property-row"><dt>{property.name}</dt><dd>{property.value}</dd></div>{/each}</dl></div>
 
-      {#if detail.canEdit && detail.hasProperties}<section class="card"><div class="card-header"><h2>Custom fields</h2></div><form class="card-body" onsubmit={saveProperties}>{#each detail.properties as property}<div class="field"><label for={`property-${property.id}`}>{property.name}</label>{#if property.usesInput}<input class="input" type={property.inputType} step="any" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} />{:else if property.usesSelect}<select class="input" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue}><option value="">No value</option>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.usesMultiSelect}<div class="property-options" id={`property-${property.id}`}>{#each property.options as option}<label class="property-option"><input type="checkbox" name={`property-${property.id}-${option.id}`} checked={option.isSelected} /><span>{option.name}</span></label>{/each}</div>{:else if property.usesCheckbox}<label class="property-boolean"><input type="checkbox" name={`property-${property.id}`} value="true" checked={property.isChecked} /><span>Checked</span></label>{/if}</div>{/each}<div class="form-actions"><button class="button small" type="submit" disabled={pending}>Save fields</button></div></form></section>{/if}
+      {#if detail.canEdit && detail.hasProperties}<section class="card"><div class="card-header"><h2>Custom fields</h2></div><form class="card-body" onsubmit={saveProperties}>{#each detail.properties as property}<div class="field"><label for={`property-${property.id}`}>{property.name}</label>{#if property.usesInput}{#if property.inputType === 'date'}<DatePicker id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} label={property.name} />{:else}<input class="input" type={property.inputType} step="any" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} />{/if}{:else if property.usesSelect}<SelectMenu id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} ariaLabel={property.name} options={[{ value: '', label: 'No value' }, ...property.options.map((option: TaskPropertyOptionContext) => ({ value: option.id, label: option.name }))]} />{:else if property.usesMultiSelect}<div class="property-options" id={`property-${property.id}`}>{#each property.options as option}<label class="property-option"><input type="checkbox" name={`property-${property.id}-${option.id}`} checked={option.isSelected} /><span>{option.name}</span></label>{/each}</div>{:else if property.usesCheckbox}<label class="property-boolean"><input type="checkbox" name={`property-${property.id}`} value="true" checked={property.isChecked} /><span>Checked</span></label>{/if}</div>{/each}<div class="form-actions"><button class="button small" type="submit" disabled={pending}>Save fields</button></div></form></section>{/if}
 
       {#if detail.canEdit}<section class="card danger-zone"><div class="card-header"><h2>Danger zone</h2></div><div class="card-rows"><div class="panel-row"><span class="panel-row-main"><strong>{detail.task.isArchived ? 'Restore task' : 'Archive task'}</strong><span>Archived tasks leave active views.</span></span><button class="button small" type="button" onclick={archiveTask} disabled={pending}><Archive size={13} />{detail.task.isArchived ? 'Restore' : 'Archive'}</button></div><div class="panel-row"><span class="panel-row-main"><strong>Delete task</strong><span>Permanently remove this task.</span></span><button class="button danger small" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div></div></section>{/if}
     </aside>
   </div>
 </div>
 
-{#if editOpen}<div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}><form class="dialog wide" onsubmit={saveTask}><div class="dialog-header"><div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body"><div class="form-grid"><div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div><div class="field"><label for="edit-status">Status</label><select class="input" id="edit-status" name="status" value={detail.task.statusValue}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field"><label for="edit-priority">Severity</label><select class="input" id="edit-priority" name="priority" value={detail.task.priorityValue}>{#each detail.task.severityOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field wide"><label for="edit-assignee">Assignee</label><select class="input" id="edit-assignee" name="assigneeID" value={detail.task.assigneeID}><option value="">Unassigned</option>{#each detail.members as member}<option value={member.id}>{member.name} · {member.email}</option>{/each}</select></div><div class="field"><label for="edit-start">Start date</label><input class="input" id="edit-start" type="date" name="startAt" value={detail.task.startInput} /></div><div class="field"><label for="edit-due">Due date</label><input class="input" id="edit-due" type="date" name="dueAt" value={detail.task.dueInput} /></div><div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div></form></div>{/if}
+{#if editOpen}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}>
+    <form class="dialog wide" onsubmit={saveTask}>
+      <div class="dialog-header"><div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body"><div class="form-grid">
+        <div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div>
+        <div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div>
+        <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={detail.task.statusValue} options={statusMenuOptions} ariaLabel="Status" /></div>
+        <div class="field"><label for="edit-priority">Severity</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Severity" /></div>
+        <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
+        <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>
+        <div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div>
+        <div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div>
+      </div></div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div>
+    </form>
+  </div>
+{/if}
 
 {#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-task-title">Delete this task?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteTask} disabled={pending}>Delete task</button></div></div></div>{/if}
