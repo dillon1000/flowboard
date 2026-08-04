@@ -3,14 +3,41 @@
   import { CalendarDays, CheckSquare, MessageSquare, Paperclip } from '@lucide/svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
 
-  let { task, draggable = false, ondragstart } = $props<{
+  let {
+    task,
+    draggable = false,
+    moving = false,
+    dropPosition = null,
+    ondragstart,
+    ondragend,
+    ondragover,
+    ondrop
+  } = $props<{
     task: TaskCardContext;
     draggable?: boolean;
+    moving?: boolean;
+    dropPosition?: 'before' | 'after' | null;
     ondragstart?: (event: DragEvent) => void;
+    ondragend?: (event: DragEvent) => void;
+    ondragover?: (event: DragEvent) => void;
+    ondrop?: (event: DragEvent) => void;
   }>();
 </script>
 
-<a class="task-card" href={task.href} draggable={draggable} ondragstart={ondragstart} data-task-id={task.id} use:taskPreview={previewFromTask(task)}>
+<a
+  class:drop-before={dropPosition === 'before'}
+  class:drop-after={dropPosition === 'after'}
+  class="task-card"
+  href={task.href}
+  draggable={draggable}
+  ondragstart={ondragstart}
+  ondragend={ondragend}
+  ondragover={ondragover}
+  ondrop={ondrop}
+  data-moving={moving ? 'true' : undefined}
+  data-task-id={task.id}
+  use:taskPreview={previewFromTask(task)}
+>
   <h3>{task.title}</h3>
   {#if task.hasDescription}<p>{task.description}</p>{/if}
   <div class="task-meta">
