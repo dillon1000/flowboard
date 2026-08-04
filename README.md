@@ -65,8 +65,8 @@ Create one Railway service from this repository. Railway reads `railway.json`,
 builds the root `Dockerfile`, sends traffic to its assigned `PORT`, and checks
 `/health`. The health route succeeds only when SvelteKit can reach Vapor.
 
-Attach one persistent volume at `/data`. It stores SQLite and local attachment
-fallback data. Keep the service at one replica because SQLite cannot support
+Attach one persistent volume at `/data`. It stores SQLite. Keep the service at
+one replica because SQLite cannot support
 several application containers writing to the same database.
 
 Connect a Railway bucket with the six `AWS_*` values in

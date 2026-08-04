@@ -81,8 +81,7 @@ final class TaskAttachment: Model, @unchecked Sendable {
     @Field(key: "file_name")
     var fileName: String
 
-    /// New records store a full `attachments/...` object key. Legacy records store
-    /// only a generated file name and continue to resolve from the mounted volume.
+    /// Stores the full server-generated `attachments/...` object key.
     @Field(key: "storage_name")
     var storageName: String
 
