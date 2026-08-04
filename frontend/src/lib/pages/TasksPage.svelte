@@ -3,6 +3,8 @@
   import { api, messageFor } from '$lib/api';
   import type { TasksPageContext } from '$lib/types';
   import { Archive, CheckSquare, Search } from '@lucide/svelte';
+  import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
+  import { showToast } from '$lib/ui/toast';
 
   let { tasks, archived } = $props<{ tasks: TasksPageContext; archived: boolean }>();
   let requestError = $state('');
@@ -12,6 +14,7 @@
     try {
       await api(`/api/v1/tasks/${taskID}`, { method: 'PATCH', body: JSON.stringify({ isArchived: false }) });
       await invalidateAll();
+      showToast('Assignment restored');
     } catch (cause) {
       requestError = messageFor(cause);
     }
@@ -36,7 +39,7 @@
         <tbody>
           {#each tasks.tasks as task (task.id)}
             <tr>
-              <td><a href={task.href}>{task.title}</a></td><td>{task.boardName}</td>
+              <td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td>{task.boardName}</td>
               <td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td>
               <td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td>
               <td class:muted={!task.hasAssignee}>{task.assigneeName}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}</td>

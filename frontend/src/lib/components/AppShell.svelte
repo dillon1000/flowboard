@@ -9,6 +9,8 @@
   import BuildSignature from './BuildSignature.svelte';
   import CreateBoardDialog from './CreateBoardDialog.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
+  import TaskPreview from './TaskPreview.svelte';
+  import Toast from './Toast.svelte';
 
   let { context, children } = $props<{ context: AppPageContext; children: Snippet }>();
   let createBoardOpen = $state(false);
@@ -21,6 +23,13 @@
 
   onMount(() => {
     collapsed = document.documentElement.dataset.sidebar === 'collapsed';
+    const syncSidebar = (event: StorageEvent): void => {
+      if (event.key !== 'flowboard-sidebar') return;
+      collapsed = event.newValue === 'collapsed';
+      document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'expanded';
+    };
+    window.addEventListener('storage', syncSidebar);
+    return () => window.removeEventListener('storage', syncSidebar);
   });
 
   function toggleSidebar(): void {
@@ -35,6 +44,11 @@
   }
 
   function handleShortcut(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = '';
+      searchInput.blur();
+      return;
+    }
     if (!(event.metaKey || event.ctrlKey)) return;
     if (event.key.toLowerCase() === 'b') {
       event.preventDefault();
@@ -131,3 +145,5 @@
 </div>
 
 <CreateBoardDialog bind:open={createBoardOpen} />
+<TaskPreview />
+<Toast />

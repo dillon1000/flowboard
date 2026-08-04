@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { TaskCardContext } from '$lib/types';
   import { CalendarDays, CheckSquare, MessageSquare, Paperclip } from '@lucide/svelte';
+  import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
 
   let { task, draggable = false, ondragstart } = $props<{
     task: TaskCardContext;
@@ -9,7 +10,7 @@
   }>();
 </script>
 
-<a class="task-card" href={task.href} draggable={draggable} ondragstart={ondragstart} data-task-id={task.id}>
+<a class="task-card" href={task.href} draggable={draggable} ondragstart={ondragstart} data-task-id={task.id} use:taskPreview={previewFromTask(task)}>
   <h3>{task.title}</h3>
   {#if task.hasDescription}<p>{task.description}</p>{/if}
   <div class="task-meta">

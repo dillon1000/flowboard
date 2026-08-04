@@ -4,6 +4,7 @@
   import type { BoardPageContext, TaskResponse } from '$lib/types';
   import { X } from '@lucide/svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
+  import { showToast } from '$lib/ui/toast';
 
   let { open = $bindable(false), board } = $props<{ open: boolean; board: BoardPageContext }>();
   let pending = $state(false);
@@ -37,6 +38,7 @@
       form.reset();
       open = false;
       await invalidateAll();
+      showToast('Task created');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {

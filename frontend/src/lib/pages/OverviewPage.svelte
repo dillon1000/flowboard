@@ -5,6 +5,8 @@
   import { CalendarDays, CheckSquare, ChevronDown, Clock3, FileText, Info, Layers, Plus, X } from '@lucide/svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
+  import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
+  import { showToast } from '$lib/ui/toast';
 
   let { overview } = $props<{ overview: OverviewPageContext }>();
   let createBoardOpen = $state(false);
@@ -33,6 +35,7 @@
       form.reset();
       createTaskOpen = false;
       await invalidateAll();
+      showToast('Assignment added');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -91,7 +94,7 @@
             <div class="study-day-content">
               {#if day.hasAssignments}
                 {#each day.assignments as assignment}
-                  <a class="study-assignment" href={assignment.href}>
+                  <a class="study-assignment" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}>
                     <span class="study-assignment-main"><span class="study-assignment-course"><span class={`study-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>{assignment.courseName}</span><strong>{assignment.title}</strong></span>
                     <span class="study-assignment-meta"><span>{assignment.dueTime}</span><small>Due</small></span>
                     <span class="study-assignment-type"><FileText size={15} />{assignment.typeName}</span>
