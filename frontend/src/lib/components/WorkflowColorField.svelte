@@ -34,7 +34,7 @@
   {#if selection === 'custom'}
     <span class="workflow-custom-color">
       <input type="color" bind:value={customColor} aria-label="Choose custom color" />
-      <input class="input" bind:value={customColor} aria-label="Custom color hex value" pattern="#[0-9A-Fa-f]{6}" maxlength="7" required />
+      <input class="input" bind:value={customColor} aria-label="Custom color hex value" pattern={'#[0-9A-Fa-f]{6}'} maxlength="7" required />
     </span>
   {/if}
 </div>

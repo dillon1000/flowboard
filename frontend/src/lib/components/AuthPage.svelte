@@ -1,44 +1,21 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { enhance } from '$app/forms';
   import { page } from '$app/state';
-  import { api, messageFor } from '$lib/api';
+  import type { AuthActionData } from '$lib/server/auth';
   import type { AuthConfiguration } from '$lib/types';
   import { Columns3, Copy, LogIn, Users } from '@lucide/svelte';
   import BuildSignature from './BuildSignature.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
 
-  let { mode, configuration } = $props<{
+  let { mode, configuration, form = null } = $props<{
     mode: 'login' | 'register';
     configuration: AuthConfiguration;
+    form?: AuthActionData | null;
   }>();
   let pending = $state(false);
-  let requestError = $state(page.url.searchParams.get('oauth_error') ?? '');
 
   const isRegister = $derived(mode === 'register');
-
-  async function submit(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    const form = event.currentTarget as HTMLFormElement;
-    const data = new FormData(form);
-    const input: Record<string, string> = {
-      email: String(data.get('email') ?? ''),
-      password: String(data.get('password') ?? '')
-    };
-    if (isRegister) input.name = String(data.get('name') ?? '');
-
-    pending = true;
-    requestError = '';
-    try {
-      await api(`/api/v1/auth/${mode}`, { method: 'POST', body: JSON.stringify(input) });
-      const requested = page.url.searchParams.get('returnTo');
-      const destination = requested?.startsWith('/') && !requested.startsWith('//') ? requested : '/app';
-      await goto(destination, { invalidateAll: true });
-    } catch (cause) {
-      requestError = messageFor(cause);
-    } finally {
-      pending = false;
-    }
-  }
+  const requestError = $derived(pending ? '' : form?.message ?? page.url.searchParams.get('oauth_error') ?? '');
 </script>
 
 <svelte:head><title>{isRegister ? 'Create account' : 'Log in'} · Flowboard</title></svelte:head>
@@ -65,16 +42,22 @@
         <div class="auth-divider" aria-hidden="true"><span>or</span></div>
       {/if}
 
-      <form onsubmit={submit}>
+      <form method="POST" use:enhance={() => {
+        pending = true;
+        return async ({ update }) => {
+          await update();
+          pending = false;
+        };
+      }}>
         {#if isRegister}
           <div class="field">
             <label for="name">Name</label>
-            <input class="input" id="name" name="name" autocomplete="name" minlength="2" maxlength="80" required />
+            <input class="input" id="name" name="name" value={form?.values.name ?? ''} autocomplete="name" minlength="2" maxlength="80" required />
           </div>
         {/if}
         <div class="field">
           <label for="email">Email</label>
-          <input class="input" id="email" type="email" name="email" autocomplete="email" spellcheck="false" placeholder="you@example.com" required />
+          <input class="input" id="email" type="email" name="email" value={form?.values.email ?? ''} autocomplete="email" spellcheck="false" placeholder="you@example.com" required />
         </div>
         <div class="field">
           <label for="password">Password</label>

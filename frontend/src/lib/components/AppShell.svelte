@@ -14,12 +14,14 @@
   let createBoardOpen = $state(false);
   let sidebarOpen = $state(false);
   let collapsed = $state(false);
+  let hydrated = $state(false);
   let searchInput: HTMLInputElement;
   const activeBoards = $derived(
     context.common.boards.filter((board: BoardNavigationContext) => !board.isArchived)
   );
 
   onMount(() => {
+    hydrated = true;
     collapsed = document.documentElement.dataset.sidebar === 'collapsed';
     const syncSidebar = (event: StorageEvent): void => {
       if (event.key !== 'flowboard-sidebar') return;
@@ -61,9 +63,8 @@
 </script>
 
 <svelte:window onkeydown={handleShortcut} />
-<svelte:body class:study-overview-page={context.isOverview} />
 
-<div class="app-shell">
+<div class:study-overview-page={context.isOverview} class="app-shell" data-hydrated={hydrated ? 'true' : undefined}>
   <aside class="sidebar" data-open={sidebarOpen ? 'true' : undefined}>
     <div class="brand-row">
       <a class="brand" href="/app" aria-label="Flowboard home">

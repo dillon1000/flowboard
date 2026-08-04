@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { replaceState } from '$app/navigation';
   import type { TapExecutionResponse, TapPreparationResponse, TapTaskProperty } from '$lib/types';
   import { onMount, tick } from 'svelte';
 
@@ -25,7 +26,7 @@
 
   onMount(() => {
     token = location.hash.slice(1);
-    history.replaceState(null, '', location.pathname + location.search);
+    setTimeout(() => replaceState(location.pathname + location.search, {}), 0);
     requestID = crypto.randomUUID();
     if (!/^fbt_[A-Za-z0-9_-]{32}$/.test(token)) {
       showRotation('This Tap link is not valid', 'Ask the tag owner to program it again.');
