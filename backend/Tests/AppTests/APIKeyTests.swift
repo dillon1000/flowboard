@@ -41,8 +41,8 @@ struct APIKeyTests {
             #expect(bearer.status == .ok)
             #expect(try bearer.content.decode([BoardSummaryResponse].self).count == 1)
 
-            // CSRF middleware can create an anonymous session cookie. Reusing that
-            // cookie must not retain the identity that came from the API key.
+            // A middleware-created anonymous cookie must not retain the identity
+            // that came from the API key after the request ends.
             if let setCookie = bearer.headers[.setCookie].first {
                 let anonymousCookie = String(try #require(setCookie.split(separator: ";").first))
                 let cookieOnly = try await app.testing().sendRequest(

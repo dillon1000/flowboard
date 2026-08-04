@@ -56,13 +56,13 @@ struct OAuthTests {
 
             let appPage = try await app.testing().sendRequest(
                 .GET,
-                "app",
+                "api/v1/workspace",
                 headers: ["Cookie": callbackCookie]
             )
             #expect(appPage.status == .ok)
             expectContains(
                 appPage.body.string,
-                #"src="https://images.example/avatar.png""#
+                #""profilePictureURL":"https://images.example/avatar.png""#
             )
 
             let account = try #require(
@@ -122,8 +122,11 @@ struct OAuthTests {
                 headers: ["Cookie": cookie]
             )
 
-            #expect(callback.status == .unprocessableEntity)
-            expectContains(callback.body.string, "could not be verified")
+            #expect(callback.status == .seeOther)
+            expectContains(
+                callback.headers.first(name: .location),
+                "/login?oauth_error=The%20OAuth%20login%20request%20could%20not%20be%20verified."
+            )
             #expect(try await OAuthAccount.query(on: app.db).count() == 0)
         }
     }

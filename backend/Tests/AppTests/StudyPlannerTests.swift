@@ -49,22 +49,22 @@ struct StudyPlannerTests {
         #expect(planner.unscheduledAssignmentCount == 1)
     }
 
-    @Test("The overview renders course planning controls")
-    func overviewRendersPlanner() async throws {
+    @Test("The overview API returns course planning data")
+    func overviewReturnsPlannerData() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
             let response = try await app.testing().sendRequest(
                 .GET,
-                "app",
+                "api/v1/workspace",
                 headers: ["Cookie": session.cookie]
             )
 
             #expect(response.status == .ok)
-            expectContains(response.body.string, "This week")
-            expectContains(response.body.string, "Courses")
-            expectContains(response.body.string, "Plan this week")
-            expectContains(response.body.string, "Add assignment")
-            expectContains(response.body.string, "My board")
+            expectContains(response.body.string, #""pageTitle":"This week""#)
+            expectContains(response.body.string, #""weekLabel":""#)
+            expectContains(response.body.string, #""courseFilters""#)
+            expectContains(response.body.string, #""days""#)
+            expectContains(response.body.string, #""name":"My board""#)
         }
     }
 }

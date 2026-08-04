@@ -1,66 +1,50 @@
 @testable import App
 import Fluent
-import Foundation
 import Testing
 import Vapor
 import VaporTesting
 
 @Suite("Board workflow customization")
 struct WorkflowCustomizationTests {
-    @Test("An administrator can add and use custom status and severity values")
+    @Test("An administrator can add and use custom workflow values")
     func addAndUseCustomTaskOptions() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
-            let settings = try await app.testing().sendRequest(
-                .GET,
-                "app/boards/\(session.boardID)/settings",
-                headers: ["Cookie": session.cookie]
-            )
-            let csrfToken = try csrfToken(from: settings.body.string)
-            #expect(!settings.body.string.contains(#"type="color""#))
-            expectContains(settings.body.string, #"class="color-picker-grid" role="listbox""#)
-            expectContains(settings.body.string, #"data-menu-target="swatch" data-color="gray""#)
-
+            let green = try #require(BoardTaskOptionColor(rawValue: "green"))
+            let purple = try #require(BoardTaskOptionColor(rawValue: "#b144dd"))
             let statusResponse = try await app.testing().sendRequest(
                 .POST,
-                "app/boards/\(session.boardID)/task-options",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ],
+                "api/v1/boards/\(session.boardID)/task-options",
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
                     try request.content.encode(
-                        [
-                            "kind": "status",
-                            "name": "Released",
-                            "color": "green",
-                            "isCompleted": "true",
-                        ],
-                        as: .urlEncodedForm
+                        CreateTaskOptionTestRequest(
+                            kind: "status",
+                            name: "Released",
+                            color: green,
+                            isCompleted: true
+                        )
                     )
                 }
             )
-            #expect(statusResponse.status == .seeOther)
+            #expect(statusResponse.status == .ok)
 
             let severityResponse = try await app.testing().sendRequest(
                 .POST,
-                "app/boards/\(session.boardID)/task-options",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ],
+                "api/v1/boards/\(session.boardID)/task-options",
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
                     try request.content.encode(
-                        [
-                            "kind": "severity",
-                            "name": "Critical",
-                            "color": "#b144dd",
-                        ],
-                        as: .urlEncodedForm
+                        CreateTaskOptionTestRequest(
+                            kind: "severity",
+                            name: "Critical",
+                            color: purple,
+                            isCompleted: false
+                        )
                     )
                 }
             )
-            #expect(severityResponse.status == .seeOther)
+            #expect(severityResponse.status == .ok)
 
             let taskResponse = try await app.testing().sendRequest(
                 .POST,
@@ -109,22 +93,22 @@ struct WorkflowCustomizationTests {
                     .sort(\.$position, .ascending)
                     .first()
             )
-            let boardPage = try await app.testing().sendRequest(
+            let boardData = try await app.testing().sendRequest(
                 .GET,
-                "app/boards/\(session.boardID)/views/\(try view.requireID())",
+                "api/v1/workspace/boards/\(session.boardID)/views/\(try view.requireID())",
                 headers: ["Cookie": session.cookie]
             )
-            #expect(boardPage.status == .ok)
-            expectContains(boardPage.body.string, "Released")
-            expectContains(boardPage.body.string, "Critical")
-            expectContains(boardPage.body.string, "--workflow-color: #b144dd")
+            #expect(boardData.status == .ok)
+            expectContains(boardData.body.string, "Released")
+            expectContains(boardData.body.string, "Critical")
+            expectContains(boardData.body.string, "#b144dd")
         }
     }
+}
 
-    private func csrfToken(from page: String) throws -> String {
-        let marker = #"name="csrf-token" content=""#
-        let start = try #require(page.range(of: marker)?.upperBound)
-        let end = try #require(page[start...].firstIndex(of: "\""))
-        return String(page[start..<end])
-    }
+private struct CreateTaskOptionTestRequest: Content {
+    let kind: String
+    let name: String
+    let color: BoardTaskOptionColor
+    let isCompleted: Bool
 }

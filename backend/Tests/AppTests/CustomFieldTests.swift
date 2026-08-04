@@ -1,44 +1,31 @@
 @testable import App
 import Fluent
-import Foundation
 import Testing
 import Vapor
 import VaporTesting
 
 @Suite("Custom fields")
 struct CustomFieldTests {
-    @Test("Select definitions create stable options")
+    @Test("Select definitions create stable options and page data")
     func selectDefinitionsCreateOptions() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
-            let settings = try await app.testing().sendRequest(
-                .GET,
-                "app/boards/\(session.boardID)/settings",
-                headers: ["Cookie": session.cookie]
-            )
-            let csrfToken = try csrfToken(from: settings.body.string)
-            #expect(!settings.body.string.contains("<select"))
-            expectContains(settings.body.string, #"data-menu-target="input" type="hidden" name="color""#)
             let response = try await app.testing().sendRequest(
                 .POST,
-                "app/boards/\(session.boardID)/properties",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ],
+                "api/v1/boards/\(session.boardID)/properties",
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
                     try request.content.encode(
-                        [
-                            "name": "Regions",
-                            "type": "multi_select",
-                            "options": "North America, Europe, Asia Pacific",
-                        ],
-                        as: .urlEncodedForm
+                        CreatePropertyTestRequest(
+                            name: "Regions",
+                            type: .multiSelect,
+                            options: ["North America", "Europe", "Asia Pacific"]
+                        )
                     )
                 }
             )
+            #expect(response.status == .ok)
 
-            #expect(response.status == .seeOther)
             let board = try #require(try await Board.find(session.boardID, on: app.db))
             let definition = try #require(board.propertyDefinitions?.first)
             #expect(definition.type == .multiSelect)
@@ -64,17 +51,16 @@ struct CustomFieldTests {
                 primaryRegion.id: "europe",
             ]
             try await task.create(on: app.db)
-            let taskPage = try await app.testing().sendRequest(
+            let taskData = try await app.testing().sendRequest(
                 .GET,
-                String(task.browserPath.dropFirst()),
+                "api/v1/workspace/tasks/\(task.publicID)",
                 headers: ["Cookie": session.cookie]
             )
-            #expect(taskPage.status == .ok)
-            #expect(!taskPage.body.string.contains("<select"))
-            expectContains(taskPage.body.string, "North America, Europe")
-            expectContains(taskPage.body.string, #"name="property-\#(definition.id)-north-america""#)
-            expectContains(taskPage.body.string, #"name="property-primary-region" value="europe""#)
-            expectContains(taskPage.body.string, #"data-menu-target="value">Europe"#)
+            #expect(taskData.status == .ok)
+            expectContains(taskData.body.string, "North America, Europe")
+            expectContains(taskData.body.string, #""id":"north-america""#)
+            expectContains(taskData.body.string, #""id":"primary-region""#)
+            expectContains(taskData.body.string, #""inputValue":"europe""#)
         }
     }
 
@@ -113,11 +99,10 @@ struct CustomFieldTests {
     ) -> BoardPropertyDefinition {
         BoardPropertyDefinition(id: "field", name: "Field", type: type, options: options)
     }
+}
 
-    private func csrfToken(from page: String) throws -> String {
-        let marker = #"name="csrf-token" content=""#
-        let start = try #require(page.range(of: marker)?.upperBound)
-        let end = try #require(page[start...].firstIndex(of: "\""))
-        return String(page[start..<end])
-    }
+private struct CreatePropertyTestRequest: Content {
+    let name: String
+    let type: BoardPropertyType
+    let options: [String]
 }
