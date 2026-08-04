@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { expect, test, type APIRequestContext, type APIResponse, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type APIResponse, type Locator, type Page } from '@playwright/test';
 
 interface TestUser {
   name: string;
@@ -90,6 +90,11 @@ function collectBrowserErrors(page: Page): string[] {
 
 async function waitForHydration(page: Page): Promise<void> {
   await expect(page.locator('.app-shell')).toHaveAttribute('data-hydrated', 'true');
+}
+
+async function chooseMenu(root: Page | Locator, label: string, option: string): Promise<void> {
+  await root.getByLabel(label).click();
+  await root.getByRole('listbox', { name: label }).getByRole('option', { name: option, exact: true }).click();
 }
 
 test('server-renders auth and overview with an aligned profile control', async ({ page, browser }) => {
@@ -198,6 +203,11 @@ test('moves board cards and completes every core task-detail action', async ({ p
   await editButton.click();
   await expect(page.locator('#edit-title')).toBeFocused();
   await expect(page.locator('#edit-description')).toHaveAttribute('maxlength', '5000');
+  await page.getByLabel('Due date').click();
+  const calendar = page.locator('.flatpickr-calendar.open');
+  await expect(calendar).toBeVisible();
+  await calendar.locator('.flatpickr-day:not(.flatpickr-disabled):not(.prevMonthDay):not(.nextMonthDay)').first().click();
+  await expect(page.locator('#edit-due')).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
   await page.keyboard.press('Escape');
   await expect(editButton).toBeFocused();
   await editButton.click();
@@ -205,9 +215,14 @@ test('moves board cards and completes every core task-detail action', async ({ p
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.locator('.task-description strong')).toHaveText('Browser checked');
 
-  await page.locator('.task-status-select').selectOption('review');
+  const promote = page.getByRole('button', { name: 'Promote' });
+  await promote.click();
+  const promoteMenu = page.getByRole('listbox', { name: 'Change task status' });
+  await expect(promoteMenu).toBeVisible();
+  await promoteMenu.getByRole('option', { name: 'Review', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Task status updated');
-  await expect(page.locator('.task-status-select')).toHaveValue('review');
+  await expect(promote).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('.task-facts .badge.status')).toHaveText('Review');
 
   await page.getByLabel('New checklist item').fill('Verify native checklist');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
@@ -262,21 +277,21 @@ test('configures a board, manages API keys, and runs a public Tap action', async
   await waitForHydration(page);
   const viewForm = page.locator('#views form');
   await viewForm.getByPlaceholder('View name').fill('Browser table');
-  await viewForm.getByLabel('View type').selectOption('table');
+  await chooseMenu(viewForm, 'View type', 'Table');
   await viewForm.getByRole('button', { name: 'Add view' }).click();
   const viewRow = page.locator('#views .panel-row').filter({ hasText: 'Browser table' });
   await expect(viewRow).toBeVisible();
   await viewRow.getByRole('button', { name: 'Configure' }).click();
   const viewDialog = page.getByRole('dialog', { name: 'Configure Browser table' });
   await expect(viewDialog.getByLabel('Group board cards by')).toBeFocused();
-  await viewDialog.getByLabel('Group board cards by').selectOption('priority');
+  await chooseMenu(viewDialog, 'Group board cards by', 'Severity');
   await viewDialog.getByLabel('Sort field').fill('title');
-  await viewDialog.getByLabel('Sort direction').selectOption('descending');
+  await chooseMenu(viewDialog, 'Sort direction', 'Descending');
   await viewDialog.getByRole('button', { name: 'Save view' }).click();
   await expect(viewRow).toContainText('Grouped by Severity');
 
   const fieldForm = page.locator('#fields form');
-  await fieldForm.getByLabel('Field type').selectOption('select');
+  await chooseMenu(fieldForm, 'Field type', 'Select');
   await expect(fieldForm.getByLabel('Field options')).toBeVisible();
   await fieldForm.getByPlaceholder('Field name').fill('Browser region');
   await fieldForm.getByLabel('Field options').fill('North, South');
@@ -285,8 +300,10 @@ test('configures a board, manages API keys, and runs a public Tap action', async
 
   const statusForm = page.locator('#workflow .panel').first().locator('form');
   await statusForm.getByPlaceholder('Status name').fill('Browser complete');
-  await statusForm.getByLabel('Color').selectOption('custom');
-  await statusForm.getByLabel('Custom color hex value').fill('#2563eb');
+  await statusForm.getByLabel('Color').click();
+  await expect(statusForm.getByRole('dialog', { name: 'Choose workflow color' })).toBeVisible();
+  await statusForm.getByLabel('Custom color hex value').fill('2563eb');
+  await expect(statusForm.locator('input[name="color"]')).toHaveValue('#2563eb');
   await statusForm.getByText('Completed', { exact: true }).click();
   await statusForm.getByRole('button', { name: 'Add status' }).click();
   await expect(page.locator('#workflow')).toContainText('Browser complete');
