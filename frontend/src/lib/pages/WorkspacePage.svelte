@@ -3,6 +3,7 @@
   import AppShell from '$lib/components/AppShell.svelte';
   import APIKeysPage from './APIKeysPage.svelte';
   import BoardPage from './BoardPage.svelte';
+  import BoardSettingsPage from './BoardSettingsPage.svelte';
   import OverviewPage from './OverviewPage.svelte';
   import SettingsPage from './SettingsPage.svelte';
   import TaskDetailPage from './TaskDetailPage.svelte';
@@ -26,6 +27,8 @@
     <SettingsPage common={context.common} />
   {:else if context.isAPIKeys && context.apiKeys}
     <APIKeysPage keys={context.apiKeys} />
+  {:else if context.isBoardSettings && context.boardSettings}
+    <BoardSettingsPage board={context.boardSettings} />
   {:else}
     <div class="page"><header class="page-header"><div class="page-title"><h1>{context.pageTitle}</h1></div></header></div>
   {/if}
