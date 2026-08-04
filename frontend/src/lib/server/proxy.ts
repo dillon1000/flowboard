@@ -1,7 +1,14 @@
 import { backendFetch } from '$lib/server/backend';
 import type { RequestHandler } from '@sveltejs/kit';
 
-const REQUEST_HEADERS = ['accept', 'content-type', 'origin', 'referer', 'user-agent'];
+const REQUEST_HEADERS = [
+  'accept',
+  'authorization',
+  'content-type',
+  'origin',
+  'referer',
+  'user-agent'
+];
 const RESPONSE_HEADERS = [
   'cache-control',
   'content-disposition',
