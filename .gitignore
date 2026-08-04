@@ -5,6 +5,8 @@ frontend/dist/
 frontend/.svelte-kit/
 frontend/build/
 frontend/.playwright-cli/
+frontend/playwright-report/
+frontend/test-results/
 
 backend/.build/
 backend/.swiftpm/
