@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { api } from '$lib/api';
   import type { AppPageContext, BoardNavigationContext } from '$lib/types';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
@@ -60,10 +58,6 @@
     }
   }
 
-  async function logout(): Promise<void> {
-    await api('/api/v1/auth/logout', { method: 'POST' });
-    await goto('/login', { invalidateAll: true });
-  }
 </script>
 
 <svelte:window onkeydown={handleShortcut} />
@@ -114,10 +108,10 @@
         <Settings size={16} /><span>Settings</span>
       </a>
     </nav>
-    <button class="user-row" type="button" onclick={logout} title="Log out">
+    <a class="user-row" href="/app/settings" title={context.common.userName}>
       <Avatar avatar={context.common.userAvatar} />
       <span><strong>{context.common.userName}</strong><small>{context.common.userEmail}</small></span>
-    </button>
+    </a>
   </aside>
 
   <button class="sidebar-scrim" type="button" aria-label="Close navigation" onclick={() => (sidebarOpen = false)} hidden={!sidebarOpen}></button>
