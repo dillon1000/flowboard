@@ -4,12 +4,14 @@
   import type { APIKeysPageContext, CreatedAPIKeyResponse } from '$lib/types';
   import { Check, Copy, KeyRound, Plus } from '@lucide/svelte';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
+  import { showToast } from '$lib/ui/toast';
 
   let { keys } = $props<{ keys: APIKeysPageContext }>();
-  let createdKey = $state('');
+  let createdKeyOverride = $state('');
   let pending = $state(false);
   let requestError = $state('');
   let copied = $state(false);
+  const createdKey = $derived(createdKeyOverride || keys.createdKey);
 
   async function createKey(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -22,9 +24,10 @@
         method: 'POST',
         body: JSON.stringify({ name, expiresAt: null })
       });
-      createdKey = created.key;
+      createdKeyOverride = created.key;
       form.reset();
       await invalidateAll();
+      showToast('API key created');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -39,6 +42,7 @@
     try {
       await api(`/api/v1/auth/api-keys/${keyID}`, { method: 'DELETE' });
       await invalidateAll();
+      showToast('API key revoked');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -47,9 +51,15 @@
   }
 
   async function copyKey(): Promise<void> {
-    await navigator.clipboard.writeText(createdKey);
-    copied = true;
-    setTimeout(() => (copied = false), 1800);
+    requestError = '';
+    try {
+      await navigator.clipboard.writeText(createdKey);
+      copied = true;
+      showToast('API key copied');
+      setTimeout(() => (copied = false), 1800);
+    } catch (cause) {
+      requestError = messageFor(cause);
+    }
   }
 </script>
 
@@ -69,8 +79,33 @@
         {#if keys.hasKeys}<div class="panel">{#each keys.keys as key (key.id)}<div class="panel-row api-key-row"><KeyRound size={16} /><span class="panel-row-main"><strong>{key.name} · <code>{key.prefix}…</code></strong><span>Created {key.createdAt} · Expires {key.expiresAt} · Last used {key.lastUsedAt}</span></span><button class="button danger small" type="button" onclick={() => revoke(key.id)} disabled={pending}>Revoke</button></div>{/each}</div>{:else}<div class="panel"><div class="panel-row"><span class="panel-row-main"><strong>No API keys</strong><span>Create a key when you are ready to connect an integration.</span></span></div></div>{/if}
       </section>
 
-      <section class="section" aria-labelledby="use-key-title"><div class="section-heading"><div><h2 id="use-key-title">Use an API key</h2><p>Send the key as a Bearer credential on every API request.</p></div></div><div class="panel panel-form api-key-docs"><h3>Authentication header</h3><pre><code>Authorization: Bearer fbk_YOUR_KEY</code></pre><h3>Search tasks</h3><pre><code>curl -H 'Authorization: Bearer fbk_YOUR_KEY' \
-  '{keys.apiBaseURL}/tasks/search?q=release&amp;priority=high'</code></pre><h3>Common endpoints</h3><dl class="api-endpoints"><div><dt><code>GET, POST /boards</code></dt><dd>List or create courses.</dd></div><div><dt><code>/boards/&#123;boardID&#125;/views</code></dt><dd>Manage saved board views.</dd></div><div><dt><code>GET, POST /tasks</code></dt><dd>List or create tasks.</dd></div><div><dt><code>/tasks/&#123;taskID&#125;/comments</code></dt><dd>Manage task comments.</dd></div></dl><p>All resource paths start with <code>{keys.apiBaseURL}</code>. API keys use your account and board roles.</p></div></section>
+      <section class="section" aria-labelledby="use-key-title">
+        <div class="section-heading"><div><h2 id="use-key-title">Use an API key</h2><p>Send the key as a Bearer credential on every API request.</p></div></div>
+        <div class="panel panel-form api-key-docs">
+          <h3>Authentication header</h3>
+          <pre><code>Authorization: Bearer fbk_YOUR_KEY</code></pre>
+          <h3>Search tasks</h3>
+          <pre><code>curl -H 'Authorization: Bearer fbk_YOUR_KEY' \
+  '{keys.apiBaseURL}/tasks/search?q=release&amp;priority=high'</code></pre>
+          <h3>Common endpoints</h3>
+          <dl class="api-endpoints">
+            <div><dt><code>GET, POST /boards</code></dt><dd>List accessible boards or create a board.</dd></div>
+            <div><dt><code>GET, PATCH, DELETE /boards/&#123;boardID&#125;</code></dt><dd>Read, update, or delete one board.</dd></div>
+            <div><dt><code>/boards/&#123;boardID&#125;/members</code></dt><dd>List, add, change, or remove board members.</dd></div>
+            <div><dt><code>/boards/&#123;boardID&#125;/views</code></dt><dd>Manage saved Board, Table, Calendar, and Gallery views.</dd></div>
+            <div><dt><code>/boards/&#123;boardID&#125;/templates</code></dt><dd>Manage task templates and create tasks from them.</dd></div>
+            <div><dt><code>GET, POST /tasks</code></dt><dd>List filtered tasks or create a task.</dd></div>
+            <div><dt><code>GET /tasks/search?q=query</code></dt><dd>Search task titles, descriptions, and public IDs.</dd></div>
+            <div><dt><code>GET, PATCH, DELETE /tasks/&#123;taskID&#125;</code></dt><dd>Read, partially update, or delete one task.</dd></div>
+            <div><dt><code>POST /tasks/&#123;taskID&#125;/move</code></dt><dd>Move a task to a status and zero-based index.</dd></div>
+            <div><dt><code>/tasks/&#123;taskID&#125;/comments</code></dt><dd>List, create, update, or delete comments.</dd></div>
+            <div><dt><code>/tasks/&#123;taskID&#125;/checklist</code></dt><dd>Manage and reorder checklist items.</dd></div>
+            <div><dt><code>/tasks/&#123;taskID&#125;/followers</code></dt><dd>List followers or follow and unfollow a visible task.</dd></div>
+          </dl>
+          <p>All resource paths start with <code>{keys.apiBaseURL}</code>. Task list and search requests accept <code>page</code>, <code>per</code>, <code>boardID</code>, <code>status</code>, <code>priority</code>, <code>assigneeID</code>, and <code>archived</code>. Board lists accept <code>q</code> and <code>archived</code>.</p>
+          <p>PATCH requests change only supplied fields, and JSON <code>null</code> clears nullable values. API keys use your account and board roles. A key cannot create or revoke another key.</p>
+        </div>
+      </section>
     </div>
   </div>
 </div>
