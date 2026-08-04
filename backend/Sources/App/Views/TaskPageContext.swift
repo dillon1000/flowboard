@@ -291,8 +291,8 @@ struct AttachmentContext: Encodable {
         let preview = attachment.preview
         self.id = attachmentID
         self.fileName = attachment.fileName
-        self.href = "/app/attachments/\(attachmentID)"
-        self.previewHref = "/app/attachments/\(attachmentID)/preview"
+        self.href = "/api/v1/attachments/\(attachmentID)"
+        self.previewHref = "/api/v1/attachments/\(attachmentID)/preview"
         self.sizeDisplay = ByteCountFormatter.string(fromByteCount: Int64(attachment.byteCount), countStyle: .file)
         self.isImage = preview?.kind == .image
         self.isAudio = preview?.kind == .audio

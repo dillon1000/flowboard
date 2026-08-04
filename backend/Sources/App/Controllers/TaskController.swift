@@ -272,10 +272,9 @@ struct TaskController: RouteCollection {
         let attachments = try await TaskAttachment.query(on: req.db)
             .filter(\.$task.$id == taskID)
             .all()
-        let workspaceActions = WorkspaceActionController()
-        try await workspaceActions.deleteStoredAttachments(attachments, for: req)
+        try await AttachmentStorageService.delete(attachments, for: req)
         try await task.delete(on: req.db)
-        workspaceActions.removeLocalAttachmentDirectories(
+        AttachmentStorageService.removeLocalDirectories(
             boardID: task.$board.id,
             taskID: taskID,
             req: req
