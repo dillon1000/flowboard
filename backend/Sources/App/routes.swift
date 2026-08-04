@@ -9,10 +9,9 @@ func routes(_ app: Application) throws {
         HealthResponse(status: "ok", service: "flowboard-server")
     }
 
-    // Browser and account routes can create or destroy login sessions. REST
-    // resource routes use a separate middleware so API keys never become sessions.
+    // OAuth callbacks create browser sessions. Resource routes use separate
+    // middleware so API keys never become sessions.
     let sessionRoutes = app.grouped(User.sessionAuthenticator())
-    try sessionRoutes.register(collection: WebController())
     try sessionRoutes.register(collection: OAuthController())
 
     let api = app.grouped("api", "v1")
@@ -29,6 +28,13 @@ func routes(_ app: Application) throws {
     }
     try api.grouped(User.sessionAuthenticator()).register(collection: AuthController())
     try api.register(collection: TapExecutionController())
+
+    // SvelteKit requests these presentation-ready models during server rendering.
+    // They are session-only because they include private workspace navigation.
+    let workspace = api
+        .grouped(User.sessionAuthenticator(), User.guardMiddleware())
+        .grouped("workspace")
+    try workspace.register(collection: AppPageController())
 
     let protectedAPI = api.grouped(APIAuthenticationMiddleware(), User.guardMiddleware())
     try protectedAPI.register(collection: BoardController())

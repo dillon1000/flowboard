@@ -4,6 +4,7 @@ import Vapor
 struct AuthController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let auth = routes.grouped("auth")
+        auth.get("config", use: configuration)
         auth.post("register", use: register)
         auth.post("login", use: login)
 
@@ -12,6 +13,13 @@ struct AuthController: RouteCollection {
         protected.patch("me", use: updateProfile)
         protected.post("logout", use: logout)
         try protected.register(collection: APIKeyController())
+    }
+
+    func configuration(req: Request) -> AuthConfigurationResponse {
+        AuthConfigurationResponse(
+            oauthEnabled: req.application.oauthConfiguration != nil,
+            oauthProviderName: req.application.oauthConfiguration?.providerName ?? "OAuth"
+        )
     }
 
     func register(req: Request) async throws -> Response {
@@ -48,4 +56,9 @@ struct AuthController: RouteCollection {
         req.session.destroy()
         return .noContent
     }
+}
+
+struct AuthConfigurationResponse: Content {
+    let oauthEnabled: Bool
+    let oauthProviderName: String
 }
