@@ -94,6 +94,8 @@ struct NotificationEvent: Codable, Sendable {
         )
     }
 
+    /// Uses the task mutation timestamp so a retried request does not enqueue a
+    /// second email, while a later reassignment creates a new notification key.
     static func taskAssigned(
         task: Task,
         board: Board,
@@ -103,8 +105,10 @@ struct NotificationEvent: Codable, Sendable {
     ) throws -> Self {
         let taskID = try task.requireID()
         let assigneeID = try assignee.requireID()
+        let assignmentVersion = task.updatedAt ?? task.createdAt
+        let version = assignmentVersion.map { String(Int64($0.timeIntervalSince1970 * 1_000_000)) } ?? taskID.uuidString
         return Self(
-            deduplicationKey: "task-assignment:\(UUID().uuidString)",
+            deduplicationKey: "task-assignment:\(taskID.uuidString):\(assigneeID.uuidString):\(version)",
             type: .taskAssigned,
             recipient: assignee.email,
             data: [

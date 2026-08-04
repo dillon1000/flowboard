@@ -61,6 +61,9 @@ describe('flowboard email worker', () => {
       from: { email: 'notifications@mail.11011.dev', name: 'Flowboard' },
       subject: 'You were assigned Finish the report'
     });
+    expect(getSentMessage()).toMatchObject({
+      html: expect.stringContaining('https://app.example/tasks/finish-the-report-abc123')
+    });
   });
 
   it('rejects stale signatures before parsing the payload', async () => {

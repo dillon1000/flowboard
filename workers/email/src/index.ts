@@ -142,7 +142,7 @@ export async function createSignature(
 export function renderNotification(payload: NotificationPayload): NotificationTemplate {
   const recipientName = dataValue(payload.data, 'recipientName') || 'there';
   const actorName = dataValue(payload.data, 'actorName') || 'A Flowboard user';
-  const appURL = dataValue(payload.data, 'appURL');
+  const appURL = dataValue(payload.data, 'appURL') || dataValue(payload.data, 'taskURL');
 
   switch (payload.type) {
     case 'welcome': {
