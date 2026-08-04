@@ -1,3 +1,0 @@
-    <!-- Bundle names stay stable, so this release token must change when UI assets change. -->
-    <link rel="stylesheet" href="/assets/index.css?v=20260801-task-page" />
-    <script type="module" src="/assets/app.js?v=20260801-task-page"></script>

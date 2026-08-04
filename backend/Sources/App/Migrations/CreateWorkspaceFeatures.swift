@@ -1,6 +1,6 @@
 import Fluent
 
-/// Creates the saved-view and collaboration records used by the Leaf workspace.
+/// Creates the saved-view and collaboration records used by the workspace.
 /// Cascading task and board references keep deleted workspaces from leaving orphans.
 struct CreateWorkspaceFeatures: AsyncMigration {
     func prepare(on database: any Database) async throws {

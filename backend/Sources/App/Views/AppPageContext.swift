@@ -69,15 +69,14 @@ struct AppPageContext: Encodable {
 }
 
 struct CommonPageContext: Encodable {
-    let csrfToken: String
     let userName: String
     let userEmail: String
     let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
 }
 
-/// Supplies one image-or-initials choice to Leaf wherever a user identity appears.
-/// OAuth URLs are validated before storage, so templates only select the display.
+/// Supplies one image-or-initials choice wherever a user identity appears.
+/// OAuth URLs are validated before storage, so clients only select the display.
 struct AvatarContext: Encodable {
     let initials: String
     let profilePictureURL: String

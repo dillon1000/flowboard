@@ -40,7 +40,6 @@ extension AppPageController {
             )
         }
         return CommonPageContext(
-            csrfToken: req.csrfToken,
             userName: user.name,
             userEmail: user.email,
             userAvatar: AvatarContext(user: user),
