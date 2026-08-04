@@ -41,6 +41,7 @@ func routes(_ app: Application) throws {
     try protectedAPI.register(collection: BoardResourceController())
     try protectedAPI.register(collection: TaskController())
     try protectedAPI.register(collection: TaskResourceController())
+    try protectedAPI.register(collection: AttachmentController())
 }
 
 private struct HealthResponse: Content {

@@ -128,13 +128,9 @@ struct BoardController: RouteCollection {
             .filter(\.$board.$id == boardID)
             .with(\.$attachments)
             .all()
-        let workspaceActions = WorkspaceActionController()
-        try await workspaceActions.deleteStoredAttachments(
-            tasks.flatMap(\.attachments),
-            for: req
-        )
+        try await AttachmentStorageService.delete(tasks.flatMap(\.attachments), for: req)
         try await board.delete(on: req.db)
-        workspaceActions.removeLocalAttachmentDirectories(boardID: boardID, req: req)
+        AttachmentStorageService.removeLocalDirectories(boardID: boardID, req: req)
         return .noContent
     }
 
