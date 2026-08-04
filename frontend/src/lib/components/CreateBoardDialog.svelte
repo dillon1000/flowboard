@@ -3,6 +3,7 @@
   import type { BoardResponse } from '$lib/types';
   import { goto, invalidateAll } from '$app/navigation';
   import { X } from '@lucide/svelte';
+  import { dialogLayer } from '$lib/actions/dialogLayer';
 
   let { open = $bindable(false) } = $props<{ open: boolean }>();
   let pending = $state(false);
@@ -35,7 +36,7 @@
 </script>
 
 {#if open}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="create-board-title" tabindex="-1" onclick={(event) => event.target === event.currentTarget && (open = false)} onkeydown={(event) => event.key === 'Escape' && (open = false)}>
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="create-board-title" tabindex="-1" use:dialogLayer={{ close: () => (open = false) }}>
     <form class="dialog" onsubmit={submit}>
       <div class="dialog-header">
         <div>
@@ -48,7 +49,7 @@
         {#if error}<p class="error-message" role="alert">{error}</p>{/if}
         <div class="field">
           <label for="new-board-name">Course name</label>
-          <input class="input" id="new-board-name" name="name" minlength="2" maxlength="80" required />
+          <input class="input" id="new-board-name" name="name" minlength="2" maxlength="80" required data-dialog-focus />
         </div>
         <div class="field">
           <label for="new-board-description">Description</label>

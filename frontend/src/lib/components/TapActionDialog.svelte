@@ -3,6 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { BoardSettingsPageContext, TapActionContext } from '$lib/types';
   import { X } from '@lucide/svelte';
+  import { dialogLayer } from '$lib/actions/dialogLayer';
 
   let {
     open = $bindable(false),
@@ -62,13 +63,13 @@
 </script>
 
 {#if open}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="tap-action-title" tabindex="-1" onkeydown={(event) => event.key === 'Escape' && (open = false)} onclick={(event) => event.target === event.currentTarget && (open = false)}>
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="tap-action-title" tabindex="-1" use:dialogLayer={{ close: () => (open = false) }}>
     <form class="dialog wide" onsubmit={submit}>
       <div class="dialog-header"><div><h2 id="tap-action-title">{action ? `Edit ${action.name}` : 'New Tap action'}</h2><p>A bearer link can run only this fixed action.</p></div><button class="icon-button" type="button" onclick={() => (open = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body">
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
         <div class="form-grid">
-          <div class="field"><label for="tap-name">Name</label><input class="input" id="tap-name" name="name" value={action?.name ?? ''} maxlength="80" required /></div>
+          <div class="field"><label for="tap-name">Name</label><input class="input" id="tap-name" name="name" value={action?.name ?? ''} maxlength="80" required data-dialog-focus /></div>
           <div class="field"><label for="tap-kind">Action</label><select class="input" id="tap-kind" name="kind" bind:value={kind}><option value="create_task">Create task</option><option value="update_task">Update task</option></select></div>
           <div class="field wide"><label for="tap-description">Phone instructions</label><input class="input" id="tap-description" name="displayDescription" value={action?.displayDescription ?? ''} maxlength="280" /></div>
           {#if kind === 'create_task'}
