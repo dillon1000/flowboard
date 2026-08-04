@@ -55,9 +55,10 @@ struct AttachmentController: RouteCollection {
     }
 
     func download(req: Request) async throws -> Response {
-        let (attachment, _) = try await requiredAttachment(req, permission: .view)
+        let (attachment, task) = try await requiredAttachment(req, permission: .view)
         let response = try await AttachmentStorageService.response(
             for: attachment,
+            task: task,
             req: req
         )
         response.headers.contentDisposition = .init(.attachment, filename: attachment.fileName)
@@ -71,12 +72,13 @@ struct AttachmentController: RouteCollection {
     }
 
     func preview(req: Request) async throws -> Response {
-        let (attachment, _) = try await requiredAttachment(req, permission: .view)
+        let (attachment, task) = try await requiredAttachment(req, permission: .view)
         guard let preview = attachment.preview else {
             throw Abort(.unsupportedMediaType, reason: "This attachment cannot be previewed.")
         }
         let response = try await AttachmentStorageService.response(
             for: attachment,
+            task: task,
             req: req
         )
         response.headers.contentDisposition = .init(.inline, filename: attachment.fileName)
@@ -86,8 +88,8 @@ struct AttachmentController: RouteCollection {
     }
 
     func delete(req: Request) async throws -> HTTPStatus {
-        let (attachment, _) = try await requiredAttachment(req, permission: .edit)
-        try await AttachmentStorageService.delete(key: attachment.storageName, for: req)
+        let (attachment, task) = try await requiredAttachment(req, permission: .edit)
+        try await AttachmentStorageService.delete(attachment, task: task, for: req)
         try await attachment.delete(on: req.db)
         return .noContent
     }
