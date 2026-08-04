@@ -23,7 +23,6 @@ export type NotificationTemplate = {
 type NotificationContent = {
   subject: string;
   preview: string;
-  label: string;
   heading: string;
   greeting?: string;
   body: ReactNode;
@@ -34,125 +33,100 @@ type NotificationContent = {
 
 const styles = {
   body: {
-    backgroundColor: '#f4f4f1',
-    color: '#171717',
+    backgroundColor: '#f5f5f3',
+    color: '#1d1d1b',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
     margin: '0',
-    padding: '32px 12px'
+    padding: '0 16px'
   },
   container: {
     backgroundColor: '#ffffff',
-    border: '1px solid #deded8',
-    borderTop: '4px solid #7257e8',
-    borderRadius: '10px',
     margin: '0 auto',
-    maxWidth: '560px',
-    overflow: 'hidden'
+    maxWidth: '640px'
   },
   header: {
-    borderBottom: '1px solid #ecece7',
-    padding: '22px 32px 20px'
+    borderBottom: '1px solid #d9d9d4',
+    padding: '28px 48px 21px'
   },
   brand: {
-    color: '#171717',
-    fontSize: '15px',
-    fontWeight: '700',
-    letterSpacing: '0.08em',
-    lineHeight: '20px',
+    color: '#1d1d1b',
+    fontSize: '16px',
+    fontWeight: '600',
+    letterSpacing: '-0.02em',
+    lineHeight: '22px',
     margin: '0'
   },
   content: {
-    padding: '34px 32px 32px'
-  },
-  eyebrow: {
-    color: '#7257e8',
-    fontSize: '10px',
-    fontWeight: '700',
-    letterSpacing: '0.14em',
-    lineHeight: '16px',
-    margin: '0 0 12px',
-    textTransform: 'uppercase'
+    padding: '48px 48px 52px'
   },
   heading: {
-    color: '#171717',
-    fontSize: '26px',
+    color: '#1d1d1b',
+    fontSize: '24px',
     fontWeight: '700',
-    letterSpacing: '-0.025em',
-    lineHeight: '31px',
-    margin: '0 0 20px'
+    letterSpacing: '-0.02em',
+    lineHeight: '30px',
+    margin: '0 0 24px'
   },
   greeting: {
-    color: '#5e5e59',
+    color: '#5a5a54',
     fontSize: '14px',
     lineHeight: '22px',
     margin: '0 0 12px'
   },
   paragraph: {
-    color: '#4a4a45',
+    color: '#4b4b46',
     fontSize: '15px',
-    lineHeight: '23px',
-    margin: '0 0 16px'
+    lineHeight: '24px',
+    margin: '0 0 20px'
   },
   task: {
-    backgroundColor: '#fafaf8',
-    border: '1px solid #e6e6df',
-    borderRadius: '8px',
-    margin: '18px 0 22px',
-    padding: '15px 16px'
+    borderBottom: '1px solid #d9d9d4',
+    borderTop: '1px solid #d9d9d4',
+    margin: '8px 0 28px',
+    padding: '14px 0 15px'
   },
-  taskTitle: {
-    color: '#171717',
-    fontSize: '16px',
-    fontWeight: '700',
-    lineHeight: '22px',
-    margin: '0'
-  },
-  taskMeta: {
-    color: '#8c8c83',
+  taskBoard: {
+    color: '#8b8b84',
     fontSize: '12px',
     lineHeight: '18px',
-    margin: '4px 0 0'
+    margin: '0 0 4px'
+  },
+  taskTitle: {
+    color: '#1d1d1b',
+    fontSize: '18px',
+    fontWeight: '700',
+    lineHeight: '24px',
+    margin: '0'
   },
   quoteSection: {
-    borderLeft: '3px solid #7257e8',
-    margin: '22px 0 24px',
-    padding: '1px 0 1px 16px'
+    borderLeft: '2px solid #1d1d1b',
+    margin: '0 0 28px',
+    padding: '0 0 0 16px'
   },
   quote: {
-    color: '#4a4a45',
-    fontSize: '15px',
-    lineHeight: '23px',
+    color: '#33332f',
+    fontSize: '16px',
+    lineHeight: '25px',
     margin: '0',
     whiteSpace: 'pre-wrap'
   },
   action: {
-    color: '#171717',
+    color: '#604bc4',
     fontSize: '14px',
-    fontWeight: '700',
+    fontWeight: '600',
     lineHeight: '20px',
-    textDecoration: 'none'
-  },
-  actionArrow: {
-    color: '#7257e8',
-    fontSize: '18px',
-    lineHeight: '20px'
+    margin: '0',
+    textDecoration: 'underline'
   },
   divider: {
-    borderColor: '#ecece7',
-    margin: '0 32px'
+    borderColor: '#d9d9d4',
+    margin: '0'
   },
   footer: {
-    backgroundColor: '#fcfcfb',
-    padding: '18px 32px 24px'
+    padding: '18px 48px 30px'
   },
   footerText: {
-    color: '#999990',
-    fontSize: '12px',
-    lineHeight: '18px',
-    margin: '0 0 5px'
-  },
-  footerBrand: {
-    color: '#c0c0b9',
+    color: '#8b8b84',
     fontSize: '12px',
     lineHeight: '18px',
     margin: '0'
@@ -180,10 +154,9 @@ function NotificationEmail(content: NotificationContent): ReactElement {
       <Body style={styles.body}>
         <Container style={styles.container}>
           <Section style={styles.header}>
-            <Text style={styles.brand}>FLOWBOARD</Text>
+            <Text style={styles.brand}>Flowboard</Text>
           </Section>
           <Section style={styles.content}>
-            <Text style={styles.eyebrow}>{content.label}</Text>
             <Heading style={styles.heading}>{content.heading}</Heading>
             {content.greeting ? <Text style={styles.greeting}>{content.greeting}</Text> : null}
             {content.body}
@@ -195,15 +168,16 @@ function NotificationEmail(content: NotificationContent): ReactElement {
             {actionURL && content.actionLabel ? (
               <Text style={styles.action}>
                 <Link href={actionURL} style={styles.action}>
-                  {content.actionLabel} <span style={styles.actionArrow}>→</span>
+                  {content.actionLabel}
                 </Link>
               </Text>
             ) : null}
           </Section>
           <Hr style={styles.divider} />
           <Section style={styles.footer}>
-            <Text style={styles.footerText}>You received this because something changed in your workspace.</Text>
-            <Text style={styles.footerBrand}>Flowboard · Work, in view.</Text>
+            <Text style={styles.footerText}>
+              You received this because something changed in your Flowboard workspace.
+            </Text>
           </Section>
         </Container>
       </Body>
@@ -221,7 +195,6 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
       return {
         subject: 'Welcome to Flowboard',
         preview: 'Your Flowboard account is ready.',
-        label: 'Welcome',
         heading: 'Welcome to Flowboard',
         greeting: `Hi ${recipientName},`,
         body: <Text style={styles.paragraph}>Your Flowboard account is ready.</Text>,
@@ -234,17 +207,14 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
       return {
         subject: safeLine(`You joined ${boardName}`),
         preview: safeLine(`${actorName} added you to ${boardName} as a ${role}.`),
-        label: 'Board access',
-        heading: 'You joined a board',
-        greeting: `Hi ${recipientName},`,
+        heading: safeLine(`You joined ${boardName}`),
         body: (
           <Text style={styles.paragraph}>
-            <strong>{actorName}</strong> added you to <strong>{boardName}</strong> as a{' '}
-            <strong>{role}</strong>.
+            <strong>{actorName}</strong> added you as a <strong>{role}</strong>.
           </Text>
         ),
         actionURL: appURL,
-        actionLabel: 'Open the board'
+        actionLabel: 'View board'
       };
     }
     case 'task_comment_added': {
@@ -254,17 +224,11 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
       return {
         subject: safeLine(`${actorName} commented on ${taskTitle}`),
         preview: safeLine(`${actorName} commented on ${taskTitle}.`),
-        label: 'New comment',
-        heading: safeLine(`${actorName} commented`),
-        body: (
-          <>
-            <Text style={styles.paragraph}>on this task:</Text>
-            {taskDetails(taskTitle, boardName)}
-          </>
-        ),
+        heading: safeLine(`${actorName} commented on`),
+        body: taskDetails(taskTitle, boardName),
         quote: commentPreview || undefined,
         actionURL: appURL,
-        actionLabel: 'Open the task'
+        actionLabel: 'View task'
       };
     }
     case 'task_assigned': {
@@ -273,17 +237,15 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
       return {
         subject: safeLine(`You were assigned ${taskTitle}`),
         preview: safeLine(`${actorName} assigned you ${taskTitle}.`),
-        label: 'Assignment',
-        heading: safeLine(`${actorName} assigned a task`),
-        greeting: `Hi ${recipientName},`,
+        heading: 'You have a new assignment',
         body: (
           <>
-            <Text style={styles.paragraph}>You have a new task:</Text>
+            <Text style={styles.paragraph}>Assigned by <strong>{actorName}</strong>:</Text>
             {taskDetails(taskTitle, boardName)}
           </>
         ),
         actionURL: appURL,
-        actionLabel: 'Open the task'
+        actionLabel: 'View task'
       };
     }
   }
@@ -292,8 +254,8 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
 function taskDetails(taskTitle: string, boardName: string | undefined): ReactElement {
   return (
     <Section style={styles.task}>
+      {boardName ? <Text style={styles.taskBoard}>{boardName}</Text> : null}
       <Text style={styles.taskTitle}>{taskTitle}</Text>
-      {boardName ? <Text style={styles.taskMeta}>{boardName}</Text> : null}
     </Section>
   );
 }
