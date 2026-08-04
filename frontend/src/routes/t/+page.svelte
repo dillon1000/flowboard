@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TapExecutionResponse, TapPreparationResponse, TapTaskProperty } from '$lib/types';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
 
   type TapState = 'running' | 'ready' | 'success' | 'error' | 'rotation';
 
@@ -21,6 +21,7 @@
   let requestID = '';
   let prepared: TapPreparationResponse | null = $state(null);
   let retryAction: (() => Promise<void>) | null = $state(null);
+  let titleInput: HTMLInputElement | undefined;
 
   onMount(() => {
     token = location.hash.slice(1);
@@ -63,6 +64,8 @@
         tapState = 'ready';
         heading = prepared.actionName || 'Create task';
         detail = prepared.actionDescription || 'Enter the task details.';
+        await tick();
+        titleInput?.focus();
       } else {
         await execute(null);
       }
@@ -167,16 +170,16 @@
       {#if tapState === 'ready' && prepared?.task}
         <form class="tap-form" onsubmit={submitTask}>
           <div class="form-grid">
-            <label class="field wide"><span class="field-label">Task title</span><input name="title" maxlength="120" required /></label>
-            <label class="field wide"><span class="field-label">Task description</span><textarea name="description" maxlength="2000"></textarea></label>
+            <label class="field wide"><span class="field-label">Task title</span><input bind:this={titleInput} name="title" maxlength="120" required /></label>
+            <label class="field wide"><span class="field-label">Task description</span><textarea name="description" maxlength="5000"></textarea></label>
             <label class="field"><span class="field-label">Status</span><select name="status" value={prepared.task.status}>{#each prepared.task.statuses as option}<option value={option.id}>{option.name}</option>{/each}</select></label>
             <label class="field"><span class="field-label">Severity</span><select name="priority" value={prepared.task.priority}>{#each prepared.task.priorities as option}<option value={option.id}>{option.name}</option>{/each}</select></label>
             <label class="field"><span class="field-label">Start date</span><input type="date" name="startAt" /></label>
             <label class="field"><span class="field-label">Due date</span><input type="date" name="dueAt" /></label>
-            <label class="field wide"><span class="field-label">Labels</span><input name="labels" placeholder="Design, Launch" /></label>
+            <label class="field wide"><span class="field-label">Labels</span><input name="labels" maxlength="500" placeholder="Design, Launch" /></label>
             {#each prepared.task.properties as property (property.id)}
               <label class:wide={property.type === 'text' || property.type === 'checkbox'} class="field"><span class="field-label">{property.name}</span>
-                {#if property.type === 'select' || property.type === 'person'}<select name={`property-${property.id}`}><option value="">Select an option</option>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'multi_select'}<select name={`property-${property.id}`} multiple>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'checkbox'}<span class="check-field"><input type="checkbox" name={`property-${property.id}`} />Set this field</span>{:else}<input type={property.type === 'text' ? 'text' : property.type} name={`property-${property.id}`} />{/if}
+                {#if property.type === 'select' || property.type === 'person'}<select name={`property-${property.id}`}><option value="">Select an option</option>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'multi_select'}<select name={`property-${property.id}`} multiple>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'checkbox'}<span class="check-field"><input type="checkbox" name={`property-${property.id}`} />Set this field</span>{:else}<input type={property.type === 'text' ? 'text' : property.type} name={`property-${property.id}`} maxlength={property.type === 'text' ? 2000 : undefined} />{/if}
               </label>
             {/each}
           </div>
