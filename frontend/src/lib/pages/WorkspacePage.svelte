@@ -9,7 +9,10 @@
   import TaskDetailPage from './TaskDetailPage.svelte';
   import TasksPage from './TasksPage.svelte';
 
-  let { context } = $props<{ context: AppPageContext }>();
+  let { context, descriptionHTML = '' } = $props<{
+    context: AppPageContext;
+    descriptionHTML?: string;
+  }>();
 </script>
 
 <svelte:head><title>{context.documentTitle}</title></svelte:head>
@@ -22,7 +25,7 @@
   {:else if context.isBoard && context.board}
     <BoardPage board={context.board} />
   {:else if context.isTaskDetail && context.taskDetail}
-    <TaskDetailPage detail={context.taskDetail} currentUserAvatar={context.common.userAvatar} />
+    <TaskDetailPage detail={context.taskDetail} currentUserAvatar={context.common.userAvatar} {descriptionHTML} />
   {:else if context.isProfileSettings}
     <SettingsPage common={context.common} />
   {:else if context.isAPIKeys && context.apiKeys}

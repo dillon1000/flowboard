@@ -3,4 +3,4 @@
   let { data } = $props();
 </script>
 
-<WorkspacePage context={data.context} />
+<WorkspacePage context={data.context} descriptionHTML={data.descriptionHTML} />

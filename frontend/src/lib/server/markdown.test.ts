@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderMarkdown } from './markdown';
 
-describe('renderMarkdown', () => {
+describe('server renderMarkdown', () => {
   it('renders the supported task formatting', () => {
     const result = renderMarkdown('# Release notes\n\n- **Ready**');
 

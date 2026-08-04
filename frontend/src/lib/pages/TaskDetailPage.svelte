@@ -1,7 +1,6 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import { renderMarkdown } from '$lib/markdown';
   import type { AvatarContext, ChecklistContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { Archive, Bell, CalendarDays, Check, Download, Paperclip, Plus, Trash2, Upload, User, X } from '@lucide/svelte';
@@ -14,9 +13,10 @@
   // server limit so a user gets a useful message before an upload starts.
   const maxAttachmentBytes = 10_000_000;
 
-  let { detail, currentUserAvatar } = $props<{
+  let { detail, currentUserAvatar, descriptionHTML } = $props<{
     detail: TaskDetailPageContext;
     currentUserAvatar: AvatarContext;
+    descriptionHTML: string;
   }>();
   let editOpen = $state(false);
   let deleteOpen = $state(false);
@@ -33,7 +33,6 @@
   const completedChecklist = $derived(
     checklist.filter((item: ChecklistContext) => item.isCompleted).length
   );
-  const descriptionHTML = $derived(renderMarkdown(detail.task.description));
   const commentDraftKey = $derived(`flowboard-comment-draft:${detail.task.id}`);
 
   $effect(() => {
