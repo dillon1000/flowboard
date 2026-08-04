@@ -133,8 +133,8 @@
           <div class="field wide"><label for="assignment-title">Title</label><input class="input" id="assignment-title" name="title" maxlength="120" required data-dialog-focus /></div>
           <div class="field"><label for="assignment-course">Course</label><select class="input" id="assignment-course" name="boardID" value={overview.defaultCourseID}>{#each overview.courseFilters as course}<option value={course.id}>{course.name}</option>{/each}</select></div>
           <div class="field"><label for="assignment-due">Due date</label><input class="input" id="assignment-due" type="date" name="dueAt" /></div>
-          <div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="2000"></textarea></div>
-          <div class="field wide"><label for="assignment-labels">Type</label><input class="input" id="assignment-labels" name="labels" placeholder="Lab report, Reading, Discussion" /></div>
+          <div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="5000"></textarea></div>
+          <div class="field wide"><label for="assignment-labels">Type</label><input class="input" id="assignment-labels" name="labels" maxlength="500" placeholder="Lab report, Reading, Discussion" /></div>
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (createTaskOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Adding…' : 'Add assignment'}</button></div>
