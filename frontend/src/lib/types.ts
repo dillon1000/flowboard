@@ -468,3 +468,31 @@ export interface CreatedAPIKeyResponse {
   expiresAt: string | null;
   createdAt: string | null;
 }
+
+export interface TapTaskProperty {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'url' | 'email' | 'person';
+  options: { id: string; name: string }[];
+}
+
+export interface TapTaskForm {
+  status: string;
+  priority: string;
+  statuses: { id: string; name: string }[];
+  priorities: { id: string; name: string }[];
+  properties: TapTaskProperty[];
+}
+
+export interface TapPreparationResponse {
+  actionName: string;
+  actionDescription: string | null;
+  kind: 'create_task' | 'update_task';
+  task: TapTaskForm | null;
+}
+
+export interface TapExecutionResponse {
+  actionName: string;
+  actionDescription: string | null;
+  message: string;
+}
