@@ -261,6 +261,36 @@ form.panel-row .menu {
   flex: 1 1 160px;
 }
 
+.workflow-color-field {
+  display: flex;
+  min-width: 160px;
+  flex: 1 1 160px;
+  gap: 8px;
+}
+
+.workflow-color-field > .input {
+  min-width: 112px;
+}
+
+.workflow-custom-color {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 180px;
+  align-items: center;
+  gap: 8px;
+}
+
+.workflow-custom-color input[type='color'] {
+  width: 38px;
+  height: 34px;
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  cursor: pointer;
+}
+
 form.panel-row .button {
   flex: 0 0 auto;
 }
