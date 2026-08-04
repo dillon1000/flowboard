@@ -21,11 +21,14 @@ if [ "$#" -gt 0 ]; then
     exec gosu vapor ./App "$@"
 fi
 
-gosu vapor ./App migrate --yes --env production
+# Railway uses production by default. Local HTTP runs can select development so
+# Vapor does not mark the session cookie as Secure.
+app_environment="${APP_ENVIRONMENT:-production}"
+gosu vapor ./App migrate --yes --env "$app_environment"
 
 backend_port="${BACKEND_PORT:-8081}"
 public_port="${PORT:-8080}"
-gosu vapor ./App serve --env production --hostname 127.0.0.1 --port "$backend_port" &
+gosu vapor ./App serve --env "$app_environment" --hostname 127.0.0.1 --port "$backend_port" &
 backend_pid=$!
 
 gosu vapor env \
