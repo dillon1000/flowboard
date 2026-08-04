@@ -7,6 +7,11 @@
   import { Archive, Bell, CalendarDays, Check, Download, Paperclip, Plus, Trash2, Upload, User, X } from '@lucide/svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
+  import { onMount } from 'svelte';
+
+  // The API rejects larger request bodies. Keep the browser limit equal to the
+  // server limit so a user gets a useful message before an upload starts.
+  const maxAttachmentBytes = 10_000_000;
 
   let { detail, currentUserAvatar } = $props<{
     detail: TaskDetailPageContext;
@@ -18,11 +23,25 @@
   let requestError = $state('');
   let commentBody = $state('');
   let selectedFileName = $state('No file chosen');
+  let checklist = $state<ChecklistContext[]>([]);
+  let pendingChecklistIDs = $state<string[]>([]);
+  let uploadPending = $state(false);
+  let uploadProgress = $state(0);
+  let uploadError = $state('');
 
   const completedChecklist = $derived(
-    detail.checklist.filter((item: ChecklistContext) => item.isCompleted).length
+    checklist.filter((item: ChecklistContext) => item.isCompleted).length
   );
   const descriptionHTML = $derived(renderMarkdown(detail.task.description));
+  const commentDraftKey = $derived(`flowboard-comment-draft:${detail.task.id}`);
+
+  $effect(() => {
+    checklist = detail.checklist.map((item: ChecklistContext) => ({ ...item }));
+  });
+
+  onMount(() => {
+    commentBody = sessionStorage.getItem(commentDraftKey) ?? '';
+  });
 
   function apiDate(value: FormDataEntryValue | null): string | null {
     const date = String(value ?? '');
@@ -80,10 +99,25 @@
   }
 
   async function toggleChecklist(itemID: string, isCompleted: boolean): Promise<void> {
-    await mutate(`/api/v1/tasks/${detail.task.id}/checklist/${itemID}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ isCompleted: !isCompleted })
-    });
+    if (pendingChecklistIDs.includes(itemID)) return;
+    const item = checklist.find((candidate) => candidate.id === itemID);
+    if (!item) return;
+
+    item.isCompleted = !isCompleted;
+    pendingChecklistIDs = [...pendingChecklistIDs, itemID];
+    requestError = '';
+    try {
+      await api(`/api/v1/tasks/${detail.task.id}/checklist/${itemID}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isCompleted: !isCompleted })
+      });
+      await invalidateAll();
+    } catch (cause) {
+      item.isCompleted = isCompleted;
+      requestError = messageFor(cause);
+    } finally {
+      pendingChecklistIDs = pendingChecklistIDs.filter((id) => id !== itemID);
+    }
   }
 
   async function addChecklist(event: SubmitEvent): Promise<void> {
@@ -95,7 +129,23 @@
 
   async function addComment(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    if (await mutate(`/api/v1/tasks/${detail.task.id}/comments`, { method: 'POST', body: JSON.stringify({ body: commentBody }) })) commentBody = '';
+    if (await mutate(`/api/v1/tasks/${detail.task.id}/comments`, { method: 'POST', body: JSON.stringify({ body: commentBody }) })) {
+      commentBody = '';
+      sessionStorage.removeItem(commentDraftKey);
+    }
+  }
+
+  function updateCommentDraft(event: Event): void {
+    commentBody = (event.currentTarget as HTMLTextAreaElement).value;
+    if (commentBody) sessionStorage.setItem(commentDraftKey, commentBody);
+    else sessionStorage.removeItem(commentDraftKey);
+  }
+
+  function submitCommentShortcut(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) return;
+    event.preventDefault();
+    const textarea = event.currentTarget as HTMLTextAreaElement;
+    if (!pending && commentBody.trim()) textarea.form?.requestSubmit();
   }
 
   async function saveProperties(event: SubmitEvent): Promise<void> {
@@ -119,10 +169,59 @@
   async function uploadAttachment(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
-    if (await mutate(`/api/v1/tasks/${detail.task.id}/attachments`, { method: 'POST', body: new FormData(form) })) {
+    const input = form.elements.namedItem('file');
+    const file = input instanceof HTMLInputElement ? input.files?.[0] : null;
+    if (!file) return;
+    if (file.size > maxAttachmentBytes) {
+      uploadError = 'Choose a file that is 10 MB or smaller.';
+      return;
+    }
+
+    uploadPending = true;
+    uploadProgress = 0;
+    uploadError = '';
+    try {
+      await uploadForm(`/api/v1/tasks/${detail.task.id}/attachments`, new FormData(form));
       form.reset();
       selectedFileName = 'No file chosen';
+      await invalidateAll();
+    } catch (cause) {
+      uploadError = messageFor(cause);
+    } finally {
+      uploadPending = false;
     }
+  }
+
+  function selectAttachment(event: Event): void {
+    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+    selectedFileName = file?.name ?? 'No file chosen';
+    uploadError = file && file.size > maxAttachmentBytes ? 'Choose a file that is 10 MB or smaller.' : '';
+  }
+
+  /** Uploads one attachment and reports browser upload progress. */
+  function uploadForm(path: string, data: FormData): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open('POST', path);
+      request.responseType = 'json';
+      request.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) uploadProgress = Math.min(100, Math.round((event.loaded / event.total) * 100));
+      });
+      request.addEventListener('load', () => {
+        if (request.status >= 200 && request.status < 300) {
+          uploadProgress = 100;
+          resolve();
+          return;
+        }
+        const payload: unknown = request.response;
+        const reason = payload && typeof payload === 'object' && 'reason' in payload
+          ? (payload as { reason?: unknown }).reason
+          : null;
+        reject(new Error(typeof reason === 'string' ? reason : request.statusText || 'The upload failed.'));
+      });
+      request.addEventListener('error', () => reject(new Error('The upload could not reach the server.')));
+      request.send(data);
+    });
   }
 
   async function archiveTask(): Promise<void> {
@@ -157,37 +256,37 @@
       </div>
     </div>
     <div class="page-actions">
-      {#if detail.canEdit}<label class="select-button"><span class="sr-only">Change status</span><select value={detail.task.statusValue} onchange={(event) => changeStatus(event.currentTarget.value)} disabled={pending}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></label>{/if}
+      {#if detail.canEdit}<label class="task-status-control"><span class="sr-only">Change status</span><select class="input task-status-select" value={detail.task.statusValue} onchange={(event) => changeStatus(event.currentTarget.value)} disabled={pending}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></label>{/if}
       <button class="button" type="button" onclick={toggleFollow} disabled={pending}><Bell size={15} />{detail.isFollowing ? 'Unfollow' : 'Follow'}<span class="badge count tabular">{detail.followerCount}</span></button>
       {#if detail.canEdit}<button class="button" type="button" onclick={() => (editOpen = true)}>Edit task</button>{/if}
     </div>
   </header>
   {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
 
-  <div class="task-layout">
+  <div class="split-layout">
     <div class="task-main">
       <section class="card"><div class="card-header"><h2>Description</h2></div><div class="card-body">{#if detail.task.hasDescription}<div class="task-description markdown">{@html descriptionHTML}</div>{:else}<div class="task-description empty">No description yet.</div>{/if}</div></section>
 
       <section class="card">
-        <div class="card-header"><h2>Checklist</h2><span class="checklist-progress"><span>{detail.checklist.length ? `${completedChecklist} of ${detail.checklist.length}` : 'No items'}</span><progress class="progress" value={completedChecklist} max={detail.checklist.length || 1}></progress></span></div>
-        {#if detail.hasChecklist}<div class="card-body"><div class="checklist">{#each detail.checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item"><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pending} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span></div>{/each}</div></div>{:else}<p class="card-empty">Nothing to check off yet.</p>{/if}
+        <div class="card-header"><h2>Checklist</h2><span class="checklist-progress"><span>{checklist.length ? `${completedChecklist} of ${checklist.length}` : 'No items'}</span><progress class="progress" value={completedChecklist} max={checklist.length || 1}></progress></span></div>
+        {#if checklist.length}<div class="card-body"><div class="checklist">{#each checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item" data-pending={pendingChecklistIDs.includes(item.id) ? 'true' : undefined}><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pendingChecklistIDs.includes(item.id)} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span></div>{/each}</div></div>{:else}<p class="card-empty">Nothing to check off yet.</p>{/if}
         {#if detail.canEdit}<div class="card-footer"><form class="checklist-add" onsubmit={addChecklist}><input class="input" name="title" placeholder="Add checklist item" maxlength="200" required aria-label="New checklist item" /><button class="button" type="submit" disabled={pending}><Plus size={14} />Add</button></form></div>{/if}
       </section>
 
       <section class="card">
         <div class="card-header"><h2>Attachments</h2></div>
         {#if detail.hasAttachments}<div class="card-body"><div class="attachment-grid">{#each detail.attachments as attachment (attachment.id)}<div class="attachment">
-          {#if attachment.isImage}<a class="attachment-media attachment-image" href={`/api/v1/attachments/${attachment.id}/preview`} target="_blank" rel="noopener"><img src={`/api/v1/attachments/${attachment.id}/preview`} alt="" loading="lazy" /></a>{:else if attachment.isAudio}<div class="attachment-media attachment-audio"><audio controls preload="metadata" src={`/api/v1/attachments/${attachment.id}/preview`} aria-label={`Preview ${attachment.fileName}`}></audio></div>{:else if attachment.isVideo}<div class="attachment-media attachment-video"><!-- svelte-ignore a11y_media_has_caption --><video controls preload="metadata" src={`/api/v1/attachments/${attachment.id}/preview`} aria-label={`Preview ${attachment.fileName}`} playsinline></video></div>{:else}<span class="attachment-file-icon"><Paperclip size={20} /></span>{/if}
-          <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={`/api/v1/attachments/${attachment.id}`}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this attachment?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' })}><Trash2 size={13} />Delete</button>{/if}</span></div>
+          {#if attachment.isImage}<a class="attachment-media attachment-image" href={attachment.previewHref} target="_blank" rel="noopener"><img src={attachment.previewHref} alt="" loading="lazy" /></a>{:else if attachment.isAudio}<div class="attachment-media attachment-audio"><audio controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`}></audio></div>{:else if attachment.isVideo}<div class="attachment-media attachment-video"><!-- svelte-ignore a11y_media_has_caption --><video controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`} playsinline></video></div>{:else}<span class="attachment-file-icon"><Paperclip size={20} /></span>{/if}
+          <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={attachment.href}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this attachment?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' })}><Trash2 size={13} />Delete</button>{/if}</span></div>
         </div>{/each}</div></div>{:else}<p class="card-empty">No files attached.</p>{/if}
-        {#if detail.canEdit}<div class="card-footer"><form class="attachment-upload-form" onsubmit={uploadAttachment}><span class="file-field"><label class="button small"><Upload size={13} />Choose file<input class="sr-only" type="file" name="file" required onchange={(event) => (selectedFileName = event.currentTarget.files?.[0]?.name ?? 'No file chosen')} /></label><span class="file-name">{selectedFileName}</span><button class="button small primary" type="submit" disabled={pending}>Upload</button></span></form></div>{/if}
+        {#if detail.canEdit}<div class="card-footer"><form class="attachment-upload-form" onsubmit={uploadAttachment}><span class="file-field"><label class="button small" aria-disabled={uploadPending}><Upload size={13} />Choose file<input class="sr-only" type="file" name="file" required disabled={uploadPending} onchange={selectAttachment} /></label><span class="file-name">{selectedFileName}</span><button class="button small primary" type="submit" disabled={uploadPending || !!uploadError}>{uploadPending ? 'Uploading…' : 'Upload'}</button></span>{#if uploadPending}<div class="upload-progress" aria-live="polite"><div class="upload-progress-meta"><span>Uploading attachment</span><span class="tabular">{uploadProgress}%</span></div><progress class="upload-progress-bar" max="100" value={uploadProgress}></progress></div>{/if}{#if uploadError}<p class="upload-error" role="alert">{uploadError}</p>{/if}</form></div>{/if}
       </section>
 
       <section class="card">
         <div class="card-header"><h2>Comments</h2><span class="badge count tabular">{detail.comments.length}</span></div>
         {#if !detail.hasComments}<p class="card-empty">No comments yet.</p>{/if}
         <div class="comment-thread">{#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' })}>Delete</button></div>{/if}</div></div>{/each}</div>
-        {#if detail.canComment}<form class="comment-composer" onsubmit={addComment}><Avatar avatar={currentUserAvatar} /><div><label class="sr-only" for="new-comment">Add a comment</label><textarea class="textarea" id="new-comment" bind:value={commentBody} maxlength="4000" placeholder="Leave a comment…" required></textarea><div class="form-actions"><span class="comment-draft-meta"><span class="tabular">{commentBody.length} / 4000</span><kbd>⌘ Enter</kbd></span><button class="button primary" type="submit" disabled={pending || !commentBody.trim()}>Comment</button></div></div></form>{/if}
+        {#if detail.canComment}<form class="comment-composer" onsubmit={addComment}><Avatar avatar={currentUserAvatar} /><div><label class="sr-only" for="new-comment">Add a comment</label><textarea class="textarea" id="new-comment" value={commentBody} oninput={updateCommentDraft} onkeydown={submitCommentShortcut} maxlength="4000" placeholder="Leave a comment…" required></textarea><div class="form-actions"><span class="comment-draft-meta"><span class="tabular">{commentBody.length} / 4000</span><kbd>⌘/Ctrl Enter</kbd></span><button class="button primary" type="submit" disabled={pending || !commentBody.trim()}>Comment</button></div></div></form>{/if}
       </section>
     </div>
 
@@ -201,6 +300,6 @@
   </div>
 </div>
 
-{#if editOpen}<div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}><form class="dialog wide" onsubmit={saveTask}><div class="dialog-header"><div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body"><div class="form-grid"><div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="2000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div><div class="field"><label for="edit-status">Status</label><select class="input" id="edit-status" name="status" value={detail.task.statusValue}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field"><label for="edit-priority">Severity</label><select class="input" id="edit-priority" name="priority" value={detail.task.priorityValue}>{#each detail.task.severityOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field wide"><label for="edit-assignee">Assignee</label><select class="input" id="edit-assignee" name="assigneeID" value={detail.task.assigneeID}><option value="">Unassigned</option>{#each detail.members as member}<option value={member.id}>{member.name} · {member.email}</option>{/each}</select></div><div class="field"><label for="edit-start">Start date</label><input class="input" id="edit-start" type="date" name="startAt" value={detail.task.startInput} /></div><div class="field"><label for="edit-due">Due date</label><input class="input" id="edit-due" type="date" name="dueAt" value={detail.task.dueInput} /></div><div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} /></div></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div></form></div>{/if}
+{#if editOpen}<div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}><form class="dialog wide" onsubmit={saveTask}><div class="dialog-header"><div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body"><div class="form-grid"><div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div><div class="field"><label for="edit-status">Status</label><select class="input" id="edit-status" name="status" value={detail.task.statusValue}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field"><label for="edit-priority">Severity</label><select class="input" id="edit-priority" name="priority" value={detail.task.priorityValue}>{#each detail.task.severityOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field wide"><label for="edit-assignee">Assignee</label><select class="input" id="edit-assignee" name="assigneeID" value={detail.task.assigneeID}><option value="">Unassigned</option>{#each detail.members as member}<option value={member.id}>{member.name} · {member.email}</option>{/each}</select></div><div class="field"><label for="edit-start">Start date</label><input class="input" id="edit-start" type="date" name="startAt" value={detail.task.startInput} /></div><div class="field"><label for="edit-due">Due date</label><input class="input" id="edit-due" type="date" name="dueAt" value={detail.task.dueInput} /></div><div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div></form></div>{/if}
 
 {#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-task-title">Delete this task?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteTask} disabled={pending}>Delete task</button></div></div></div>{/if}
