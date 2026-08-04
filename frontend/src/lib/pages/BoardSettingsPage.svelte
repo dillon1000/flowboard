@@ -5,6 +5,7 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import TapActionDialog from '$lib/components/TapActionDialog.svelte';
   import WorkflowColorField from '$lib/components/WorkflowColorField.svelte';
+  import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
   import type {
     BoardResponse,
     BoardSettingsPageContext,
@@ -48,12 +49,47 @@
   let nfcSupported = $state(false);
   let deleteOpen = $state(false);
   let propertyType = $state('text');
+  const viewTypeOptions: SelectMenuOption[] = [
+    { value: 'board', label: 'Board' },
+    { value: 'table', label: 'Table' },
+    { value: 'calendar', label: 'Calendar' },
+    { value: 'gallery', label: 'Gallery' }
+  ];
+  const fieldTypeOptions: SelectMenuOption[] = [
+    { value: 'text', label: 'Text' },
+    { value: 'number', label: 'Number' },
+    { value: 'select', label: 'Select' },
+    { value: 'multi_select', label: 'Multi-select' },
+    { value: 'date', label: 'Date' },
+    { value: 'checkbox', label: 'Checkbox' },
+    { value: 'url', label: 'URL' },
+    { value: 'email', label: 'Email' },
+    { value: 'person', label: 'Person' }
+  ];
+  const memberRoleOptions: SelectMenuOption[] = [
+    { value: 'viewer', label: 'Viewer' },
+    { value: 'commenter', label: 'Commenter' },
+    { value: 'editor', label: 'Editor' },
+    { value: 'admin', label: 'Admin' }
+  ];
+  const groupOptions: SelectMenuOption[] = [
+    { value: 'status', label: 'Status' },
+    { value: 'priority', label: 'Severity' }
+  ];
+  const sortDirectionOptions: SelectMenuOption[] = [
+    { value: 'ascending', label: 'Ascending' },
+    { value: 'descending', label: 'Descending' }
+  ];
 
   const provisionedURL = $derived(provisionedURLOverride || board.createdTapURL);
   const provisionedURLByteCount = $derived(
     provisionedURL ? new TextEncoder().encode(provisionedURL).length : 0
   );
   const propertyNeedsOptions = $derived(propertyType === 'select' || propertyType === 'multi_select');
+
+  function selectPropertyType(value: string): void {
+    propertyType = value;
+  }
 
   onMount(() => {
     nfcSupported = 'NDEFReader' in globalThis;
@@ -381,7 +417,7 @@
           {/each}
           <form class="panel-row" onsubmit={addView}>
             <input class="input" name="name" placeholder="View name" maxlength="60" required />
-            <select class="input" name="type" aria-label="View type"><option value="board">Board</option><option value="table">Table</option><option value="calendar">Calendar</option><option value="gallery">Gallery</option></select>
+            <SelectMenu name="type" value="board" options={viewTypeOptions} ariaLabel="View type" />
             <button class="button small" type="submit" disabled={pending}>Add view</button>
           </form>
         </div>
@@ -419,7 +455,7 @@
           {#each board.properties as property}<div class="panel-row"><Tag size={15} /><span class="panel-row-main"><strong>{property.name}</strong><span>{property.detail}</span></span></div>{/each}
           <form class="panel-row" onsubmit={addProperty}>
             <input class="input" name="name" placeholder="Field name" maxlength="60" required />
-            <select class="input" name="type" bind:value={propertyType} aria-label="Field type"><option value="text">Text</option><option value="number">Number</option><option value="select">Select</option><option value="multi_select">Multi-select</option><option value="date">Date</option><option value="checkbox">Checkbox</option><option value="url">URL</option><option value="email">Email</option><option value="person">Person</option></select>
+            <SelectMenu name="type" value={propertyType} options={fieldTypeOptions} ariaLabel="Field type" onchange={selectPropertyType} />
             {#if propertyNeedsOptions}<input class="input" name="options" placeholder="Options, comma-separated" aria-label="Field options" maxlength="800" required />{/if}
             <button class="button small" type="submit" disabled={pending}>Add field</button>
           </form>
@@ -431,7 +467,7 @@
         <div class="panel">
           <div class="panel-row"><Avatar avatar={board.ownerAvatar} /><span class="panel-row-main"><strong>{board.ownerName}</strong><span>{board.ownerEmail}</span></span><span class="badge">Owner</span></div>
           {#each board.members as member (member.id)}<div class="panel-row"><Avatar avatar={member.avatar} /><span class="panel-row-main"><strong>{member.name}</strong><span>{member.email}</span></span><span class="badge">{member.role}</span><button class="icon-button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/members/${member.id}`, { method: 'DELETE' }, 'Member removed')} aria-label={`Remove ${member.name}`} disabled={pending}><X size={14} /></button></div>{/each}
-          <form class="panel-row" onsubmit={addMember}><input class="input" type="email" name="email" placeholder="Member email" required /><select class="input" name="role" aria-label="Member role"><option value="viewer">Viewer</option><option value="commenter">Commenter</option><option value="editor" selected>Editor</option><option value="admin">Admin</option></select><button class="button small" type="submit" disabled={pending}>Share</button></form>
+          <form class="panel-row" onsubmit={addMember}><input class="input" type="email" name="email" placeholder="Member email" required /><SelectMenu name="role" value="editor" options={memberRoleOptions} ariaLabel="Member role" /><button class="button small" type="submit" disabled={pending}>Share</button></form>
         </div>
       </section>
 
@@ -508,12 +544,12 @@
     <form class="dialog" onsubmit={(event) => configureView(event, editingView!.id)}>
       <div class="dialog-header"><div><h2 id="configure-view-title">Configure {editingView.name}</h2><p>Set grouping, one filter, and one sort rule.</p></div><button class="icon-button" type="button" onclick={() => (editingView = null)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body">
-        <div class="field"><label for="view-group">Group board cards by</label><select class="input" id="view-group" name="groupBy" value={editingView.groupBy} data-dialog-focus><option value="status">Status</option><option value="priority">Severity</option></select></div>
+        <div class="field"><label for="view-group">Group board cards by</label><SelectMenu id="view-group" name="groupBy" value={editingView.groupBy} options={groupOptions} ariaLabel="Group board cards by" initialFocus /></div>
         <div class="form-grid">
           <div class="field"><label for="view-filter-field">Filter field</label><input class="input" id="view-filter-field" name="filterField" value={editingView.filterField} placeholder="status, priority, or label" /></div>
           <div class="field"><label for="view-filter-value">Filter value</label><input class="input" id="view-filter-value" name="filterValue" value={editingView.filterValue} placeholder="review" /></div>
           <div class="field"><label for="view-sort-field">Sort field</label><input class="input" id="view-sort-field" name="sortField" value={editingView.sortField} placeholder="title, due_at, or priority" /></div>
-          <div class="field"><label for="view-sort-direction">Sort direction</label><select class="input" id="view-sort-direction" name="sortDirection" value={editingView.sortDirection}><option value="ascending">Ascending</option><option value="descending">Descending</option></select></div>
+          <div class="field"><label for="view-sort-direction">Sort direction</label><SelectMenu id="view-sort-direction" name="sortDirection" value={editingView.sortDirection} options={sortDirectionOptions} ariaLabel="Sort direction" /></div>
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingView = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save view</button></div>
