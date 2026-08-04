@@ -27,7 +27,7 @@
 - P1: The first pass used text that was too small. Fixed by matching the reference type scale.
 - P1: The tablet layout could overlap the workload card and actions. Fixed by hiding the card at the tablet breakpoint and stacking the controls.
 - P1: Flatpickr removed the accessible name from the visible due-date input. Fixed by copying the field label before Flatpickr hides the source input.
-- P2: A Leaf integer condition showed the wrong empty-state text. Fixed with an explicit Boolean context value.
+- P2: An integer condition showed the wrong empty-state text. Fixed with an explicit Boolean context value.
 - P2: The first browser run reported missing Lucide icons. Fixed by registering the required icon subset.
 - P2: The mobile course strip showed a page scrollbar. Fixed by keeping the course strip scrollable while hiding its scrollbar.
 

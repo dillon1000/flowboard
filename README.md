@@ -1,37 +1,32 @@
 # Flowboard
 
-Flowboard is a server-rendered project workspace built with Swift Vapor, Leaf,
-Fluent, Turbo, and Stimulus. Fluent stores accounts, sessions, boards, saved
-views, tasks, comments, checklists, attachment metadata, templates, and sharing
-roles in SQLite. Attachment objects use Railway's private S3-compatible storage
-in production. The browser uses the same Vapor origin, so normal use does not
-need CORS.
+Flowboard is a server-rendered project workspace. SvelteKit owns every browser
+route and renders the first response on the server. Swift Vapor provides the
+private JSON API, authentication, and data services. Fluent stores accounts,
+sessions, boards, views, tasks, comments, checklists, attachment metadata,
+templates, and sharing roles in SQLite. Production attachments use Railway's
+private S3-compatible storage.
 
 ## Run locally
 
-Build the browser assets:
+Install and start the Vapor API on loopback:
+
+```sh
+cd backend
+swift run App serve --hostname 127.0.0.1 --port 8081
+```
+
+In another terminal, install and start SvelteKit:
 
 ```sh
 cd frontend
 pnpm install
-pnpm build
+BACKEND_URL=http://127.0.0.1:8081 pnpm dev
 ```
 
-Start Vapor:
-
-```sh
-cd ../backend
-swift run App serve
-```
-
-Open [http://localhost:8080/register](http://localhost:8080/register). Create an
-account to get a private workspace and first board. The app creates
-`backend/db.sqlite` and runs development migrations on first start.
-
-Re-run `pnpm build` after a CSS or TypeScript change. Vite writes the asset
-bundle to `backend/Public`, and Vapor renders all application pages with Leaf.
-Turbo replaces full page reloads, while small Stimulus controllers handle
-menus, dialogs, dates, drag and drop, theme state, search, and mobile navigation.
+Open [http://localhost:5173/register](http://localhost:5173/register). SvelteKit
+proxies `/api` and `/oauth` to Vapor, so the browser uses one origin. Vapor
+creates `backend/db.sqlite` and runs development migrations on first start.
 
 ## Run with Docker
 
@@ -41,52 +36,51 @@ Build the production image from the repository root:
 docker build -t flowboard .
 ```
 
-For local HTTP use, start the container in development mode so the browser can
-use a non-secure session cookie:
+For local HTTP, use the development environment so session cookies do not need
+TLS:
 
 ```sh
 docker run --rm -p 8080:8080 \
+  -e APP_ENVIRONMENT=development \
   -v flowboard-data:/data \
-  flowboard serve --env development --hostname 0.0.0.0 --port 8080
+  flowboard
 ```
 
 Open [http://localhost:8080/register](http://localhost:8080/register). The named
-volume keeps the SQLite database and local development uploads when the
-container stops.
+volume keeps the SQLite database and local attachments.
 
-In production, start the image without an extra command:
+For production, start the same image without `APP_ENVIRONMENT`:
 
 ```sh
 docker run --rm -p 8080:8080 -v flowboard-data:/data flowboard
 ```
 
-The production entrypoint applies pending Fluent migrations and then starts
-Vapor. Production session cookies require HTTPS, so put this container behind a
-TLS reverse proxy.
+The entrypoint applies pending migrations, starts Vapor on private loopback port
+8081, and starts the SvelteKit Node server on public port 8080. Put the container
+behind HTTPS because production session cookies use the `Secure` attribute.
 
 ## Deploy on Railway
 
-Create a Railway service from this repository. Railway reads `railway.json`,
-builds the root `Dockerfile`, checks `/health`, and passes its assigned `PORT`
-to the container.
+Create one Railway service from this repository. Railway reads `railway.json`,
+builds the root `Dockerfile`, sends traffic to its assigned `PORT`, and checks
+`/health`. The health route succeeds only when SvelteKit can reach Vapor.
 
-Attach one persistent volume to the service at `/data`. The volume stores the
-SQLite database and legacy uploads, and the startup entrypoint applies pending
-migrations after Railway mounts it. Connect a Railway bucket by setting its six
-`AWS_*` configuration values from `backend/.env.example`; all new attachments use
-that private bucket. Keep this service at one replica because SQLite does not
-support multiple application containers writing to the same database.
+Attach one persistent volume at `/data`. It stores SQLite and local attachment
+fallback data. Keep the service at one replica because SQLite cannot support
+several application containers writing to the same database.
 
-Generate a public Railway domain, then add the OAuth values from
-`backend/.env.example` as Railway service variables. Set `OAUTH_REDIRECT_URL`
-to the public HTTPS domain followed by `/oauth/callback`, and register that
-exact URI with the OAuth provider. Do not add `PORT`; Railway supplies it.
+Connect a Railway bucket with the six `AWS_*` values in
+`backend/.env.example`. Production requires the complete bucket configuration,
+and all new attachments use that private bucket.
 
-For NFC tags, add a short custom domain such as `tap.example.com` to the same
-Railway service. Set `TAP_BASE_URL=https://tap.example.com/t`. Flowboard writes
-that URL plus a 36-character secret fragment to each tag and rejects a complete
-URL that uses 504 UTF-8 bytes or more. If this value is absent, Flowboard uses
-the current public domain followed by `/t`.
+Generate a public Railway domain. Add the OAuth values from
+`backend/.env.example`, set `OAUTH_REDIRECT_URL` to the public HTTPS domain plus
+`/oauth/callback`, and register that exact URI with the provider. Do not set
+`PORT`; Railway supplies it. The container sets its private `BACKEND_URL`.
+
+For NFC tags, add a short custom domain to the same service and set
+`TAP_BASE_URL=https://tap.example.com/t`. If this value is absent, Flowboard
+uses the current public domain plus `/t`.
 
 Deploy from the Railway dashboard or from the repository root:
 
@@ -94,29 +88,25 @@ Deploy from the Railway dashboard or from the repository root:
 railway up
 ```
 
-The Docker build context excludes `backend/.env`, local databases, uploads,
-dependencies, and generated artifacts, so local credentials and user data are
-not sent to Railway.
+The Docker context excludes credentials, local databases, uploads,
+dependencies, and generated output.
 
 ## Features
 
-- Leaf-rendered registration, login, overview, task search, board, task detail,
-  board settings, and account settings pages
-- Bcrypt password hashes, CSRF protection, and persistent `HttpOnly`,
-  `SameSite=Lax` Fluent sessions
-- Generic OAuth 2.0 authorization-code login with PKCE, verified-email linking,
-  and persisted provider identities
+- SvelteKit SSR for registration, login, overview, task search, boards, task
+  detail, board administration, account settings, and the public Tap runner
+- Bcrypt password hashes and persistent `Secure`, `HttpOnly`, `SameSite=Lax`
+  Fluent sessions
+- OAuth 2.0 authorization-code login with PKCE, verified-email linking, and
+  stored provider identities
 - Board, Table, Calendar, and Gallery views with saved grouping, filtering, and
   sorting rules
-- Month navigation in Calendar views and custom Flatpickr date controls in forms
-- Persisted tasks with status, priority, labels, assignee, dates, custom fields,
+- Tasks with workflow values, labels, an assignee, dates, custom fields,
   comments, followers, checklists, and protected attachments
 - Board templates, duplication, archive, JSON import and export, and task search
-- Authenticated board sharing with Viewer, Commenter, Editor, and Admin roles
-- NFC Tap actions that create or update tasks through short, unguessable,
-  expiring links, with use limits, cooldowns, reassignment, rotation, and history
-- Custom listboxes, dialogs, confirmations, file controls, and status messages;
-  the application does not use native dropdowns, alerts, prompts, or calendars
+- Board sharing with Viewer, Commenter, Editor, and Admin roles
+- NFC Tap actions with scoped bearer links, use limits, cooldowns, expiration,
+  rotation, and idempotent execution
 - Light and dark themes, keyboard access, reduced motion, and responsive layouts
 - Fluent models, relationships, migrations, validation, transactions,
   pagination, and SQLite
@@ -127,14 +117,15 @@ not sent to Railway.
 cd frontend
 pnpm check
 pnpm build
+pnpm test
 
 cd ../backend
 swift build
 swift test
 ```
 
-The Swift Testing framework must be present in the selected Apple toolchain.
-Use the full Xcode toolchain if Command Line Tools does not include it:
+The Swift Testing framework must be present in the selected Apple toolchain. If
+Command Line Tools does not include it, use the full Xcode toolchain:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
@@ -142,64 +133,44 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
 
 ## Configuration
 
-`backend/.env.example` defines the SQLite path, optional development CORS
-origins, the public Tap URL, Railway bucket values, and the generic OAuth settings. Production
-requires the full bucket configuration, while development and tests use local
-files when those values are absent. OAuth stays disabled until all six required
-endpoint and client values are present. Register
-`OAUTH_REDIRECT_URL` exactly with the provider; local development normally uses
-`http://localhost:8080/oauth/callback`.
+`backend/.env.example` defines the SQLite path, optional direct-API CORS
+origins, the public Tap URL, Railway bucket values, and generic OAuth settings.
+Development and tests use local attachment files when bucket values are absent.
+OAuth stays disabled until all required endpoint and client values are present.
 
-The default profile mapping reads `sub`, `email`, `name`, `picture`, and
-`email_verified`.
-The optional field settings accept dot-separated paths for providers with
-nested profile data. Valid HTTPS picture URLs are synchronized on each OAuth
-login. Verified email is required before a new provider identity can create or
-link an account; disable that check only when the provider guarantees verified
-emails through another contract.
+The default OAuth profile mapping reads `sub`, `email`, `name`, `picture`, and
+`email_verified`. Optional field settings accept dot-separated paths for nested
+provider data. Flowboard needs a verified email before it creates or links an
+account unless the provider contract guarantees that state.
 
-Production does not migrate automatically. Build the frontend, run migrations,
-and then start the server:
+Production does not migrate during Vapor configuration. The container
+entrypoint runs this migration command before it starts either server:
 
 ```sh
-cd frontend
-pnpm build
-
-cd ../backend
+cd backend
 swift run App --env production migrate --yes
-swift run App --env production serve
 ```
-
-Production session cookies use the `Secure`, `HttpOnly`, and `SameSite=Lax`
-attributes. Lax mode lets the provider return to the OAuth callback while the
-per-session state and PKCE verifier protect the transaction. Put Vapor behind
-HTTPS before you use production mode.
 
 ## Routes
 
-Web pages:
+SvelteKit owns these browser surfaces:
 
-- `GET /login` and `POST /login`
-- `GET /register` and `POST /register`
+- `GET /login` and `GET /register`
 - `GET /oauth/start` and `GET /oauth/callback`
-- `POST /logout`
-- `GET /t` for the public, cacheable NFC Tap runner
+- `GET /t` for the public NFC Tap runner
 - `GET /app/**` for protected application pages
+- `/api/**` as the same-origin gateway to Vapor
 
-The JSON API is available under `/api/v1`. See [the API guide](backend/API.md)
-for request fields, filters, role rules, and examples.
+The JSON API is available under `/api/v1`. See
+[the API guide](backend/API.md) for request fields, filters, role rules, and
+examples.
 
 - `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
 - `GET /auth/me` and `PATCH /auth/me`
-- `GET /boards`, `POST /boards`, `GET /boards/:id`
-- `PATCH /boards/:id` and `DELETE /boards/:id`
-- Board member, saved view, and task template CRUD under `/boards/:id`
-- `GET /tasks?page=1&per=100`, with search and workspace filters
-- `POST /tasks`, `GET /tasks/:id`, `PATCH /tasks/:id`, and `DELETE /tasks/:id`
-- `POST /tasks/:id/move`
-- `POST /taps/execute` with a Tap bearer token and idempotency request ID
-- Task comment, checklist, and follower CRUD under `/tasks/:id`
+- Board, member, view, workflow, field, template, Tap, import, and export routes
+  under `/boards`
+- Task, move, comment, checklist, follower, and attachment routes under `/tasks`
+- `POST /taps/prepare` and `POST /taps/execute`
 - `GET /health`
 
-All board and task routes require a valid session and enforce the board member's
-role.
+Private routes require a valid session or API key and enforce each board role.
