@@ -21,7 +21,7 @@
   let requestID = '';
   let prepared: TapPreparationResponse | null = $state(null);
   let retryAction: (() => Promise<void>) | null = $state(null);
-  let titleInput: HTMLInputElement | undefined;
+  let titleInput = $state<HTMLInputElement>();
 
   onMount(() => {
     token = location.hash.slice(1);
