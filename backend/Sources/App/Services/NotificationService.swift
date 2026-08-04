@@ -323,12 +323,12 @@ enum NotificationService {
 }
 
 actor NotificationDispatchLoop {
-    private var task: Task<Void, Never>?
+    private var task: _Concurrency.Task<Void, Never>?
 
     func start(application: Application, configuration: NotificationConfiguration) {
         guard task == nil else { return }
-        task = Task {
-            while !Task.isCancelled {
+        task = _Concurrency.Task {
+            while !_Concurrency.Task.isCancelled {
                 await NotificationService.dispatchPending(
                     configuration: configuration,
                     database: application.db,
@@ -336,7 +336,7 @@ actor NotificationDispatchLoop {
                     logger: application.logger
                 )
                 do {
-                    try await Task.sleep(nanoseconds: 15_000_000_000)
+                    try await _Concurrency.Task.sleep(nanoseconds: 15_000_000_000)
                 } catch {
                     break
                 }
