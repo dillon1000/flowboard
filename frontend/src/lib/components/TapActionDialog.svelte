@@ -17,6 +17,11 @@
   }>();
   let pending = $state(false);
   let requestError = $state('');
+  let kind = $state<'create_task' | 'update_task'>('create_task');
+
+  $effect(() => {
+    if (open) kind = action?.kind === 'update_task' ? 'update_task' : 'create_task';
+  });
 
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -27,16 +32,13 @@
     const input = {
       name: String(data.get('name') ?? ''),
       displayDescription: String(data.get('displayDescription') ?? '') || null,
-      kind: String(data.get('kind') ?? 'create_task'),
-      targetTaskID: targetTaskID || null,
-      title: String(data.get('title') ?? '') || null,
-      description: String(data.get('description') ?? '') || null,
+      kind,
+      targetTaskID: kind === 'update_task' ? targetTaskID || null : null,
       status: String(data.get('status') ?? board.defaultTapStatus),
-      priority: String(data.get('priority') ?? board.defaultTapSeverity),
-      labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6),
+      priority: kind === 'create_task' ? String(data.get('priority') ?? board.defaultTapSeverity) : null,
       expiresAt: expiresAt ? `${expiresAt}T23:59:59Z` : null,
       maxUses: maxUses ? Number(maxUses) : null,
-      cooldownSeconds: Number(data.get('cooldownSeconds') ?? 0)
+      cooldownSeconds: Number(data.get('cooldownSeconds') ?? 3)
     };
 
     pending = true;
@@ -67,17 +69,18 @@
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
         <div class="form-grid">
           <div class="field"><label for="tap-name">Name</label><input class="input" id="tap-name" name="name" value={action?.name ?? ''} maxlength="80" required /></div>
-          <div class="field"><label for="tap-kind">Action</label><select class="input" id="tap-kind" name="kind" value={action?.kind ?? 'create_task'}><option value="create_task">Create task</option><option value="update_task">Update task</option></select></div>
-          <div class="field wide"><label for="tap-description">Phone instructions</label><input class="input" id="tap-description" name="displayDescription" value={action?.displayDescription ?? ''} maxlength="240" /></div>
-          <div class="field wide"><label for="tap-target">Target task for update actions</label><select class="input" id="tap-target" name="targetTaskID" value={action?.targetTaskID ?? ''}><option value="">Select a task</option>{#each board.tapTasks as task}<option value={task.id}>{task.title}</option>{/each}</select></div>
-          <div class="field wide"><label for="tap-title">Task title for create actions</label><input class="input" id="tap-title" name="title" value={action?.title ?? ''} maxlength="120" /></div>
-          <div class="field wide"><label for="tap-task-description">Task description</label><textarea class="textarea" id="tap-task-description" name="description" maxlength="2000">{action?.description ?? ''}</textarea></div>
+          <div class="field"><label for="tap-kind">Action</label><select class="input" id="tap-kind" name="kind" bind:value={kind}><option value="create_task">Create task</option><option value="update_task">Update task</option></select></div>
+          <div class="field wide"><label for="tap-description">Phone instructions</label><input class="input" id="tap-description" name="displayDescription" value={action?.displayDescription ?? ''} maxlength="280" /></div>
+          {#if kind === 'create_task'}
+            <div class="field wide"><span class="field-label">Scanner input</span><span class="field-help">The person who scans this tag enters the task title, description, dates, labels, and board fields on their phone.</span></div>
+            <div class="field"><label for="tap-priority">Default severity</label><select class="input" id="tap-priority" name="priority" value={action?.severity ?? board.defaultTapSeverity}>{#each board.severities as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
+          {:else}
+            <div class="field wide"><label for="tap-target">Target task</label><select class="input" id="tap-target" name="targetTaskID" value={action?.targetTaskID ?? ''} required><option value="">Select a task</option>{#each board.tapTasks as task}<option value={task.id}>{task.title}</option>{/each}</select>{#if !board.hasTapTasks}<span class="field-help">Create a task before you select this action.</span>{/if}</div>
+          {/if}
           <div class="field"><label for="tap-status">Status</label><select class="input" id="tap-status" name="status" value={action?.status ?? board.defaultTapStatus}>{#each board.statuses as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
-          <div class="field"><label for="tap-priority">Severity</label><select class="input" id="tap-priority" name="priority" value={action?.severity ?? board.defaultTapSeverity}>{#each board.severities as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
-          <div class="field wide"><label for="tap-labels">Labels</label><input class="input" id="tap-labels" name="labels" value={action?.labels ?? ''} /></div>
           <div class="field"><label for="tap-expiration">Expiration date</label><input class="input" id="tap-expiration" type="date" name="expiresAt" value={action?.expiresAtInput ?? ''} /></div>
           <div class="field"><label for="tap-uses">Maximum uses</label><input class="input" id="tap-uses" type="number" name="maxUses" min="1" value={action?.maxUses ?? ''} /></div>
-          <div class="field"><label for="tap-cooldown">Cooldown in seconds</label><input class="input" id="tap-cooldown" type="number" name="cooldownSeconds" min="0" max="300" value={action?.cooldownSeconds ?? 0} /></div>
+          <div class="field"><label for="tap-cooldown">Cooldown in seconds</label><input class="input" id="tap-cooldown" type="number" name="cooldownSeconds" min="0" max="300" value={action?.cooldownSeconds ?? 3} /></div>
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : action ? 'Save action' : 'Create action'}</button></div>

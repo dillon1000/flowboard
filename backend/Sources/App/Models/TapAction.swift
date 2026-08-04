@@ -7,14 +7,11 @@ enum TapActionKind: String, Codable, CaseIterable, Content, Sendable {
     case updateTask = "update_task"
 }
 
-/// Contains the fixed task values that a bearer token can apply. The target task
+/// Contains the workflow values that a bearer token can apply. The target task
 /// is a relationship on `TapAction`, so task deletion cannot leave a stale UUID in JSON.
 struct TapActionConfiguration: Codable, Sendable {
-    let title: String?
-    let description: String?
     let status: String
     let priority: String?
-    let labels: [String]
 }
 
 /// Defines one narrowly scoped action that a person can run without signing in.

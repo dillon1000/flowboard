@@ -116,8 +116,6 @@ struct TapActionContext: Encodable {
     let isActive: Bool
     let stateName: String
     let summary: String
-    let title: String
-    let description: String
     let status: String
     let statusName: String
     let severity: String
@@ -127,7 +125,6 @@ struct TapActionContext: Encodable {
     let statusOptions: [TaskOptionContext]
     let severityOptions: [TaskOptionContext]
     let tasks: [TapTaskOptionContext]
-    let labels: String
     let expiresAtInput: String
     let expiresAtLabel: String
     let maxUses: String
@@ -166,8 +163,6 @@ struct TapActionContext: Encodable {
         } else {
             "Set \(targetTask?.title ?? "missing task") to \(board.statusOption(for: TaskStatus(rawValue: action.configuration.status)).name)"
         }
-        self.title = action.configuration.title ?? ""
-        self.description = action.configuration.description ?? ""
         self.status = action.configuration.status
         self.statusName = board.statusOption(
             for: TaskStatus(rawValue: action.configuration.status)
@@ -188,7 +183,6 @@ struct TapActionContext: Encodable {
         self.tasks = try tasks.map {
             try TapTaskOptionContext(task: $0, selectedID: action.$targetTask.id)
         }
-        self.labels = action.configuration.labels.joined(separator: ", ")
         self.expiresAtInput = action.expiresAt.map(inputDate) ?? ""
         self.expiresAtLabel = action.expiresAt.map(displayDateOnly) ?? "Never"
         self.maxUses = action.maxUses.map(String.init) ?? ""

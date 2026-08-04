@@ -104,11 +104,8 @@ struct TapActionTests {
             )
             try await task.create(on: app.db)
             let configuration = TapActionConfiguration(
-                title: nil,
-                description: nil,
                 status: TaskStatus.done.rawValue,
-                priority: nil,
-                labels: []
+                priority: nil
             )
             let created = try await TapActionService.create(
                 board: board,
@@ -228,11 +225,8 @@ struct TapActionTests {
                             displayDescription: "Leave the clipboard at the loading dock.",
                             kind: .createTask,
                             targetTaskID: nil,
-                            title: "Inspect the loading dock",
-                            description: "Created by a physical tag.",
                             status: "backlog",
                             priority: "high",
-                            labels: ["NFC", "inspection"],
                             expiresAt: nil,
                             maxUses: 5,
                             cooldownSeconds: 2
@@ -252,7 +246,7 @@ struct TapActionTests {
             #expect(action.name == "Dock inspection")
             #expect(action.displayDescription == "Leave the clipboard at the loading dock.")
             #expect(action.kind == .createTask)
-            #expect(action.configuration.labels.isEmpty)
+            #expect(action.configuration.priority == "high")
             #expect(action.maxUses == 5)
             #expect(!action.tokenHash.contains(String(tagURL.suffix(36))))
 
@@ -281,11 +275,8 @@ struct TapActionTests {
                             displayDescription: "This work order is now complete.",
                             kind: .updateTask,
                             targetTaskID: try task.requireID(),
-                            title: nil,
-                            description: nil,
                             status: "done",
                             priority: "medium",
-                            labels: [],
                             expiresAt: nil,
                             maxUses: nil,
                             cooldownSeconds: 3
@@ -336,11 +327,8 @@ struct TapActionTests {
             kind: .createTask,
             targetTaskID: nil,
             configuration: TapActionConfiguration(
-                title: "Inspect the loading dock",
-                description: "Created from the dock NFC tag.",
                 status: TaskStatus.backlog.rawValue,
-                priority: TaskPriority.high.rawValue,
-                labels: ["NFC"]
+                priority: TaskPriority.high.rawValue
             ),
             expiresAt: nil,
             maxUses: maxUses,
@@ -394,11 +382,8 @@ private struct TapActionMutationTestRequest: Content {
     let displayDescription: String?
     let kind: TapActionKind
     let targetTaskID: UUID?
-    let title: String?
-    let description: String?
     let status: String
     let priority: String?
-    let labels: [String]
     let expiresAt: String?
     let maxUses: Int?
     let cooldownSeconds: Int

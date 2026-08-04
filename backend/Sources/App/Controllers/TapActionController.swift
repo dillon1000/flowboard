@@ -101,21 +101,14 @@ struct TapActionController: RouteCollection {
         else {
             throw Abort(.unprocessableEntity, reason: "Name, action, and status are required.")
         }
-        let labels = input.labels ?? []
-        guard labels.count <= 6 else {
-            throw Abort(.unprocessableEntity, reason: "Tap actions can have at most six labels.")
-        }
         return TapActionService.Definition(
             name: name,
             displayDescription: input.displayDescription,
             kind: kind,
             targetTaskID: input.targetTaskID,
             configuration: TapActionConfiguration(
-                title: input.title,
-                description: input.description,
                 status: status,
-                priority: input.priority,
-                labels: labels
+                priority: input.priority
             ),
             expiresAt: try expiry(from: input.expiresAt),
             maxUses: input.maxUses,
@@ -151,11 +144,8 @@ private struct TapActionMutationRequest: Content {
     let displayDescription: String?
     let kind: TapActionKind?
     let targetTaskID: UUID?
-    let title: String?
-    let description: String?
     let status: String?
     let priority: String?
-    let labels: [String]?
     let expiresAt: String?
     let maxUses: Int?
     let cooldownSeconds: Int?
