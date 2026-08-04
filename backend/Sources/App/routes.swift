@@ -39,6 +39,7 @@ func routes(_ app: Application) throws {
     let protectedAPI = api.grouped(APIAuthenticationMiddleware(), User.guardMiddleware())
     try protectedAPI.register(collection: BoardController())
     try protectedAPI.register(collection: BoardResourceController())
+    try protectedAPI.register(collection: BoardConfigurationController())
     try protectedAPI.register(collection: TaskController())
     try protectedAPI.register(collection: TaskResourceController())
     try protectedAPI.register(collection: AttachmentController())
