@@ -79,7 +79,12 @@ enum TapTokenService {
             .first
             .map(String.init)
             ?? (req.application.environment == .production ? "https" : "http")
-        let host = req.headers.first(name: .host) ?? "localhost:8080"
+        let host = req.headers.first(name: "X-Forwarded-Host")?
+            .split(separator: ",")
+            .first
+            .map(String.init)
+            ?? req.headers.first(name: .host)
+            ?? "localhost:8080"
         return "\(scheme)://\(host)/t"
     }
 }

@@ -109,7 +109,7 @@ struct TaskCardContext: Encodable {
             ?? BoardTaskOption.fallback(id: task.priority.rawValue)
         self.id = try task.requireID()
         self.boardID = task.$board.id
-        self.boardName = task.$board.value?.name ?? ""
+        self.boardName = resolvedBoard?.name ?? ""
         self.href = task.browserPath
         self.title = task.title
         self.description = task.description ?? ""
