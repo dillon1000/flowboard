@@ -24,7 +24,9 @@ fi
 # Railway uses production by default. Local HTTP runs can select development so
 # Vapor does not mark the session cookie as Secure.
 app_environment="${APP_ENVIRONMENT:-production}"
-gosu vapor ./App migrate --yes --env "$app_environment"
+# The migration command runs with production variables, but its database tables
+# do not exist yet. Keep the notification loop out of that short-lived process.
+gosu vapor env NOTIFICATION_DISPATCH_DISABLED=1 ./App migrate --yes --env "$app_environment"
 
 backend_port="${BACKEND_PORT:-8081}"
 public_port="${PORT:-8080}"

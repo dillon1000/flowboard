@@ -89,7 +89,11 @@ public func configure(_ app: Application) async throws {
         try await app.autoMigrate()
     }
 
-    if let notificationConfiguration = app.notificationConfiguration {
+    // The production entrypoint sets this only for the migration process. The
+    // migration command starts lifecycle handlers before it creates tables, so
+    // the outbox loop must wait for the serving process.
+    if Environment.get("NOTIFICATION_DISPATCH_DISABLED") != "1",
+       let notificationConfiguration = app.notificationConfiguration {
         app.lifecycle.use(NotificationDispatchLifecycle(configuration: notificationConfiguration))
     }
 
