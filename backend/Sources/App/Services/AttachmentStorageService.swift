@@ -41,8 +41,15 @@ enum AttachmentStorageService {
 
     static func response(
         for attachment: TaskAttachment,
+        task: Task,
         req: Request
     ) async throws -> Response {
+        guard AttachmentStorage.isObjectKey(attachment.storageName) else {
+            return try await req.fileio.asyncStreamFile(
+                at: legacyPath(attachment, task: task, req: req)
+            )
+        }
+
         let key = try validKey(attachment.storageName)
         guard req.application.attachmentStorage.usesRemoteStore else {
             return try await req.fileio.asyncStreamFile(at: root(for: req) + key)
@@ -63,7 +70,24 @@ enum AttachmentStorageService {
     /// the metadata intact, which lets the user retry without creating an orphan.
     static func delete(_ attachments: [TaskAttachment], for req: Request) async throws {
         for attachment in attachments {
+            if AttachmentStorage.isObjectKey(attachment.storageName) {
+                try await delete(key: attachment.storageName, for: req)
+            } else {
+                let task = try await attachment.$task.get(on: req.db)
+                try deleteLegacy(attachment, task: task, req: req)
+            }
+        }
+    }
+
+    static func delete(
+        _ attachment: TaskAttachment,
+        task: Task,
+        for req: Request
+    ) async throws {
+        if AttachmentStorage.isObjectKey(attachment.storageName) {
             try await delete(key: attachment.storageName, for: req)
+        } else {
+            try deleteLegacy(attachment, task: task, req: req)
         }
     }
 
@@ -97,6 +121,28 @@ enum AttachmentStorageService {
             throw Abort(.notFound, reason: "The attachment file does not exist.")
         }
         return value
+    }
+
+    private static func deleteLegacy(
+        _ attachment: TaskAttachment,
+        task: Task,
+        req: Request
+    ) throws {
+        let path = try legacyPath(attachment, task: task, req: req)
+        if FileManager.default.fileExists(atPath: path) {
+            try FileManager.default.removeItem(atPath: path)
+        }
+    }
+
+    private static func legacyPath(
+        _ attachment: TaskAttachment,
+        task: Task,
+        req: Request
+    ) throws -> String {
+        root(for: req)
+            + task.$board.id.uuidString + "/"
+            + (try task.requireID()).uuidString + "/"
+            + attachment.storageName
     }
 
     private static func root(for req: Request) -> String {

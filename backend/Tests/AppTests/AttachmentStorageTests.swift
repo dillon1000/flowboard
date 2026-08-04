@@ -27,6 +27,58 @@ struct AttachmentStorageTests {
         #expect(!AttachmentStorage.isObjectKey("attachments/../../secret"))
     }
 
+    @Test("Legacy attachments remain readable and deletable")
+    func legacyAttachmentLifecycle() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let task = Task(
+                boardID: session.boardID,
+                title: "Legacy attachment task",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            try await task.create(on: app.db)
+            let taskID = try task.requireID()
+            let storageName = "legacy-\(UUID().uuidString).txt"
+            let attachment = TaskAttachment(
+                taskID: taskID,
+                uploadedByID: session.userID,
+                fileName: "legacy.txt",
+                storageName: storageName,
+                contentType: "text/plain",
+                byteCount: 17
+            )
+            try await attachment.create(on: app.db)
+            let attachmentID = try attachment.requireID()
+            let boardPath = app.directory.workingDirectory + "Uploads/" + session.boardID.uuidString
+            let filePath = boardPath + "/" + taskID.uuidString + "/" + storageName
+            try FileManager.default.createDirectory(
+                atPath: URL(fileURLWithPath: filePath).deletingLastPathComponent().path,
+                withIntermediateDirectories: true
+            )
+            defer { try? FileManager.default.removeItem(atPath: boardPath) }
+            try Data("legacy attachment".utf8).write(to: URL(fileURLWithPath: filePath))
+
+            let download = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/attachments/\(attachmentID)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(download.status == .ok)
+            let body = try #require(download.body)
+            #expect(body.getString(at: body.readerIndex, length: body.readableBytes) == "legacy attachment")
+
+            let deleted = try await app.testing().sendRequest(
+                .DELETE,
+                "api/v1/attachments/\(attachmentID)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(deleted.status == .noContent)
+            #expect(!FileManager.default.fileExists(atPath: filePath))
+            #expect(try await TaskAttachment.find(attachmentID, on: app.db) == nil)
+        }
+    }
+
     @Test("Railway bucket round trip when enabled")
     func railwayBucketRoundTrip() async throws {
         guard Environment.get("RUN_LIVE_BUCKET_TESTS") == "1" else {

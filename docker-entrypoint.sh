@@ -1,10 +1,10 @@
 #!/bin/sh
 set -eu
 
-# Railway mounts the SQLite volume as root. Grant the application user access
-# before migrations or either server starts.
-mkdir -p /data
-chown vapor:vapor /data
+# Railway mounts the SQLite and legacy attachment volume as root. Grant the
+# application user access before migrations or either server starts.
+mkdir -p /data/uploads
+chown vapor:vapor /data /data/uploads
 for database_file in \
     "$DATABASE_PATH" \
     "$DATABASE_PATH-shm" \
