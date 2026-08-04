@@ -99,6 +99,8 @@ describe('flowboard email worker', () => {
     });
 
     expect(result.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(result.html).toContain('New comment');
+    expect(result.html).not.toContain('A task has a new comment');
     expect(result.html).not.toContain('<script>alert(1)</script>');
   });
 });
