@@ -6,6 +6,8 @@
   import { ArrowDownUp, CalendarDays, ChevronLeft, ChevronRight, Columns3, Filter, GalleryHorizontalEnd, Plus, Settings, Table2 } from '@lucide/svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
+  import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
+  import { showToast } from '$lib/ui/toast';
 
   let { board } = $props<{ board: BoardPageContext }>();
   let createTaskOpen = $state(false);
@@ -29,6 +31,7 @@
       });
       if (completed) confetti({ particleCount: 70, spread: 65, origin: { y: 0.75 } });
       await invalidateAll();
+      showToast('Task moved');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -77,17 +80,17 @@
     {:else if board.activeView.isTable}
       {#if board.hasTasks}
         <div class="table-wrap"><table class="data-table"><thead><tr><th>Task</th><th>Status</th><th>Severity</th><th>Assignee</th><th>Start</th><th>Due</th></tr></thead><tbody>
-          {#each board.tasks as task (task.id)}<tr><td><a href={task.href}>{task.title}</a></td><td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td><td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td><td class:muted={!task.hasAssignee}>{task.assigneeName}</td><td class="muted">{task.startDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}</td></tr>{/each}
+          {#each board.tasks as task (task.id)}<tr><td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td><td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td><td class:muted={!task.hasAssignee}>{task.assigneeName}</td><td class="muted">{task.startDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}</td></tr>{/each}
         </tbody></table></div>
       {:else}{@render EmptyView('table')}{/if}
     {:else if board.activeView.isCalendar}
       <div class="calendar-shell">
         <div class="calendar-toolbar"><div class="calendar-navigation"><a class="icon-button" href={board.previousMonthHref} aria-label="Previous month"><ChevronLeft size={16} /></a><h2>{board.calendarMonthLabel}</h2><a class="icon-button" href={board.nextMonthHref} aria-label="Next month"><ChevronRight size={16} /></a></div><a class="button small" href={board.todayMonthHref}>Today</a></div>
         <div class="calendar-weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
-        <div class="calendar-grid">{#each board.calendarDays as day}<div class:muted={day.isMuted} class:today={day.isToday} class="calendar-day"><span class="calendar-date">{day.day}</span>{#each day.tasks as task}<a class={`calendar-task ${task.statusColorClass}`} style={task.statusColorStyle} href={task.href}><span>{task.title}</span></a>{/each}</div>{/each}</div>
+        <div class="calendar-grid">{#each board.calendarDays as day}<div class:muted={day.isMuted} class:today={day.isToday} class="calendar-day"><span class="calendar-date">{day.day}</span>{#each day.tasks as task}<a class={`calendar-task ${task.statusColorClass}`} style={task.statusColorStyle} href={task.href} use:taskPreview={previewFromTask(task)}><span>{task.title}</span></a>{/each}</div>{/each}</div>
       </div>
     {:else if board.activeView.isGallery}
-      {#if board.hasTasks}<div class="gallery">{#each board.tasks as task (task.id)}<a class="gallery-card" href={task.href}><h3>{task.title}</h3><p>{task.description || 'No description.'}</p><div class="task-meta"><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></div></a>{/each}</div>{:else}{@render EmptyView('gallery')}{/if}
+      {#if board.hasTasks}<div class="gallery">{#each board.tasks as task (task.id)}<a class="gallery-card" href={task.href} use:taskPreview={previewFromTask(task)}><h3>{task.title}</h3><p>{task.description || 'No description.'}</p><div class="task-meta"><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></div></a>{/each}</div>{:else}{@render EmptyView('gallery')}{/if}
     {/if}
   </div>
 </div>

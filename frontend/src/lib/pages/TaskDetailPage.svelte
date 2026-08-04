@@ -8,6 +8,7 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { onMount } from 'svelte';
+  import { showToast } from '$lib/ui/toast';
 
   // The API rejects larger request bodies. Keep the browser limit equal to the
   // server limit so a user gets a useful message before an upload starts.
@@ -48,12 +49,13 @@
     return date ? `${date}T00:00:00Z` : null;
   }
 
-  async function mutate(path: string, init: RequestInit): Promise<boolean> {
+  async function mutate(path: string, init: RequestInit, successMessage = ''): Promise<boolean> {
     pending = true;
     requestError = '';
     try {
       await api(path, init);
       await invalidateAll();
+      if (successMessage) showToast(successMessage);
       return true;
     } catch (cause) {
       requestError = messageFor(cause);
@@ -67,7 +69,7 @@
     const didComplete = detail.task.statusOptions.some(
       (option: TaskOptionContext) => option.value === status && option.isCompleted
     );
-    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }) && didComplete) {
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }, 'Task status updated') && didComplete) {
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
     }
   }
@@ -75,7 +77,7 @@
   async function toggleFollow(): Promise<void> {
     await mutate(`/api/v1/tasks/${detail.task.id}/followers/me`, {
       method: detail.isFollowing ? 'DELETE' : 'POST'
-    });
+    }, detail.isFollowing ? 'Task unfollowed' : 'Task followed');
   }
 
   async function saveTask(event: SubmitEvent): Promise<void> {
@@ -94,7 +96,7 @@
         dueAt: apiDate(data.get('dueAt')),
         labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6)
       })
-    });
+    }, 'Task updated');
     if (saved) editOpen = false;
   }
 
@@ -112,6 +114,7 @@
         body: JSON.stringify({ isCompleted: !isCompleted })
       });
       await invalidateAll();
+      showToast(item.isCompleted ? 'Checklist item completed' : 'Checklist item reopened');
     } catch (cause) {
       item.isCompleted = isCompleted;
       requestError = messageFor(cause);
@@ -124,12 +127,12 @@
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
     const title = String(new FormData(form).get('title') ?? '');
-    if (await mutate(`/api/v1/tasks/${detail.task.id}/checklist`, { method: 'POST', body: JSON.stringify({ title }) })) form.reset();
+    if (await mutate(`/api/v1/tasks/${detail.task.id}/checklist`, { method: 'POST', body: JSON.stringify({ title }) }, 'Checklist item added')) form.reset();
   }
 
   async function addComment(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    if (await mutate(`/api/v1/tasks/${detail.task.id}/comments`, { method: 'POST', body: JSON.stringify({ body: commentBody }) })) {
+    if (await mutate(`/api/v1/tasks/${detail.task.id}/comments`, { method: 'POST', body: JSON.stringify({ body: commentBody }) }, 'Comment added')) {
       commentBody = '';
       sessionStorage.removeItem(commentDraftKey);
     }
@@ -163,7 +166,7 @@
         if (value) properties[property.id] = value;
       }
     }
-    await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ properties }) });
+    await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ properties }) }, 'Custom fields saved');
   }
 
   async function uploadAttachment(event: SubmitEvent): Promise<void> {
@@ -185,6 +188,7 @@
       form.reset();
       selectedFileName = 'No file chosen';
       await invalidateAll();
+      showToast('Attachment uploaded');
     } catch (cause) {
       uploadError = messageFor(cause);
     } finally {
@@ -226,7 +230,7 @@
 
   async function archiveTask(): Promise<void> {
     const wasArchived = detail.task.isArchived;
-    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !wasArchived }) }) && !wasArchived) {
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !wasArchived }) }, wasArchived ? 'Task restored' : 'Task archived') && !wasArchived) {
       await goto(detail.boardHref);
     }
   }
@@ -236,6 +240,7 @@
     requestError = '';
     try {
       await api(`/api/v1/tasks/${detail.task.id}`, { method: 'DELETE' });
+      showToast('Task deleted');
       await goto(detail.boardHref, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
@@ -277,7 +282,7 @@
         <div class="card-header"><h2>Attachments</h2></div>
         {#if detail.hasAttachments}<div class="card-body"><div class="attachment-grid">{#each detail.attachments as attachment (attachment.id)}<div class="attachment">
           {#if attachment.isImage}<a class="attachment-media attachment-image" href={attachment.previewHref} target="_blank" rel="noopener"><img src={attachment.previewHref} alt="" loading="lazy" /></a>{:else if attachment.isAudio}<div class="attachment-media attachment-audio"><audio controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`}></audio></div>{:else if attachment.isVideo}<div class="attachment-media attachment-video"><!-- svelte-ignore a11y_media_has_caption --><video controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`} playsinline></video></div>{:else}<span class="attachment-file-icon"><Paperclip size={20} /></span>{/if}
-          <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={attachment.href}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this attachment?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' })}><Trash2 size={13} />Delete</button>{/if}</span></div>
+          <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={attachment.href}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this attachment?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' }, 'Attachment deleted')}><Trash2 size={13} />Delete</button>{/if}</span></div>
         </div>{/each}</div></div>{:else}<p class="card-empty">No files attached.</p>{/if}
         {#if detail.canEdit}<div class="card-footer"><form class="attachment-upload-form" onsubmit={uploadAttachment}><span class="file-field"><label class="button small" aria-disabled={uploadPending}><Upload size={13} />Choose file<input class="sr-only" type="file" name="file" required disabled={uploadPending} onchange={selectAttachment} /></label><span class="file-name">{selectedFileName}</span><button class="button small primary" type="submit" disabled={uploadPending || !!uploadError}>{uploadPending ? 'Uploading…' : 'Upload'}</button></span>{#if uploadPending}<div class="upload-progress" aria-live="polite"><div class="upload-progress-meta"><span>Uploading attachment</span><span class="tabular">{uploadProgress}%</span></div><progress class="upload-progress-bar" max="100" value={uploadProgress}></progress></div>{/if}{#if uploadError}<p class="upload-error" role="alert">{uploadError}</p>{/if}</form></div>{/if}
       </section>
@@ -285,7 +290,7 @@
       <section class="card">
         <div class="card-header"><h2>Comments</h2><span class="badge count tabular">{detail.comments.length}</span></div>
         {#if !detail.hasComments}<p class="card-empty">No comments yet.</p>{/if}
-        <div class="comment-thread">{#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' })}>Delete</button></div>{/if}</div></div>{/each}</div>
+        <div class="comment-thread">{#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' }, 'Comment deleted')}>Delete</button></div>{/if}</div></div>{/each}</div>
         {#if detail.canComment}<form class="comment-composer" onsubmit={addComment}><Avatar avatar={currentUserAvatar} /><div><label class="sr-only" for="new-comment">Add a comment</label><textarea class="textarea" id="new-comment" value={commentBody} oninput={updateCommentDraft} onkeydown={submitCommentShortcut} maxlength="4000" placeholder="Leave a comment…" required></textarea><div class="form-actions"><span class="comment-draft-meta"><span class="tabular">{commentBody.length} / 4000</span><kbd>⌘/Ctrl Enter</kbd></span><button class="button primary" type="submit" disabled={pending || !commentBody.trim()}>Comment</button></div></div></form>{/if}
       </section>
     </div>

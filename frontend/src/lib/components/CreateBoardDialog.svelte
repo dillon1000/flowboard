@@ -4,6 +4,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { X } from '@lucide/svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
+  import { showToast } from '$lib/ui/toast';
 
   let { open = $bindable(false) } = $props<{ open: boolean }>();
   let pending = $state(false);
@@ -26,6 +27,7 @@
       form.reset();
       open = false;
       await invalidateAll();
+      showToast('Course added');
       await goto(`/app/boards/${board.id}`);
     } catch (cause) {
       error = messageFor(cause);
