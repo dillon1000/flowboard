@@ -228,8 +228,8 @@ struct BoardResourceController: RouteCollection {
         try applyRequiredString(input.title, name: "Task title", limit: 120, to: &template.title)
         switch input.description {
         case let .value(description):
-            guard description.count <= 2_000 else {
-                throw Abort(.unprocessableEntity, reason: "Descriptions cannot exceed 2,000 characters.")
+            guard description.count <= 5_000 else {
+                throw Abort(.unprocessableEntity, reason: "Descriptions cannot exceed 5,000 characters.")
             }
             template.description = clean(description)
         case .null:

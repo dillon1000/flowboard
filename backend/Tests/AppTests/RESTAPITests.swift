@@ -118,6 +118,52 @@ struct RESTAPITests {
         }
     }
 
+    @Test("Task descriptions accept the browser limit")
+    func taskDescriptionLimit() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let accepted = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/tasks",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        CreateTaskRequest(
+                            boardID: session.boardID,
+                            title: "Long task description",
+                            description: String(repeating: "a", count: 5_000),
+                            status: .backlog,
+                            priority: .medium,
+                            labels: [],
+                            dueAt: nil
+                        )
+                    )
+                }
+            )
+            #expect(accepted.status == .created)
+
+            let rejected = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/tasks",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        CreateTaskRequest(
+                            boardID: session.boardID,
+                            title: "Oversized task description",
+                            description: String(repeating: "a", count: 5_001),
+                            status: .backlog,
+                            priority: .medium,
+                            labels: [],
+                            dueAt: nil
+                        )
+                    )
+                }
+            )
+            #expect(rejected.status == .unprocessableEntity)
+        }
+    }
+
     @Test("Task writes enforce board roles")
     func taskWritesEnforceBoardRoles() async throws {
         try await withApp(configure: configure) { app in
