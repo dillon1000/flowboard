@@ -2,9 +2,12 @@
   import { Check, ChevronDown } from '@lucide/svelte';
   import { onMount } from 'svelte';
 
+  type ColorPickerElement = HTMLElement & { color: string };
+
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
-  let picker = $state<(HTMLElement & { color: string }) | undefined>();
+  let picker = $state<ColorPickerElement | undefined>();
+  let pickerReady = false;
   let open = $state(false);
   let selection = $state('gray');
   let customColor = $state('#3b82f6');
@@ -31,26 +34,38 @@
         selection = 'gray';
         customColor = '#3b82f6';
         open = false;
+        if (pickerReady && picker) picker.color = customColor;
       });
     };
     form?.addEventListener('reset', reset);
-    let disposed = false;
-    const colorChanged = (event: Event): void => {
-      const value = (event as CustomEvent<{ value: string }>).detail.value;
-      setCustomColor(value);
-    };
-    void import('vanilla-colorful').then(() => {
-      if (disposed) return;
-      if (!picker) return;
-      picker.color = customColor;
-      picker.addEventListener('color-changed', colorChanged);
-    });
     return () => {
-      disposed = true;
       form?.removeEventListener('reset', reset);
-      picker?.removeEventListener('color-changed', colorChanged);
     };
   });
+
+  // The custom element must load in the browser for SSR. This action connects
+  // each picker when its menu opens and removes its listener when it closes.
+  function mountPicker(node: ColorPickerElement): { destroy: () => void } {
+    let disposed = false;
+    const colorChanged = (event: Event): void => {
+      setCustomColor((event as CustomEvent<{ value: string }>).detail.value);
+    };
+    picker = node;
+    void import('vanilla-colorful').then(() => {
+      if (disposed) return;
+      node.color = customColor;
+      node.addEventListener('color-changed', colorChanged);
+      pickerReady = true;
+    });
+    return {
+      destroy: () => {
+        disposed = true;
+        pickerReady = false;
+        node.removeEventListener('color-changed', colorChanged);
+        if (picker === node) picker = undefined;
+      }
+    };
+  }
 
   function setPreset(value: string): void {
     selection = value;
@@ -60,7 +75,7 @@
     if (!/^#[0-9a-f]{6}$/i.test(value)) return;
     customColor = value.toLowerCase();
     selection = 'custom';
-    if (picker && picker.color !== customColor) picker.color = customColor;
+    if (pickerReady && picker && picker.color !== customColor) picker.color = customColor;
   }
 
   function typeHex(event: Event): void {
@@ -101,7 +116,7 @@
       </div>
       <div class="color-picker-custom">
         <span class="color-picker-title">Custom</span>
-        <hex-color-picker class="color-picker-spectrum" bind:this={picker}></hex-color-picker>
+        <hex-color-picker class="color-picker-spectrum" use:mountPicker></hex-color-picker>
         <label class="color-picker-hex"><span>#</span><input aria-label="Custom color hex value" value={customColor.slice(1)} maxlength="6" pattern="[0-9A-Fa-f]{6}" oninput={typeHex} /></label>
       </div>
     </div>
