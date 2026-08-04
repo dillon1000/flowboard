@@ -67,12 +67,13 @@
 </script>
 
 <svelte:window onkeydown={handleShortcut} />
+<svelte:body class:study-overview-page={context.isOverview} />
 
 <div class="app-shell">
   <aside class="sidebar" data-open={sidebarOpen ? 'true' : undefined}>
     <div class="brand-row">
       <a class="brand" href="/app" aria-label="Flowboard home">
-        <img class="brand-logo" src={collapsed ? '/focalboard-fb-abbreviation-tp.webp' : '/focalboard-wordmark.webp'} alt="" width="104" height="14" />
+        <img class="brand-logo" src={context.isOverview || collapsed ? '/focalboard-fb-abbreviation-tp.webp' : '/focalboard-wordmark.webp'} alt="" width="104" height="14" />
       </a>
     </div>
 
