@@ -70,10 +70,20 @@ Board child resources are available at these paths:
 | Members | `GET, POST /boards/{boardID}/members`; `PATCH, DELETE /boards/{boardID}/members/{memberID}` |
 | Views | `GET, POST /boards/{boardID}/views`; `GET, PATCH, DELETE /boards/{boardID}/views/{viewID}` |
 | Templates | `GET, POST /boards/{boardID}/templates`; `GET, PATCH, DELETE /boards/{boardID}/templates/{templateID}` |
+| Fields | `POST /boards/{boardID}/properties` |
+| Workflow values | `POST /boards/{boardID}/task-options` |
+| Tap actions | `POST /boards/{boardID}/tap-actions`; `PATCH, DELETE /boards/{boardID}/tap-actions/{tapActionID}` |
 
 Call `POST /boards/{boardID}/templates/{templateID}/instantiate` to create a
 task from a template. Member and configuration changes need administrator
 access. Board viewers can read views and templates.
+
+Call `POST /boards/{boardID}/duplicate` to copy a visible board into a new
+private board. Call `GET /boards/{boardID}/export` to download a versioned JSON
+document, or send that document as multipart field `file` to
+`POST /boards/{boardID}/import`. Rotate a Tap credential with
+`POST /boards/{boardID}/tap-actions/{tapActionID}/rotate`; the complete bearer
+URL appears only in the create or rotate response.
 
 ## Tasks
 
@@ -100,11 +110,15 @@ Task child resources are available at these paths:
 | Comments | `GET, POST /tasks/{taskID}/comments`; `PATCH, DELETE /tasks/{taskID}/comments/{commentID}` |
 | Checklist | `GET, POST /tasks/{taskID}/checklist`; `PATCH, DELETE /tasks/{taskID}/checklist/{itemID}` |
 | Followers | `GET /tasks/{taskID}/followers`; `POST, DELETE /tasks/{taskID}/followers/me` |
+| Attachments | `POST /tasks/{taskID}/attachments`; `GET, DELETE /attachments/{attachmentID}` |
 
 Call `POST /tasks/{taskID}/checklist/{itemID}/move` with `targetIndex` to reorder
 a checklist. Commenters can create comments, but only the comment author or a
 board administrator can change them. Task edits and checklist changes need
 editor access. Following a visible task needs viewer access.
+Attachment uploads use multipart field `file` and accept at most 10 MB. Use
+`GET /attachments/{attachmentID}/preview` for an inline preview of a supported
+image, audio, video, or PDF file.
 
 ## Example
 
