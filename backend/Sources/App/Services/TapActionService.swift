@@ -284,11 +284,8 @@ enum TapActionService {
                 throw Abort(.unprocessableEntity, reason: "Select a default severity configured for this board.")
             }
             configuration = TapActionConfiguration(
-                title: nil,
-                description: nil,
                 status: status.rawValue,
-                priority: priority.rawValue,
-                labels: []
+                priority: priority.rawValue
             )
             targetTaskID = nil
 
@@ -303,11 +300,8 @@ enum TapActionService {
                 throw Abort(.unprocessableEntity, reason: "Select a task from this board.")
             }
             configuration = TapActionConfiguration(
-                title: nil,
-                description: nil,
                 status: status.rawValue,
-                priority: nil,
-                labels: []
+                priority: nil
             )
             targetTaskID = requestedTaskID
         }

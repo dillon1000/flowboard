@@ -361,8 +361,6 @@ export interface TapActionContext {
   isActive: boolean;
   stateName: string;
   summary: string;
-  title: string;
-  description: string;
   status: string;
   statusName: string;
   severity: string;
@@ -372,7 +370,6 @@ export interface TapActionContext {
   statusOptions: TaskOptionContext[];
   severityOptions: TaskOptionContext[];
   tasks: TapTaskOptionContext[];
-  labels: string;
   expiresAtInput: string;
   expiresAtLabel: string;
   maxUses: string;
