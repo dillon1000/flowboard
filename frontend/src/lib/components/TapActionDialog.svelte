@@ -1,9 +1,11 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { BoardSettingsPageContext, TapActionContext } from '$lib/types';
+  import type { BoardSettingsPageContext, TapActionContext, TapTaskOptionContext, TaskOptionContext } from '$lib/types';
   import { X } from '@lucide/svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
+  import DatePicker from './DatePicker.svelte';
+  import SelectMenu, { type SelectMenuOption } from './SelectMenu.svelte';
 
   let {
     open = $bindable(false),
@@ -19,10 +21,28 @@
   let pending = $state(false);
   let requestError = $state('');
   let kind = $state<'create_task' | 'update_task'>('create_task');
+  const kindOptions: SelectMenuOption[] = [
+    { value: 'create_task', label: 'Create task' },
+    { value: 'update_task', label: 'Update task' }
+  ];
+  const severityOptions = $derived<SelectMenuOption[]>(
+    board.severities.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
+  );
+  const statusOptions = $derived<SelectMenuOption[]>(
+    board.statuses.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
+  );
+  const taskOptions = $derived<SelectMenuOption[]>([
+    { value: '', label: 'Select a task' },
+    ...board.tapTasks.map((task: TapTaskOptionContext) => ({ value: task.id, label: task.title }))
+  ]);
 
   $effect(() => {
     if (open) kind = action?.kind === 'update_task' ? 'update_task' : 'create_task';
   });
+
+  function selectKind(value: string): void {
+    kind = value === 'update_task' ? 'update_task' : 'create_task';
+  }
 
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -70,16 +90,16 @@
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
         <div class="form-grid">
           <div class="field"><label for="tap-name">Name</label><input class="input" id="tap-name" name="name" value={action?.name ?? ''} maxlength="80" required data-dialog-focus /></div>
-          <div class="field"><label for="tap-kind">Action</label><select class="input" id="tap-kind" name="kind" bind:value={kind}><option value="create_task">Create task</option><option value="update_task">Update task</option></select></div>
+          <div class="field"><label for="tap-kind">Action</label><SelectMenu id="tap-kind" name="kind" value={kind} options={kindOptions} ariaLabel="Action" onchange={selectKind} /></div>
           <div class="field wide"><label for="tap-description">Phone instructions</label><input class="input" id="tap-description" name="displayDescription" value={action?.displayDescription ?? ''} maxlength="280" /></div>
           {#if kind === 'create_task'}
             <div class="field wide"><span class="field-label">Scanner input</span><span class="field-help">The person who scans this tag enters the task title, description, dates, labels, and board fields on their phone.</span></div>
-            <div class="field"><label for="tap-priority">Default severity</label><select class="input" id="tap-priority" name="priority" value={action?.severity ?? board.defaultTapSeverity}>{#each board.severities as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
+            <div class="field"><label for="tap-priority">Default severity</label><SelectMenu id="tap-priority" name="priority" value={action?.severity ?? board.defaultTapSeverity} options={severityOptions} ariaLabel="Default severity" /></div>
           {:else}
-            <div class="field wide"><label for="tap-target">Target task</label><select class="input" id="tap-target" name="targetTaskID" value={action?.targetTaskID ?? ''} required><option value="">Select a task</option>{#each board.tapTasks as task}<option value={task.id}>{task.title}</option>{/each}</select>{#if !board.hasTapTasks}<span class="field-help">Create a task before you select this action.</span>{/if}</div>
+            <div class="field wide"><label for="tap-target">Target task</label><SelectMenu id="tap-target" name="targetTaskID" value={action?.targetTaskID ?? ''} options={taskOptions} ariaLabel="Target task" />{#if !board.hasTapTasks}<span class="field-help">Create a task before you select this action.</span>{/if}</div>
           {/if}
-          <div class="field"><label for="tap-status">Status</label><select class="input" id="tap-status" name="status" value={action?.status ?? board.defaultTapStatus}>{#each board.statuses as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
-          <div class="field"><label for="tap-expiration">Expiration date</label><input class="input" id="tap-expiration" type="date" name="expiresAt" value={action?.expiresAtInput ?? ''} /></div>
+          <div class="field"><label for="tap-status">Status</label><SelectMenu id="tap-status" name="status" value={action?.status ?? board.defaultTapStatus} options={statusOptions} ariaLabel="Status" /></div>
+          <div class="field"><label for="tap-expiration">Expiration date</label><DatePicker id="tap-expiration" name="expiresAt" value={action?.expiresAtInput ?? ''} label="Expiration date" placeholder="Never" /></div>
           <div class="field"><label for="tap-uses">Maximum uses</label><input class="input" id="tap-uses" type="number" name="maxUses" min="1" value={action?.maxUses ?? ''} /></div>
           <div class="field"><label for="tap-cooldown">Cooldown in seconds</label><input class="input" id="tap-cooldown" type="number" name="cooldownSeconds" min="0" max="300" value={action?.cooldownSeconds ?? 3} /></div>
         </div>

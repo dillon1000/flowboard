@@ -1,14 +1,22 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { BoardPageContext, TaskResponse } from '$lib/types';
+  import type { BoardPageContext, TaskOptionContext, TaskResponse } from '$lib/types';
   import { X } from '@lucide/svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
+  import DatePicker from './DatePicker.svelte';
+  import SelectMenu, { type SelectMenuOption } from './SelectMenu.svelte';
 
   let { open = $bindable(false), board } = $props<{ open: boolean; board: BoardPageContext }>();
   let pending = $state(false);
   let requestError = $state('');
+  const statusOptions = $derived<SelectMenuOption[]>(
+    board.statusOptions.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
+  );
+  const severityOptions = $derived<SelectMenuOption[]>(
+    board.severityOptions.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
+  );
 
   function apiDate(value: FormDataEntryValue | null): string | null {
     const date = String(value ?? '');
@@ -59,10 +67,10 @@
         <div class="form-grid">
           <div class="field wide"><label for="new-task-name">Title</label><input class="input" id="new-task-name" name="title" value={board.newTaskTitle} maxlength="120" required data-dialog-focus /></div>
           <div class="field wide"><label for="new-task-description">Description</label><textarea class="textarea" id="new-task-description" name="description" maxlength="5000">{board.newTaskDescription}</textarea></div>
-          <div class="field"><label for="new-task-status">Status</label><select class="input" id="new-task-status" name="status" value={board.newTaskStatus}>{#each board.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
-          <div class="field"><label for="new-task-priority">Severity</label><select class="input" id="new-task-priority" name="priority" value={board.newTaskPriority}>{#each board.severityOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
-          <div class="field"><label for="new-task-start">Start date</label><input class="input" id="new-task-start" type="date" name="startAt" /></div>
-          <div class="field"><label for="new-task-due">Due date</label><input class="input" id="new-task-due" type="date" name="dueAt" /></div>
+          <div class="field"><label for="new-task-status">Status</label><SelectMenu id="new-task-status" name="status" value={board.newTaskStatus} options={statusOptions} ariaLabel="Status" /></div>
+          <div class="field"><label for="new-task-priority">Severity</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Severity" /></div>
+          <div class="field"><label for="new-task-start">Start date</label><DatePicker id="new-task-start" name="startAt" label="Start date" /></div>
+          <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
           <div class="field wide"><label for="new-task-labels">Labels</label><input class="input" id="new-task-labels" name="labels" value={board.newTaskLabels} maxlength="500" placeholder="Design, Launch" /></div>
         </div>
       </div>
