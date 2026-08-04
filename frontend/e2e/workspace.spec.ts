@@ -302,6 +302,12 @@ test('configures a board, manages API keys, and runs a public Tap action', async
   await statusForm.getByPlaceholder('Status name').fill('Browser complete');
   await statusForm.getByLabel('Color').click();
   await expect(statusForm.getByRole('dialog', { name: 'Choose workflow color' })).toBeVisible();
+  const spectrum = statusForm.locator('hex-color-picker');
+  await expect(spectrum).toHaveJSProperty('color', '#3b82f6');
+  const saturationBox = await spectrum.locator('[part="saturation"]').boundingBox();
+  expect(saturationBox?.height).toBeGreaterThan(100);
+  await spectrum.locator('[part="hue"]').click({ position: { x: 100, y: 10 } });
+  await expect(statusForm.locator('input[name="color"]')).toHaveValue(/^#[0-9a-f]{6}$/);
   await statusForm.getByLabel('Custom color hex value').fill('2563eb');
   await expect(statusForm.locator('input[name="color"]')).toHaveValue('#2563eb');
   await statusForm.getByText('Completed', { exact: true }).click();
