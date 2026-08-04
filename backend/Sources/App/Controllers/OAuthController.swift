@@ -1,4 +1,4 @@
-import Leaf
+import Foundation
 import Vapor
 
 struct OAuthController: RouteCollection {
@@ -77,11 +77,9 @@ struct OAuthController: RouteCollection {
             clearTransaction(from: req)
             let message = (error as? any AbortError)?.reason
                 ?? "OAuth login failed. Try again."
-            let page = try await req.view.render(
-                "login",
-                AuthPageContext(request: req, error: message)
-            )
-            return try await page.encodeResponse(status: .unprocessableEntity, for: req)
+            let encoded = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+                ?? "OAuth%20login%20failed.%20Try%20again."
+            return req.redirect(to: "/login?oauth_error=\(encoded)")
         }
     }
 

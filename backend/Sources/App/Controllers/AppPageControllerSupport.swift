@@ -1,6 +1,5 @@
 import Fluent
 import Foundation
-import Leaf
 import Vapor
 
 extension AppPageController {
@@ -49,7 +48,7 @@ extension AppPageController {
         )
     }
 
-    func render(
+    func respond(
         common: CommonPageContext,
         pageTitle: String,
         pageKind: AppPageKind,
@@ -59,11 +58,9 @@ extension AppPageController {
         taskDetail: TaskDetailPageContext? = nil,
         settings: SettingsPageContext? = nil,
         apiKeys: APIKeysPageContext? = nil,
-        boardSettings: BoardSettingsPageContext? = nil,
-        for req: Request
-    ) async throws -> View {
-        try await req.view.render(
-            "app",
+        boardSettings: BoardSettingsPageContext? = nil
+    ) throws -> Response {
+        try jsonResponse(
             AppPageContext(
                 common: common,
                 pageTitle: pageTitle,

@@ -1,22 +1,21 @@
 import Fluent
 import Foundation
-import Leaf
 import Vapor
 
 struct AppPageController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
-        routes.get("app", use: overview)
-        routes.get("app", "tasks", use: allTasks)
-        routes.get("app", "tasks", "archived", use: archivedTasks)
-        routes.get("app", "settings", use: settings)
-        routes.get("app", "settings", "api-keys", use: apiKeys)
-        routes.get("app", "boards", ":boardID", use: boardDefault)
-        routes.get("app", "boards", ":boardID", "views", ":viewID", use: boardView)
-        routes.get("app", "boards", ":boardID", "settings", use: boardSettings)
-        routes.get("app", "tasks", ":taskID", use: taskDetail)
+        routes.get(use: overview)
+        routes.get("tasks", use: allTasks)
+        routes.get("tasks", "archived", use: archivedTasks)
+        routes.get("settings", use: settings)
+        routes.get("settings", "api-keys", use: apiKeys)
+        routes.get("boards", ":boardID", use: boardDefault)
+        routes.get("boards", ":boardID", "views", ":viewID", use: boardView)
+        routes.get("boards", ":boardID", "settings", use: boardSettings)
+        routes.get("tasks", ":taskID", use: taskDetail)
     }
 
-    func overview(req: Request) async throws -> View {
+    func overview(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
         let boardIDs = common.boards.map(\.id)
         let requestedCourseID = (try? req.query.get(String.self, at: "course"))
@@ -28,7 +27,7 @@ struct AppPageController: RouteCollection {
             .sort(\.$dueAt, .ascending)
             .all()
 
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: "This week",
             pageKind: .overview,
@@ -37,11 +36,10 @@ struct AppPageController: RouteCollection {
                 courses: common.boards,
                 selectedCourseID: selectedCourseID
             ),
-            for: req
         )
     }
 
-    func allTasks(req: Request) async throws -> View {
+    func allTasks(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
         let queryText = ((try? req.query.get(String.self, at: "q")) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -54,18 +52,17 @@ struct AppPageController: RouteCollection {
             }
         }
         let tasks = try await query.all()
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: queryText.isEmpty ? "All assignments" : "Search",
             pageKind: .tasks,
             tasks: TasksPageContext(query: queryText, tasks: try await makeTaskContexts(tasks, on: req.db)),
-            for: req
         )
     }
 
     /// Lists archived tasks separately from active search results so users can
     /// find and restore work after it leaves all active board views.
-    func archivedTasks(req: Request) async throws -> View {
+    func archivedTasks(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
         let tasks = try await taskQuery(
             boardIDs: common.boards.map(\.id),
@@ -80,44 +77,42 @@ struct AppPageController: RouteCollection {
             editPermissionUserID: req.auth.require(User.self).requireID()
         )
 
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: "Archived assignments",
             pageKind: .archivedTasks,
             tasks: TasksPageContext(query: "", tasks: taskContexts),
-            for: req
         )
     }
 
-    func settings(req: Request) async throws -> View {
+    func settings(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: "Settings",
             pageKind: .settings,
             settings: SettingsPageContext(),
-            for: req
         )
     }
 
-    func apiKeys(req: Request) async throws -> View {
+    func apiKeys(req: Request) async throws -> Response {
         try await renderAPIKeysPage(for: req)
     }
 
-    /// Renders key management after GET requests and direct POST responses. The
-    /// created secret stays in request memory and is never stored in a session.
+    /// Returns key management data. A created secret is included only in the
+    /// response to the request that created it and is never stored in a session.
     func renderAPIKeysPage(
         for req: Request,
         createdKey: String? = nil,
         error: String? = nil
-    ) async throws -> View {
+    ) async throws -> Response {
         let common = try await commonContext(for: req)
         let userID = try req.auth.require(User.self).requireID()
         let credentials = try await APIKeyCredential.query(on: req.db)
             .filter(\.$user.$id == userID)
             .sort(\.$createdAt, .descending)
             .all()
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: "API keys",
             pageKind: .apiKeys,
@@ -127,7 +122,6 @@ struct AppPageController: RouteCollection {
                 createdKey: createdKey,
                 error: error
             ),
-            for: req
         )
     }
 
@@ -139,7 +133,12 @@ struct AppPageController: RouteCollection {
             .first
             .map(String.init)
             ?? (req.application.environment == .production ? "https" : "http")
-        let host = req.headers.first(name: .host) ?? "localhost:8080"
+        let host = req.headers.first(name: "X-Forwarded-Host")?
+            .split(separator: ",")
+            .first
+            .map(String.init)
+            ?? req.headers.first(name: .host)
+            ?? "localhost:5173"
         return "\(scheme)://\(host)/api/v1"
     }
 
@@ -153,10 +152,14 @@ struct AppPageController: RouteCollection {
         else {
             throw Abort(.notFound, reason: "This board has no views.")
         }
-        return req.redirect(to: "/app/boards/\(boardID)/views/\(try view.requireID())")
+        return try jsonResponse(
+            BoardDefaultViewContext(
+                href: "/app/boards/\(boardID)/views/\(try view.requireID())"
+            )
+        )
     }
 
-    func boardView(req: Request) async throws -> View {
+    func boardView(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
         let access = try await boardAccess(for: req, permission: .view)
         let boardID = try access.board.requireID()
@@ -205,26 +208,24 @@ struct AppPageController: RouteCollection {
             defaultTemplate: defaultTemplate
         )
 
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: access.board.name,
             pageKind: .board,
             board: boardContext,
-            for: req
         )
     }
 
-    func boardSettings(req: Request) async throws -> View {
+    func boardSettings(req: Request) async throws -> Response {
         try await renderBoardSettingsPage(for: req)
     }
 
-    /// Builds board administration and Tap capability state for GET requests and
-    /// direct form responses that must show a newly created bearer URL once.
+    /// Builds board administration and Tap capability state for the SSR frontend.
     func renderBoardSettingsPage(
         for req: Request,
         createdTapURL: String? = nil,
         tapError: String? = nil
-    ) async throws -> View {
+    ) async throws -> Response {
         let common = try await commonContext(for: req)
         let access = try await boardAccess(for: req, permission: .admin)
         let boardID = try access.board.requireID()
@@ -270,7 +271,7 @@ struct AppPageController: RouteCollection {
         }
         let firstViewID = try views.first?.requireID()
 
-        return try await render(
+        return try respond(
             common: common,
             pageTitle: "\(access.board.name) settings",
             pageKind: .boardSettings,
@@ -288,15 +289,11 @@ struct AppPageController: RouteCollection {
                 createdTapURL: createdTapURL,
                 tapError: tapError
             ),
-            for: req
         )
     }
 
     func taskDetail(req: Request) async throws -> Response {
         let task = try await requiredTask(for: req, permission: .view)
-        guard req.url.path == task.browserPath else {
-            return req.redirect(to: task.browserPath, redirectType: .permanent)
-        }
         let common = try await commonContext(for: req)
         let boardID = task.$board.id
         let access = try await BoardAccessService.require(
@@ -339,13 +336,15 @@ struct AppPageController: RouteCollection {
             followers: followers,
             currentUserID: req.auth.require(User.self).requireID()
         )
-        let view = try await render(
+        return try respond(
             common: common,
             pageTitle: task.title,
             pageKind: .taskDetail,
             taskDetail: context,
-            for: req
         )
-        return try await view.encodeResponse(for: req)
     }
+}
+
+private struct BoardDefaultViewContext: Encodable {
+    let href: String
 }
