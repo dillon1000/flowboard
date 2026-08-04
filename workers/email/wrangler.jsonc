@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flowboard-email",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 }
+  },
+  "vars": {
+    "SENDER_EMAIL": "notifications@mail.11011.dev",
+    "SENDER_NAME": "Flowboard"
+  },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["notifications@mail.11011.dev"]
+    }
+  ],
+  "env": {
+    "development": {
+      "name": "flowboard-email-development",
+      "vars": {
+        "SENDER_EMAIL": "notifications@mail.11011.dev",
+        "SENDER_NAME": "Flowboard Development"
+      },
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "remote": true,
+          "allowed_sender_addresses": ["notifications@mail.11011.dev"]
+        }
+      ]
+    },
+    "production": {
+      "name": "flowboard-email",
+      "vars": {
+        "SENDER_EMAIL": "notifications@mail.11011.dev",
+        "SENDER_NAME": "Flowboard"
+      },
+      "send_email": [
+        {
+          "name": "EMAIL",
+          "allowed_sender_addresses": ["notifications@mail.11011.dev"]
+        }
+      ]
+    }
+  }
+}

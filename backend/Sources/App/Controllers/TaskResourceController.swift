@@ -51,6 +51,27 @@ struct TaskResourceController: RouteCollection {
             body: body
         )
         try await comment.create(on: req.db)
+        let board = try await task.$board.get(on: req.db)
+        let actorID = try user.requireID()
+        let followers = try await TaskFollower.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .with(\.$user)
+            .all()
+        if let configuration = req.application.notificationConfiguration {
+            for follower in followers where follower.$user.id != actorID {
+                await NotificationService.enqueue(
+                    try NotificationEvent.taskCommentAdded(
+                        comment: comment,
+                        task: task,
+                        board: board,
+                        actor: user,
+                        recipient: follower.user,
+                        appURL: configuration.publicAppURL
+                    ),
+                    for: req
+                )
+            }
+        }
         return try await TaskCommentResponse(comment: comment, authorName: user.name)
             .encodeResponse(status: .created, for: req)
     }

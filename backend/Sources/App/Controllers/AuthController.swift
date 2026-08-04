@@ -27,6 +27,15 @@ struct AuthController: RouteCollection {
         let input = try req.content.decode(RegisterRequest.self)
         let user = try await AuthService.register(input, on: req.db)
         req.auth.login(user)
+        if let configuration = req.application.notificationConfiguration {
+            await NotificationService.enqueue(
+                try NotificationEvent.welcome(
+                    user: user,
+                    appURL: configuration.appURL(path: "/app")
+                ),
+                for: req
+            )
+        }
         return try await UserResponse(user: user).encodeResponse(status: .created, for: req)
     }
 

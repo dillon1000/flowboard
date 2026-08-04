@@ -49,6 +49,7 @@ struct BoardResourceController: RouteCollection {
         try CreateBoardMemberRequest.validate(content: req)
         let input = try req.content.decode(CreateBoardMemberRequest.self)
         let access = try await requiredBoard(req, permission: .admin)
+        let actor = try req.auth.require(User.self)
         let email = input.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let user = try await User.query(on: req.db).filter(\.$email == email).first() else {
             throw Abort(.unprocessableEntity, reason: "The account does not exist.")
@@ -67,6 +68,18 @@ struct BoardResourceController: RouteCollection {
         }
         let member = BoardMember(boardID: boardID, userID: userID, role: input.role)
         try await member.create(on: req.db)
+        if let configuration = req.application.notificationConfiguration {
+            await NotificationService.enqueue(
+                try NotificationEvent.boardMemberAdded(
+                    member: member,
+                    user: user,
+                    actor: actor,
+                    board: access.board,
+                    appURL: configuration.publicAppURL
+                ),
+                for: req
+            )
+        }
         return try await BoardMemberResponse(
             member: member,
             user: user,

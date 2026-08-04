@@ -143,6 +143,30 @@ The default OAuth profile mapping reads `sub`, `email`, `name`, `picture`, and
 provider data. Flowboard needs a verified email before it creates or links an
 account unless the provider contract guarantees that state.
 
+## Transactional email
+
+The optional email Worker sends welcome, board membership, task assignment, and
+task comment notifications. Set `NOTIFICATION_WORKER_URL`,
+`NOTIFICATION_SHARED_SECRET`, and `PUBLIC_APP_URL` in the backend environment.
+The shared secret must match the Worker secret named
+`NOTIFICATION_SHARED_SECRET`.
+
+Install and check the Worker with pnpm:
+
+```sh
+cd workers/email
+pnpm install
+pnpm run types
+pnpm check
+pnpm test
+```
+
+Use `pnpm run dev` for remote email binding development with test addresses you
+control. Set the production secret with `pnpm wrangler secret put
+NOTIFICATION_SHARED_SECRET --env production`, then deploy with
+`pnpm run deploy`. Email Sending requires the onboarded `mail.11011.dev`
+domain and a Workers Paid plan for arbitrary recipients.
+
 Production does not migrate during Vapor configuration. The container
 entrypoint runs this migration command before it starts either server:
 

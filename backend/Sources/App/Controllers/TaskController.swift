@@ -94,7 +94,8 @@ struct TaskController: RouteCollection {
         try CreateTaskRequest.validate(content: req)
         let input = try req.content.decode(CreateTaskRequest.self)
 
-        let userID = try req.auth.require(User.self).requireID()
+        let actor = try req.auth.require(User.self)
+        let userID = try actor.requireID()
         let access = try await BoardAccessService.require(
             boardID: input.boardID,
             userID: userID,
@@ -132,6 +133,22 @@ struct TaskController: RouteCollection {
             on: req.db
         )
         try await task.create(on: req.db)
+        if let assigneeID = task.$assignee.id,
+           assigneeID != userID,
+           let assignee = try await User.find(assigneeID, on: req.db),
+           let configuration = req.application.notificationConfiguration
+        {
+            await NotificationService.enqueue(
+                try NotificationEvent.taskAssigned(
+                    task: task,
+                    board: access.board,
+                    assignee: assignee,
+                    actor: actor,
+                    appURL: configuration.publicAppURL
+                ),
+                for: req
+            )
+        }
 
         let response = try TaskResponse(task: task)
         return try await response.encodeResponse(status: .created, for: req)
@@ -143,6 +160,9 @@ struct TaskController: RouteCollection {
         let input = try req.content.decode(PatchTaskRequest.self)
         let task = try await findTask(req)
         let board = try await requiredBoard(for: task, on: req.db)
+        let actor = try req.auth.require(User.self)
+        let actorID = try actor.requireID()
+        let previousAssigneeID = task.$assignee.id
         if case let .value(title) = input.title {
             let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard (1...120).contains(title.count) else {
@@ -224,6 +244,23 @@ struct TaskController: RouteCollection {
         }
 
         try await task.update(on: req.db)
+        if let assigneeID = task.$assignee.id,
+           assigneeID != previousAssigneeID,
+           assigneeID != actorID,
+           let assignee = try await User.find(assigneeID, on: req.db),
+           let configuration = req.application.notificationConfiguration
+        {
+            await NotificationService.enqueue(
+                try NotificationEvent.taskAssigned(
+                    task: task,
+                    board: board,
+                    assignee: assignee,
+                    actor: actor,
+                    appURL: configuration.publicAppURL
+                ),
+                for: req
+            )
+        }
         return try TaskResponse(task: task)
     }
 

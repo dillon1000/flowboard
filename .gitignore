@@ -15,3 +15,8 @@ backend/db.sqlite*
 backend/Uploads/
 
 work/
+
+workers/email/node_modules/
+workers/email/.wrangler/
+workers/email/.dev.vars
+workers/email/.env

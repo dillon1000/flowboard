@@ -12,6 +12,7 @@ public func configure(_ app: Application) async throws {
     // their own smaller file limits after Vapor rejects bodies above 10 MB.
     app.routes.defaultMaxBodySize = "10mb"
     app.oauthConfiguration = try OAuthConfiguration.fromEnvironment()
+    app.notificationConfiguration = try NotificationConfiguration.fromEnvironment()
 
     if app.environment == .testing {
         app.databases.use(.sqlite(.memory), as: .sqlite)
@@ -81,10 +82,15 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateAPIKeyCredential())
     app.migrations.add(CreateTapActions())
     app.migrations.add(AddTapActionDisplayDescription())
+    app.migrations.add(CreateNotificationOutbox())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {
         try await app.autoMigrate()
+    }
+
+    if let notificationConfiguration = app.notificationConfiguration {
+        app.lifecycle.use(NotificationDispatchLifecycle(configuration: notificationConfiguration))
     }
 
     try routes(app)
