@@ -3,6 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { BoardPageContext, TaskResponse } from '$lib/types';
   import { X } from '@lucide/svelte';
+  import { dialogLayer } from '$lib/actions/dialogLayer';
 
   let { open = $bindable(false), board } = $props<{ open: boolean; board: BoardPageContext }>();
   let pending = $state(false);
@@ -45,7 +46,7 @@
 </script>
 
 {#if open}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="new-task-title" tabindex="-1" onkeydown={(event) => event.key === 'Escape' && (open = false)} onclick={(event) => event.target === event.currentTarget && (open = false)}>
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="new-task-title" tabindex="-1" use:dialogLayer={{ close: () => (open = false) }}>
     <form class="dialog wide" onsubmit={submit}>
       <div class="dialog-header">
         <div><h2 id="new-task-title">Create task</h2><p>{board.hasDefaultTemplate ? `Using the ${board.defaultTemplateName} template.` : 'Add the work, then refine its details.'}</p></div>
@@ -54,7 +55,7 @@
       <div class="dialog-body">
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
         <div class="form-grid">
-          <div class="field wide"><label for="new-task-name">Title</label><input class="input" id="new-task-name" name="title" value={board.newTaskTitle} maxlength="120" required /></div>
+          <div class="field wide"><label for="new-task-name">Title</label><input class="input" id="new-task-name" name="title" value={board.newTaskTitle} maxlength="120" required data-dialog-focus /></div>
           <div class="field wide"><label for="new-task-description">Description</label><textarea class="textarea" id="new-task-description" name="description" maxlength="2000">{board.newTaskDescription}</textarea></div>
           <div class="field"><label for="new-task-status">Status</label><select class="input" id="new-task-status" name="status" value={board.newTaskStatus}>{#each board.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div>
           <div class="field"><label for="new-task-priority">Severity</label><select class="input" id="new-task-priority" name="priority" value={board.newTaskPriority}>{#each board.severityOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div>

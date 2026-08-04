@@ -5,6 +5,7 @@
   import { Archive, ChevronLeft, Columns3, Copy, Download, KeyRound, ListFilter, Plus, Settings, Tag, Trash2, Upload, Users, X } from '@lucide/svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import TapActionDialog from '$lib/components/TapActionDialog.svelte';
+  import { dialogLayer } from '$lib/actions/dialogLayer';
 
   let { board } = $props<{ board: BoardSettingsPageContext }>();
   let pending = $state(false);
@@ -194,4 +195,4 @@
 </div>
 
 <TapActionDialog bind:open={tapOpen} {board} action={editingTap} onprovision={(url) => (provisionedURL = url)} />
-{#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-board-title" tabindex="-1" onkeydown={(event) => event.key === 'Escape' && (deleteOpen = false)}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-board-title">Delete {board.name}?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)}>Cancel</button><button class="button danger" type="button" onclick={deleteBoard}>Delete board</button></div></div></div>{/if}
+{#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-board-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-board-title">Delete {board.name}?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteBoard}>Delete board</button></div></div></div>{/if}
