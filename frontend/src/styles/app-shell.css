@@ -297,5 +297,11 @@
 }
 
 :root[data-sidebar='collapsed'] .sidebar .user-row {
-  padding-block: 12px;
+  width: 40px;
+  min-height: 40px;
+  align-self: center;
+  padding: 0;
+  margin: 8px;
+  border-top: 0;
+  border-radius: var(--radius-small);
 }

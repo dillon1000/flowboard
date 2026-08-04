@@ -55,7 +55,13 @@
 }
 
 .study-overview-page .user-row {
-  min-height: 72px;
+  width: 52px;
+  min-height: 52px;
+  align-self: center;
+  padding: 0;
+  margin: 10px;
+  border-top: 0;
+  border-radius: var(--radius-small);
 }
 
 .study-overview-page .topbar {
@@ -661,6 +667,15 @@
   .study-overview-page .sidebar .brand-row,
   .study-overview-page .sidebar .user-row {
     padding-inline: 16px;
+  }
+
+  .study-overview-page .sidebar .user-row {
+    width: auto;
+    min-height: 60px;
+    align-self: stretch;
+    margin: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
   }
 
   .study-overview-page .sidebar .nav-link {
