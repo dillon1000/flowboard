@@ -1,5 +1,7 @@
 <script lang="ts">
   import { replaceState } from '$app/navigation';
+  import DatePicker from '$lib/components/DatePicker.svelte';
+  import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
   import type { TapExecutionResponse, TapPreparationResponse, TapTaskProperty } from '$lib/types';
   import { onMount, tick } from 'svelte';
 
@@ -134,6 +136,11 @@
     return value || undefined;
   }
 
+  function menuOptions(options: { id: string; name: string }[], emptyLabel?: string): SelectMenuOption[] {
+    const values = options.map((option) => ({ value: option.id, label: option.name }));
+    return emptyLabel ? [{ value: '', label: emptyLabel }, ...values] : values;
+  }
+
   function submitTask(event: SubmitEvent): void {
     event.preventDefault();
     if (!prepared?.task) return;
@@ -173,15 +180,15 @@
           <div class="form-grid">
             <label class="field wide"><span class="field-label">Task title</span><input bind:this={titleInput} name="title" maxlength="120" required /></label>
             <label class="field wide"><span class="field-label">Task description</span><textarea name="description" maxlength="5000"></textarea></label>
-            <label class="field"><span class="field-label">Status</span><select name="status" value={prepared.task.status}>{#each prepared.task.statuses as option}<option value={option.id}>{option.name}</option>{/each}</select></label>
-            <label class="field"><span class="field-label">Severity</span><select name="priority" value={prepared.task.priority}>{#each prepared.task.priorities as option}<option value={option.id}>{option.name}</option>{/each}</select></label>
-            <label class="field"><span class="field-label">Start date</span><input type="date" name="startAt" /></label>
-            <label class="field"><span class="field-label">Due date</span><input type="date" name="dueAt" /></label>
+            <div class="field"><label class="field-label" for="tap-task-status">Status</label><SelectMenu id="tap-task-status" name="status" value={prepared.task.status} options={menuOptions(prepared.task.statuses)} ariaLabel="Status" /></div>
+            <div class="field"><label class="field-label" for="tap-task-priority">Severity</label><SelectMenu id="tap-task-priority" name="priority" value={prepared.task.priority} options={menuOptions(prepared.task.priorities)} ariaLabel="Severity" /></div>
+            <div class="field"><label class="field-label" for="tap-task-start">Start date</label><DatePicker id="tap-task-start" name="startAt" label="Start date" /></div>
+            <div class="field"><label class="field-label" for="tap-task-due">Due date</label><DatePicker id="tap-task-due" name="dueAt" label="Due date" /></div>
             <label class="field wide"><span class="field-label">Labels</span><input name="labels" maxlength="500" placeholder="Design, Launch" /></label>
             {#each prepared.task.properties as property (property.id)}
-              <label class:wide={property.type === 'text' || property.type === 'checkbox'} class="field"><span class="field-label">{property.name}</span>
-                {#if property.type === 'select' || property.type === 'person'}<select name={`property-${property.id}`}><option value="">Select an option</option>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'multi_select'}<select name={`property-${property.id}`} multiple>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'checkbox'}<span class="check-field"><input type="checkbox" name={`property-${property.id}`} />Set this field</span>{:else}<input type={property.type === 'text' ? 'text' : property.type} name={`property-${property.id}`} maxlength={property.type === 'text' ? 2000 : undefined} />{/if}
-              </label>
+              <div class:wide={property.type === 'text' || property.type === 'checkbox'} class="field"><label class="field-label" for={`tap-property-${property.id}`}>{property.name}</label>
+                {#if property.type === 'select' || property.type === 'person'}<SelectMenu id={`tap-property-${property.id}`} name={`property-${property.id}`} options={menuOptions(property.options, 'Select an option')} ariaLabel={property.name} />{:else if property.type === 'multi_select'}<select id={`tap-property-${property.id}`} name={`property-${property.id}`} multiple>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.type === 'checkbox'}<span class="check-field"><input id={`tap-property-${property.id}`} type="checkbox" name={`property-${property.id}`} />Set this field</span>{:else if property.type === 'date'}<DatePicker id={`tap-property-${property.id}`} name={`property-${property.id}`} label={property.name} />{:else}<input id={`tap-property-${property.id}`} type={property.type === 'text' ? 'text' : property.type} name={`property-${property.id}`} maxlength={property.type === 'text' ? 2000 : undefined} />{/if}
+              </div>
             {/each}
           </div>
           <button type="submit">Create task</button>
@@ -216,6 +223,7 @@
   .field-label { font-size: 13px; font-weight: 500; }
   input, textarea, select { width: 100%; min-height: 40px; border: 1px solid var(--border-strong); border-radius: 6px; color: var(--text); background: var(--surface); font: inherit; }
   input, select { padding: 0 11px; }
+  :global(.tap-form .select-trigger), :global(.tap-form .flatpickr-input.input) { min-height: 40px; border: 1px solid var(--border-strong); box-shadow: none; }
   textarea { min-height: 96px; padding: 10px 11px; resize: vertical; }
   select[multiple] { height: 112px; padding: 6px; }
   .check-field { display: flex; min-height: 40px; align-items: center; gap: 9px; color: var(--text-secondary); }
