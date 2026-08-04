@@ -1,5 +1,5 @@
 {
-  "originHash" : "8afa351df3583667e437afaae2bb74736867d4e77f97ff8e75c941676369220e",
+  "originHash" : "8ed687f21894635f5502112fb8aa5f7b143cde789e1dcab75281d8c833e18d51",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -62,33 +62,6 @@
       "state" : {
         "revision" : "3877a5060e85ae33e3b9fe51ab581784f65ec80e",
         "version" : "1.0.3"
-      }
-    },
-    {
-      "identity" : "leaf",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/leaf.git",
-      "state" : {
-        "revision" : "21852a898dc8681ec072f79968f1c21fb87da8cb",
-        "version" : "4.5.2"
-      }
-    },
-    {
-      "identity" : "leaf-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/leaf-kit.git",
-      "state" : {
-        "revision" : "64cc0a5c8dcf4fbd03be73b944f6850c0b82e439",
-        "version" : "1.14.3"
-      }
-    },
-    {
-      "identity" : "leaf-markdown",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor-community/leaf-markdown.git",
-      "state" : {
-        "revision" : "a2292ee724754962c91d294d9fd2f416317f7a88",
-        "version" : "4.0.0"
       }
     },
     {
@@ -188,15 +161,6 @@
       "state" : {
         "revision" : "449dbbecd0f31e82b510ada227ca152caa8b5e98",
         "version" : "1.19.4"
-      }
-    },
-    {
-      "identity" : "swift-cmark",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-cmark.git",
-      "state" : {
-        "revision" : "924936d0427cb25a61169739a7660230bffa6ea6",
-        "version" : "0.8.0"
       }
     },
     {

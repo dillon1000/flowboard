@@ -18,12 +18,7 @@ let package = Package(
         ),
         .package(url: "https://github.com/vapor/vapor.git", from: "4.121.4"),
         .package(url: "https://github.com/vapor/fluent.git", from: "4.13.0"),
-        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0"),
-        .package(url: "https://github.com/vapor/leaf.git", from: "4.5.1"),
-        .package(
-            url: "https://github.com/vapor-community/leaf-markdown.git",
-            from: "4.0.0"
-        )
+        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.9.0")
     ],
     targets: [
         .target(
@@ -32,8 +27,6 @@ let package = Package(
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
-                .product(name: "Leaf", package: "leaf"),
-                .product(name: "LeafMarkdown", package: "leaf-markdown"),
                 .product(name: "SotoSignerV4", package: "soto-core"),
                 .product(name: "Vapor", package: "vapor")
             ]
