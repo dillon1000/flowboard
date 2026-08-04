@@ -1,7 +1,7 @@
 import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
 
-/** Converts user Markdown to the only HTML subset that task pages may insert. */
+/** Converts user Markdown to the safe HTML subset sent in SSR page data. */
 export function renderMarkdown(value: string): string {
   const rendered = marked.parse(value, { async: false }) as string;
   return sanitizeHtml(rendered, {
