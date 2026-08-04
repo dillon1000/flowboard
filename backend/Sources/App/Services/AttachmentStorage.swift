@@ -100,10 +100,7 @@ final class AttachmentStorage: Sendable {
         )
     }
 
-    /// Creates the stable object key stored in the existing `storage_name` field.
-    ///
-    /// The prefix distinguishes new bucket objects from legacy attachment rows,
-    /// which contain only a generated file name and remain readable from `/data`.
+    /// Creates the stable object key stored in `storage_name`.
     static func objectKey(
         boardID: UUID,
         taskID: UUID,
@@ -154,7 +151,7 @@ final class AttachmentStorage: Sendable {
     }
 
     /// Downloads a complete object. Attachments are capped at 10 MB during upload,
-    /// so buffering the body preserves the current Vapor response behavior safely.
+    /// so buffering the body has a fixed memory limit.
     func get(key: String, using client: any Client) async throws -> Data {
         let remote = try remoteStore()
         let url = try remote.objectURL(key: key)

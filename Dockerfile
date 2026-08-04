@@ -72,11 +72,10 @@ COPY --from=frontend --chown=vapor:vapor /workspace/frontend/package.json /app/f
 COPY --from=frontend --chown=vapor:vapor /workspace/frontend/node_modules /app/frontend/node_modules
 COPY --chown=vapor:vapor docker-entrypoint.sh /app/docker-entrypoint.sh
 
-# SQLite and legacy attachments share one mount. New production attachments use
-# Railway object storage, while the symlink preserves old files and local use.
-RUN mkdir -p /data/uploads \
-    && chown -R vapor:vapor /data \
-    && ln -s /data/uploads /app/Uploads \
+# Production attachments use Railway object storage. The local directory exists
+# only for development containers and is not part of the persistent SQLite volume.
+RUN mkdir -p /data /app/Uploads \
+    && chown -R vapor:vapor /data /app/Uploads \
     && chmod +x /app/docker-entrypoint.sh \
     && chmod -R a-w /app/frontend
 

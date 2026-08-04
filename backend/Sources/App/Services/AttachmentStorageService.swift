@@ -41,42 +41,34 @@ enum AttachmentStorageService {
 
     static func response(
         for attachment: TaskAttachment,
-        task: Task,
         req: Request
     ) async throws -> Response {
-        if AttachmentStorage.isObjectKey(attachment.storageName) {
-            guard req.application.attachmentStorage.usesRemoteStore else {
-                return try await req.fileio.asyncStreamFile(
-                    at: root(for: req) + attachment.storageName
-                )
-            }
-            do {
-                let data = try await req.application.attachmentStorage.get(
-                    key: attachment.storageName,
-                    using: req.client
-                )
-                return Response(status: .ok, body: .init(data: data))
-            } catch {
-                req.logger.error("Attachment download failed: \(error)")
-                throw Abort(.badGateway, reason: "Attachment storage is unavailable.")
-            }
+        let key = try validKey(attachment.storageName)
+        guard req.application.attachmentStorage.usesRemoteStore else {
+            return try await req.fileio.asyncStreamFile(at: root(for: req) + key)
         }
-        return try await req.fileio.asyncStreamFile(
-            at: try legacyPath(for: attachment, task: task, req: req)
-        )
+        do {
+            let data = try await req.application.attachmentStorage.get(
+                key: key,
+                using: req.client
+            )
+            return Response(status: .ok, body: .init(data: data))
+        } catch {
+            req.logger.error("Attachment download failed: \(error)")
+            throw Abort(.badGateway, reason: "Attachment storage is unavailable.")
+        }
     }
 
     /// Deletes object bytes before metadata cascades. A storage failure leaves
     /// the metadata intact, which lets the user retry without creating an orphan.
     static func delete(_ attachments: [TaskAttachment], for req: Request) async throws {
         for attachment in attachments {
-            if AttachmentStorage.isObjectKey(attachment.storageName) {
-                try await delete(key: attachment.storageName, for: req)
-            }
+            try await delete(key: attachment.storageName, for: req)
         }
     }
 
     static func delete(key: String, for req: Request) async throws {
+        let key = try validKey(key)
         guard req.application.attachmentStorage.usesRemoteStore else {
             try? FileManager.default.removeItem(atPath: root(for: req) + key)
             return
@@ -95,21 +87,16 @@ enum AttachmentStorageService {
         req: Request
     ) {
         let suffix = taskID.map { "/\($0.uuidString)" } ?? ""
-        try? FileManager.default.removeItem(atPath: root(for: req) + boardID.uuidString + suffix)
         try? FileManager.default.removeItem(
             atPath: root(for: req) + "attachments/" + boardID.uuidString + suffix
         )
     }
 
-    static func legacyPath(
-        for attachment: TaskAttachment,
-        task: Task,
-        req: Request
-    ) throws -> String {
-        root(for: req)
-            + task.$board.id.uuidString + "/"
-            + (try task.requireID()).uuidString + "/"
-            + attachment.storageName
+    private static func validKey(_ value: String) throws -> String {
+        guard AttachmentStorage.isObjectKey(value) else {
+            throw Abort(.notFound, reason: "The attachment file does not exist.")
+        }
+        return value
     }
 
     private static func root(for req: Request) -> String {

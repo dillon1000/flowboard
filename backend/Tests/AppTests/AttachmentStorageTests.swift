@@ -6,7 +6,7 @@ import VaporTesting
 
 @Suite("Attachment storage")
 struct AttachmentStorageTests {
-    @Test("Object keys separate new records from legacy volume files")
+    @Test("Object keys use the strict attachment namespace")
     func objectKeyFormat() {
         let boardID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
         let taskID = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
