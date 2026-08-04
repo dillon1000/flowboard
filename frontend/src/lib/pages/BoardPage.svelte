@@ -3,7 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { BoardPageContext, TaskColumnContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArrowDownUp, CalendarDays, ChevronLeft, ChevronRight, Columns3, Filter, GalleryHorizontalEnd, Plus, Settings, Table2 } from '@lucide/svelte';
+  import { ArrowsDownUpIcon as ArrowDownUp, CalendarDotsIcon as CalendarDays, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, ColumnsIcon as Columns3, FunnelIcon as Filter, ImagesSquareIcon as GalleryHorizontalEnd, PlusIcon as Plus, GearIcon as Settings, TableIcon as Table2 } from 'phosphor-svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';

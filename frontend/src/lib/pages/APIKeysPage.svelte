@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { APIKeysPageContext, CreatedAPIKeyResponse } from '$lib/types';
-  import { Check, Copy, KeyRound, Plus } from '@lucide/svelte';
+  import { CheckIcon as Check, CopyIcon as Copy, KeyIcon as KeyRound, PlusIcon as Plus } from 'phosphor-svelte';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
   import { showToast } from '$lib/ui/toast';
 

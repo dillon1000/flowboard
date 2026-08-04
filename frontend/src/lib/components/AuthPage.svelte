@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import type { AuthActionData } from '$lib/server/auth';
   import type { AuthConfiguration } from '$lib/types';
-  import { Columns3, Copy, LogIn, Users } from '@lucide/svelte';
+  import { ColumnsIcon as Columns3, CopyIcon as Copy, SignInIcon as LogIn, UsersIcon as Users } from 'phosphor-svelte';
   import BuildSignature from './BuildSignature.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
 

@@ -15,22 +15,22 @@
   } from '$lib/types';
   import { showToast } from '$lib/ui/toast';
   import {
-    Archive,
-    Check,
-    ChevronLeft,
-    Columns3,
-    Copy,
-    Download,
-    KeyRound,
-    ListFilter,
-    Plus,
-    Settings,
-    Tag,
-    Trash2,
-    Upload,
-    Users,
-    X
-  } from '@lucide/svelte';
+    ArchiveIcon as Archive,
+    CheckIcon as Check,
+    CaretLeftIcon as ChevronLeft,
+    ColumnsIcon as Columns3,
+    CopyIcon as Copy,
+    DownloadIcon as Download,
+    KeyIcon as KeyRound,
+    ListMagnifyingGlassIcon as ListFilter,
+    PlusIcon as Plus,
+    GearIcon as Settings,
+    TagIcon as Tag,
+    TrashIcon as Trash2,
+    UploadIcon as Upload,
+    UsersIcon as Users,
+    XIcon as X
+  } from 'phosphor-svelte';
   import { onMount } from 'svelte';
 
   // Common NFC tags expose 504 writable bytes. The generated link normally fits,

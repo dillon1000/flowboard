@@ -2,7 +2,7 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { CommonPageContext } from '$lib/types';
-  import { LogOut } from '@lucide/svelte';
+  import { SignOutIcon as LogOut } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
 

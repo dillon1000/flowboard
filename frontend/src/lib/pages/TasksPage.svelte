@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { TasksPageContext } from '$lib/types';
-  import { Archive, CheckSquare, Search } from '@lucide/svelte';
+  import { ArchiveIcon as Archive, CheckSquareIcon as CheckSquare, MagnifyingGlassIcon as Search } from 'phosphor-svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
 

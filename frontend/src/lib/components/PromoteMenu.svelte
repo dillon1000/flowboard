@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TaskOptionContext } from '$lib/types';
-  import { ArrowUpRight, ChevronDown } from '@lucide/svelte';
+  import { ArrowUpRightIcon as ArrowUpRight, CaretDownIcon as ChevronDown } from 'phosphor-svelte';
   import { tick } from 'svelte';
 
   let {

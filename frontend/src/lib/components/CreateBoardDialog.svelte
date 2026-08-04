@@ -2,7 +2,7 @@
   import { api, messageFor } from '$lib/api';
   import type { BoardResponse } from '$lib/types';
   import { goto, invalidateAll } from '$app/navigation';
-  import { X } from '@lucide/svelte';
+  import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
 

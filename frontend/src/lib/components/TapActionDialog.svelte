@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { BoardSettingsPageContext, TapActionContext, TapTaskOptionContext, TaskOptionContext } from '$lib/types';
-  import { X } from '@lucide/svelte';
+  import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import DatePicker from './DatePicker.svelte';
   import SelectMenu, { type SelectMenuOption } from './SelectMenu.svelte';

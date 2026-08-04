@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { BoardPageContext, TaskOptionContext, TaskResponse } from '$lib/types';
-  import { X } from '@lucide/svelte';
+  import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
   import DatePicker from './DatePicker.svelte';

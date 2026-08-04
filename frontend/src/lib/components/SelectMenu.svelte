@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-  import { ChevronDown } from '@lucide/svelte';
+  import { CaretDownIcon as ChevronDown } from 'phosphor-svelte';
   import { onMount, tick } from 'svelte';
 
   let {

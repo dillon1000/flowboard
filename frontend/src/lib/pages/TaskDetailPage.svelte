@@ -3,7 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { AvatarContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { Archive, Bell, CalendarDays, Check, Download, Paperclip, Plus, Trash2, Upload, User, X } from '@lucide/svelte';
+  import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import PromoteMenu from '$lib/components/PromoteMenu.svelte';

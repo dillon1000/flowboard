@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { KeyRound, User } from '@lucide/svelte';
+  import { KeyIcon as KeyRound, UserIcon as User } from 'phosphor-svelte';
   let { active } = $props<{ active: 'profile' | 'api-keys' }>();
 </script>
 

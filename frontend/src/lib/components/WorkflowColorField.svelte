@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, ChevronDown } from '@lucide/svelte';
+  import { CheckIcon as Check, CaretDownIcon as ChevronDown } from 'phosphor-svelte';
   import { onMount } from 'svelte';
 
   type ColorPickerElement = HTMLElement & { color: string };

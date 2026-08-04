@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Moon, Sun } from '@lucide/svelte';
+  import { MoonIcon as Moon, SunIcon as Sun } from 'phosphor-svelte';
   import { onMount } from 'svelte';
 
   let theme = $state<'light' | 'dark'>('light');

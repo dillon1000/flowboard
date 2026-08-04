@@ -2,7 +2,7 @@
   import type { AppPageContext, BoardNavigationContext } from '$lib/types';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
-  import { Archive, CalendarDays, CheckSquare, Folder, PanelLeft, Plus, Search, Settings } from '@lucide/svelte';
+  import { ArchiveIcon as Archive, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings } from 'phosphor-svelte';
   import Avatar from './Avatar.svelte';
   import BuildSignature from './BuildSignature.svelte';
   import CreateBoardDialog from './CreateBoardDialog.svelte';

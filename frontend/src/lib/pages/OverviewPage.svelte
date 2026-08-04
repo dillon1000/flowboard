@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { OverviewPageContext, StudyCourseContext, TaskResponse } from '$lib/types';
-  import { CalendarDays, CheckSquare, ChevronDown, Clock3, FileText, Info, Layers, Plus, X } from '@lucide/svelte';
+  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, CaretDownIcon as ChevronDown, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, StackIcon as Layers, PlusIcon as Plus, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';

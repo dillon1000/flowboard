@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TaskCardContext } from '$lib/types';
-  import { CalendarDays, CheckSquare, MessageSquare, Paperclip } from '@lucide/svelte';
+  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ChatCircleIcon as MessageSquare, PaperclipIcon as Paperclip } from 'phosphor-svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
 
   let {
