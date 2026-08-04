@@ -1,0 +1,216 @@
+<script lang="ts">
+  import { goto, invalidateAll } from '$app/navigation';
+  import { api, messageFor } from '$lib/api';
+  import type { AvatarContext, ChecklistContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
+  import { marked } from 'marked';
+  import sanitizeHtml from 'sanitize-html';
+  import confetti from 'canvas-confetti';
+  import { Archive, Bell, CalendarDays, Check, Download, Paperclip, Plus, Trash2, Upload, User, X } from '@lucide/svelte';
+  import Avatar from '$lib/components/Avatar.svelte';
+
+  let { detail, currentUserAvatar } = $props<{
+    detail: TaskDetailPageContext;
+    currentUserAvatar: AvatarContext;
+  }>();
+  let editOpen = $state(false);
+  let deleteOpen = $state(false);
+  let pending = $state(false);
+  let requestError = $state('');
+  let commentBody = $state('');
+  let selectedFileName = $state('No file chosen');
+
+  const completedChecklist = $derived(
+    detail.checklist.filter((item: ChecklistContext) => item.isCompleted).length
+  );
+  const descriptionHTML = $derived(renderMarkdown(detail.task.description));
+
+  /** Converts Markdown to a small safe HTML subset before Svelte inserts it. */
+  function renderMarkdown(value: string): string {
+    const rendered = marked.parse(value, { async: false }) as string;
+    return sanitizeHtml(rendered, {
+      allowedTags: ['p', 'br', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'blockquote', 'a', 'h1', 'h2', 'h3'],
+      allowedAttributes: { a: ['href', 'title', 'target', 'rel'] },
+      allowedSchemes: ['http', 'https', 'mailto']
+    });
+  }
+
+  function apiDate(value: FormDataEntryValue | null): string | null {
+    const date = String(value ?? '');
+    return date ? `${date}T00:00:00Z` : null;
+  }
+
+  async function mutate(path: string, init: RequestInit): Promise<boolean> {
+    pending = true;
+    requestError = '';
+    try {
+      await api(path, init);
+      await invalidateAll();
+      return true;
+    } catch (cause) {
+      requestError = messageFor(cause);
+      return false;
+    } finally {
+      pending = false;
+    }
+  }
+
+  async function changeStatus(status: string): Promise<void> {
+    const didComplete = detail.task.statusOptions.some(
+      (option: TaskOptionContext) => option.value === status && option.isCompleted
+    );
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }) && didComplete) {
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
+    }
+  }
+
+  async function toggleFollow(): Promise<void> {
+    await mutate(`/api/v1/tasks/${detail.task.id}/followers/me`, {
+      method: detail.isFollowing ? 'DELETE' : 'POST'
+    });
+  }
+
+  async function saveTask(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const assigneeID = String(data.get('assigneeID') ?? '');
+    const saved = await mutate(`/api/v1/tasks/${detail.task.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        title: String(data.get('title') ?? ''),
+        description: String(data.get('description') ?? '') || null,
+        status: String(data.get('status') ?? ''),
+        priority: String(data.get('priority') ?? ''),
+        assigneeID: assigneeID || null,
+        startAt: apiDate(data.get('startAt')),
+        dueAt: apiDate(data.get('dueAt')),
+        labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6)
+      })
+    });
+    if (saved) editOpen = false;
+  }
+
+  async function toggleChecklist(itemID: string, isCompleted: boolean): Promise<void> {
+    await mutate(`/api/v1/tasks/${detail.task.id}/checklist/${itemID}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isCompleted: !isCompleted })
+    });
+  }
+
+  async function addChecklist(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const title = String(new FormData(form).get('title') ?? '');
+    if (await mutate(`/api/v1/tasks/${detail.task.id}/checklist`, { method: 'POST', body: JSON.stringify({ title }) })) form.reset();
+  }
+
+  async function addComment(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    if (await mutate(`/api/v1/tasks/${detail.task.id}/comments`, { method: 'POST', body: JSON.stringify({ body: commentBody }) })) commentBody = '';
+  }
+
+  async function saveProperties(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const properties: Record<string, string> = {};
+    for (const property of detail.properties) {
+      if (property.usesMultiSelect) {
+        const selected = property.options
+          .filter((option: TaskPropertyOptionContext) => data.has(`property-${property.id}-${option.id}`))
+          .map((option: TaskPropertyOptionContext) => option.id);
+        if (selected.length) properties[property.id] = JSON.stringify(selected);
+      } else {
+        const value = String(data.get(`property-${property.id}`) ?? '').trim();
+        if (value) properties[property.id] = value;
+      }
+    }
+    await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ properties }) });
+  }
+
+  async function uploadAttachment(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    if (await mutate(`/api/v1/tasks/${detail.task.id}/attachments`, { method: 'POST', body: new FormData(form) })) {
+      form.reset();
+      selectedFileName = 'No file chosen';
+    }
+  }
+
+  async function archiveTask(): Promise<void> {
+    const wasArchived = detail.task.isArchived;
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !wasArchived }) }) && !wasArchived) {
+      await goto(detail.boardHref);
+    }
+  }
+
+  async function deleteTask(): Promise<void> {
+    pending = true;
+    requestError = '';
+    try {
+      await api(`/api/v1/tasks/${detail.task.id}`, { method: 'DELETE' });
+      await goto(detail.boardHref, { invalidateAll: true });
+    } catch (cause) {
+      requestError = messageFor(cause);
+      pending = false;
+    }
+  }
+</script>
+
+<div class="page task-detail-page">
+  <header class="page-header detail-header">
+    <div class="page-title">
+      <h1>{detail.task.title}</h1>
+      <div class="task-facts">
+        <span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span>
+        <span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span>
+        {#each detail.task.labels as label}<span class="badge subtle">{label}</span>{/each}
+        <span class="fact-divider" aria-hidden="true"></span><span class:muted={!detail.task.hasAssignee} class="fact"><User size={14} />{detail.task.assigneeName}</span><span class:muted={!detail.task.hasDueDate} class="fact"><CalendarDays size={14} />{detail.task.dueDisplay}</span>
+      </div>
+    </div>
+    <div class="page-actions">
+      {#if detail.canEdit}<label class="select-button"><span class="sr-only">Change status</span><select value={detail.task.statusValue} onchange={(event) => changeStatus(event.currentTarget.value)} disabled={pending}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></label>{/if}
+      <button class="button" type="button" onclick={toggleFollow} disabled={pending}><Bell size={15} />{detail.isFollowing ? 'Unfollow' : 'Follow'}<span class="badge count tabular">{detail.followerCount}</span></button>
+      {#if detail.canEdit}<button class="button" type="button" onclick={() => (editOpen = true)}>Edit task</button>{/if}
+    </div>
+  </header>
+  {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
+
+  <div class="task-layout">
+    <div class="task-main">
+      <section class="card"><div class="card-header"><h2>Description</h2></div><div class="card-body">{#if detail.task.hasDescription}<div class="task-description markdown">{@html descriptionHTML}</div>{:else}<div class="task-description empty">No description yet.</div>{/if}</div></section>
+
+      <section class="card">
+        <div class="card-header"><h2>Checklist</h2><span class="checklist-progress"><span>{detail.checklist.length ? `${completedChecklist} of ${detail.checklist.length}` : 'No items'}</span><progress class="progress" value={completedChecklist} max={detail.checklist.length || 1}></progress></span></div>
+        {#if detail.hasChecklist}<div class="card-body"><div class="checklist">{#each detail.checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item"><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pending} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span></div>{/each}</div></div>{:else}<p class="card-empty">Nothing to check off yet.</p>{/if}
+        {#if detail.canEdit}<div class="card-footer"><form class="checklist-add" onsubmit={addChecklist}><input class="input" name="title" placeholder="Add checklist item" maxlength="200" required aria-label="New checklist item" /><button class="button" type="submit" disabled={pending}><Plus size={14} />Add</button></form></div>{/if}
+      </section>
+
+      <section class="card">
+        <div class="card-header"><h2>Attachments</h2></div>
+        {#if detail.hasAttachments}<div class="card-body"><div class="attachment-grid">{#each detail.attachments as attachment (attachment.id)}<div class="attachment">
+          {#if attachment.isImage}<a class="attachment-media attachment-image" href={`/api/v1/attachments/${attachment.id}/preview`} target="_blank" rel="noopener"><img src={`/api/v1/attachments/${attachment.id}/preview`} alt="" loading="lazy" /></a>{:else if attachment.isAudio}<div class="attachment-media attachment-audio"><audio controls preload="metadata" src={`/api/v1/attachments/${attachment.id}/preview`} aria-label={`Preview ${attachment.fileName}`}></audio></div>{:else if attachment.isVideo}<div class="attachment-media attachment-video"><!-- svelte-ignore a11y_media_has_caption --><video controls preload="metadata" src={`/api/v1/attachments/${attachment.id}/preview`} aria-label={`Preview ${attachment.fileName}`} playsinline></video></div>{:else}<span class="attachment-file-icon"><Paperclip size={20} /></span>{/if}
+          <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={`/api/v1/attachments/${attachment.id}`}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this attachment?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' })}><Trash2 size={13} />Delete</button>{/if}</span></div>
+        </div>{/each}</div></div>{:else}<p class="card-empty">No files attached.</p>{/if}
+        {#if detail.canEdit}<div class="card-footer"><form class="attachment-upload-form" onsubmit={uploadAttachment}><span class="file-field"><label class="button small"><Upload size={13} />Choose file<input class="sr-only" type="file" name="file" required onchange={(event) => (selectedFileName = event.currentTarget.files?.[0]?.name ?? 'No file chosen')} /></label><span class="file-name">{selectedFileName}</span><button class="button small primary" type="submit" disabled={pending}>Upload</button></span></form></div>{/if}
+      </section>
+
+      <section class="card">
+        <div class="card-header"><h2>Comments</h2><span class="badge count tabular">{detail.comments.length}</span></div>
+        {#if !detail.hasComments}<p class="card-empty">No comments yet.</p>{/if}
+        <div class="comment-thread">{#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' })}>Delete</button></div>{/if}</div></div>{/each}</div>
+        {#if detail.canComment}<form class="comment-composer" onsubmit={addComment}><Avatar avatar={currentUserAvatar} /><div><label class="sr-only" for="new-comment">Add a comment</label><textarea class="textarea" id="new-comment" bind:value={commentBody} maxlength="4000" placeholder="Leave a comment…" required></textarea><div class="form-actions"><span class="comment-draft-meta"><span class="tabular">{commentBody.length} / 4000</span><kbd>⌘ Enter</kbd></span><button class="button primary" type="submit" disabled={pending || !commentBody.trim()}>Comment</button></div></div></form>{/if}
+      </section>
+    </div>
+
+    <aside class="task-sidebar">
+      <div class="card"><div class="card-header"><h2>Properties</h2></div><dl class="property-list"><div class="property-row"><dt>Status</dt><dd><span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span></dd></div><div class="property-row"><dt>Severity</dt><dd><span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span></dd></div><div class="property-row"><dt>Assignee</dt><dd>{detail.task.assigneeName}</dd></div><div class="property-row"><dt>Creator</dt><dd>{detail.creatorName}</dd></div><div class="property-row"><dt>Start</dt><dd class="muted">{detail.task.startDisplay}</dd></div><div class="property-row"><dt>Due</dt><dd>{detail.task.dueDisplay}</dd></div>{#each detail.properties as property}<div class="property-row"><dt>{property.name}</dt><dd>{property.value}</dd></div>{/each}</dl></div>
+
+      {#if detail.canEdit && detail.hasProperties}<section class="card"><div class="card-header"><h2>Custom fields</h2></div><form class="card-body" onsubmit={saveProperties}>{#each detail.properties as property}<div class="field"><label for={`property-${property.id}`}>{property.name}</label>{#if property.usesInput}<input class="input" type={property.inputType} step="any" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} />{:else if property.usesSelect}<select class="input" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue}><option value="">No value</option>{#each property.options as option}<option value={option.id}>{option.name}</option>{/each}</select>{:else if property.usesMultiSelect}<div class="property-options" id={`property-${property.id}`}>{#each property.options as option}<label class="property-option"><input type="checkbox" name={`property-${property.id}-${option.id}`} checked={option.isSelected} /><span>{option.name}</span></label>{/each}</div>{:else if property.usesCheckbox}<label class="property-boolean"><input type="checkbox" name={`property-${property.id}`} value="true" checked={property.isChecked} /><span>Checked</span></label>{/if}</div>{/each}<div class="form-actions"><button class="button small" type="submit" disabled={pending}>Save fields</button></div></form></section>{/if}
+
+      {#if detail.canEdit}<section class="card danger-zone"><div class="card-header"><h2>Danger zone</h2></div><div class="card-rows"><div class="panel-row"><span class="panel-row-main"><strong>{detail.task.isArchived ? 'Restore task' : 'Archive task'}</strong><span>Archived tasks leave active views.</span></span><button class="button small" type="button" onclick={archiveTask} disabled={pending}><Archive size={13} />{detail.task.isArchived ? 'Restore' : 'Archive'}</button></div><div class="panel-row"><span class="panel-row-main"><strong>Delete task</strong><span>Permanently remove this task.</span></span><button class="button danger small" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div></div></section>{/if}
+    </aside>
+  </div>
+</div>
+
+{#if editOpen}<div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" onkeydown={(event) => event.key === 'Escape' && (editOpen = false)} onclick={(event) => event.target === event.currentTarget && (editOpen = false)}><form class="dialog wide" onsubmit={saveTask}><div class="dialog-header"><div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body"><div class="form-grid"><div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="2000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div><div class="field"><label for="edit-status">Status</label><select class="input" id="edit-status" name="status" value={detail.task.statusValue}>{#each detail.task.statusOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field"><label for="edit-priority">Severity</label><select class="input" id="edit-priority" name="priority" value={detail.task.priorityValue}>{#each detail.task.severityOptions as option}<option value={option.value}>{option.name}</option>{/each}</select></div><div class="field wide"><label for="edit-assignee">Assignee</label><select class="input" id="edit-assignee" name="assigneeID" value={detail.task.assigneeID}><option value="">Unassigned</option>{#each detail.members as member}<option value={member.id}>{member.name} · {member.email}</option>{/each}</select></div><div class="field"><label for="edit-start">Start date</label><input class="input" id="edit-start" type="date" name="startAt" value={detail.task.startInput} /></div><div class="field"><label for="edit-due">Due date</label><input class="input" id="edit-due" type="date" name="dueAt" value={detail.task.dueInput} /></div><div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} /></div></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div></form></div>{/if}
+
+{#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" tabindex="-1" onkeydown={(event) => event.key === 'Escape' && (deleteOpen = false)}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-task-title">Delete this task?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)}>Cancel</button><button class="button danger" type="button" onclick={deleteTask} disabled={pending}>Delete task</button></div></div></div>{/if}
