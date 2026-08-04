@@ -10,7 +10,6 @@ backend/.build/
 backend/.swiftpm/
 backend/.env
 backend/db.sqlite*
-backend/Public/
 backend/Uploads/
 
 work/

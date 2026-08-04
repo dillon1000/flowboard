@@ -10,7 +10,6 @@ frontend/build
 frontend/.playwright-cli
 backend/.build
 backend/.swiftpm
-backend/Public
 
 # Never send local credentials or persistent application data to the image builder.
 backend/.env
