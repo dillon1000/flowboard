@@ -174,6 +174,7 @@ export interface BoardPageContext {
   description: string;
   role: string;
   canEdit: boolean;
+  canAdmin: boolean;
   isOwner: boolean;
   views: BoardViewTabContext[];
   activeView: BoardViewTabContext;

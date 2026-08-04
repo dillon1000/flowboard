@@ -66,6 +66,42 @@ struct WorkspacePageAPITests {
         }
     }
 
+    @Test("Board data exposes administration capability by role")
+    func boardAdministrationCapability() async throws {
+        try await withApp(configure: configure) { app in
+            let owner = try await register(on: app)
+            let viewer = try await register(on: app)
+            try await BoardMember(
+                boardID: owner.boardID,
+                userID: viewer.userID,
+                role: .viewer
+            ).create(on: app.db)
+            let viewID = try #require(
+                try await BoardView.query(on: app.db)
+                    .filter(\.$board.$id == owner.boardID)
+                    .first()?
+                    .requireID()
+            )
+            let path = "api/v1/workspace/boards/\(owner.boardID)/views/\(viewID)"
+
+            let ownerResponse = try await app.testing().sendRequest(
+                .GET,
+                path,
+                headers: ["Cookie": owner.cookie]
+            )
+            #expect(ownerResponse.status == .ok)
+            expectContains(ownerResponse.body.string, #""canAdmin":true"#)
+
+            let viewerResponse = try await app.testing().sendRequest(
+                .GET,
+                path,
+                headers: ["Cookie": viewer.cookie]
+            )
+            #expect(viewerResponse.status == .ok)
+            expectContains(viewerResponse.body.string, #""canAdmin":false"#)
+        }
+    }
+
     @Test("Auth configuration is public")
     func authConfiguration() async throws {
         try await withApp(configure: configure) { app in

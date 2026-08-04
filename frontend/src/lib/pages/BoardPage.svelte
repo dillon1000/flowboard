@@ -112,7 +112,7 @@
     <header class="page-header">
       <div class="page-title"><h1>{board.name}</h1><p>{board.description || `Shared as ${board.role}.`}</p></div>
       <div class="page-actions">
-        <a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Board settings</a>
+        {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Board settings</a>{/if}
         {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />New task</button>{/if}
       </div>
     </header>
@@ -125,7 +125,7 @@
       <span class="toolbar-spacer"></span><span class="badge subtle">Group: {board.groupByName}</span>
       {#if board.hasFilters}<span class="badge subtle"><Filter size={12} />{board.filterSummary}</span>{/if}
       {#if board.hasSorts}<span class="badge subtle"><ArrowDownUp size={12} />{board.sortSummary}</span>{/if}
-      <a class="button ghost small" href={`/app/boards/${board.id}/settings`}><Settings size={14} />Configure</a>
+      {#if board.canAdmin}<a class="button ghost small" href={`/app/boards/${board.id}/settings`}><Settings size={14} />Configure</a>{/if}
     </nav>
   </div>
 

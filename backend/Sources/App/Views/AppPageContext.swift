@@ -386,6 +386,7 @@ struct BoardPageContext: Encodable {
     let description: String
     let role: String
     let canEdit: Bool
+    let canAdmin: Bool
     let isOwner: Bool
     let views: [BoardViewTabContext]
     let activeView: BoardViewTabContext
@@ -433,6 +434,7 @@ struct BoardPageContext: Encodable {
         self.description = board.description ?? ""
         self.role = access.isOwner ? "Owner" : access.role.rawValue.capitalized
         self.canEdit = access.isOwner || access.role.canEdit
+        self.canAdmin = access.isOwner || access.role == .admin
         self.isOwner = access.isOwner
         self.views = try views.map {
             try BoardViewTabContext(view: $0, boardID: board.requireID(), activeID: activeView.requireID())
