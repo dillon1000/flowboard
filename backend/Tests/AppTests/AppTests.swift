@@ -5,7 +5,7 @@ import Testing
 import Vapor
 import VaporTesting
 
-@Suite("Flowboard web application")
+@Suite("Flowboard application API")
 struct AppTests {
     @Test("Health endpoint reports the service state")
     func healthCheck() async throws {
@@ -20,18 +20,6 @@ struct AppTests {
         }
     }
 
-    @Test("Unknown browser routes render the not found page")
-    func unknownBrowserRouteRendersNotFoundPage() async throws {
-        try await withApp(configure: configure) { app in
-            let response = try await app.testing().sendRequest(.GET, "missing-page")
-
-            #expect(response.status == .notFound)
-            #expect(response.headers.contentType == .html)
-            expectContains(response.body.string, "This card isn’t on the board.")
-            expectContains(response.body.string, "focalboard-wordmark.webp")
-        }
-    }
-
     @Test("Unknown API routes keep the JSON error contract")
     func unknownAPIRouteReturnsJSON() async throws {
         try await withApp(configure: configure) { app in
@@ -43,33 +31,7 @@ struct AppTests {
         }
     }
 
-    @Test("Auth pages and the app sidebar show the build signature")
-    func pagesShowBuildSignature() async throws {
-        try await withApp(configure: configure) { app in
-            for path in ["login", "register"] {
-                let response = try await app.testing().sendRequest(.GET, path)
-
-                #expect(response.status == .ok)
-                expectContains(response.body.string, "Built with love and")
-                expectContains(response.body.string, #"src="/swift.svg""#)
-                expectContains(response.body.string, "in McKinney, Texas.")
-            }
-
-            let session = try await register(on: app)
-            let appPage = try await app.testing().sendRequest(
-                .GET,
-                "app",
-                headers: ["Cookie": session.cookie]
-            )
-
-            #expect(appPage.status == .ok)
-            expectContains(appPage.body.string, "Built with love and")
-            expectContains(appPage.body.string, #"src="/swift.svg""#)
-            expectContains(appPage.body.string, "in McKinney, Texas.")
-        }
-    }
-
-    @Test("Board data requires an authenticated session")
+    @Test("Private board data requires authentication")
     func boardDataRequiresAuthentication() async throws {
         try await withApp(configure: configure) { app in
             let response = try await app.testing().sendRequest(.GET, "api/v1/boards")
@@ -97,81 +59,53 @@ struct AppTests {
         }
     }
 
-    @Test("An authenticated user can create and list tasks")
+    @Test("Task mutations appear in workspace page data")
     func taskLifecycle() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
-            let input = CreateTaskRequest(
-                boardID: session.boardID,
-                title: "Test the release notes",
-                description: nil,
-                status: .backlog,
-                priority: .high,
-                labels: ["QA"],
-                dueAt: nil
-            )
-
             let created = try await app.testing().sendRequest(
                 .POST,
                 "api/v1/tasks",
                 headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
-                    try request.content.encode(input)
+                    try request.content.encode(
+                        CreateTaskRequest(
+                            boardID: session.boardID,
+                            title: "Test the release notes",
+                            description: "Review the Svelte output.",
+                            status: .backlog,
+                            priority: .high,
+                            labels: ["QA"],
+                            dueAt: nil
+                        )
+                    )
                 }
             )
             #expect(created.status == .created)
-            expectContains(created.body.string, "Test the release notes")
             let createdTask = try created.content.decode(TaskResponse.self)
             let storedTask = try #require(try await Task.find(createdTask.id, on: app.db))
             #expect(storedTask.$creator.id == session.userID)
 
-            let legacyTaskPage = try await app.testing().sendRequest(
+            let pageData = try await app.testing().sendRequest(
                 .GET,
-                "app/tasks/\(createdTask.id)",
+                "api/v1/workspace/tasks/\(storedTask.publicID)",
                 headers: ["Cookie": session.cookie]
             )
-            #expect(legacyTaskPage.status == .movedPermanently)
-            #expect(legacyTaskPage.headers.first(name: .location) == storedTask.browserPath)
+            #expect(pageData.status == .ok)
+            expectContains(pageData.body.string, "Test the release notes")
+            expectContains(pageData.body.string, "\"boardName\":\"My board\"")
+            expectContains(pageData.body.string, "\"creatorName\":\"Test User\"")
 
-            let taskPage = try await app.testing().sendRequest(
-                .GET,
-                String(storedTask.browserPath.dropFirst()),
-                headers: ["Cookie": session.cookie]
-            )
-            #expect(taskPage.status == .ok)
-            expectContains(
-                taskPage.body.string,
-                #"<a href="/app/boards/\#(session.boardID)">My board</a>"#
-            )
-            expectContains(taskPage.body.string, "<dt>Creator</dt>")
-            expectContains(taskPage.body.string, "<dd>Test User</dd>")
-            expectContains(taskPage.body.string, ">Promote</span>")
-            expectContains(
-                taskPage.body.string,
-                #"/app/tasks/\#(createdTask.id)/status"#
-            )
-
-            let csrfMarker = #"name="csrf-token" content=""#
-            let csrfStart = try #require(taskPage.body.string.range(of: csrfMarker)?.upperBound)
-            let csrfEnd = try #require(
-                taskPage.body.string[csrfStart...].firstIndex(of: "\"")
-            )
-            let csrfToken = String(taskPage.body.string[csrfStart..<csrfEnd])
             let promoted = try await app.testing().sendRequest(
-                .POST,
-                "app/tasks/\(createdTask.id)/status",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ],
+                .PATCH,
+                "api/v1/tasks/\(createdTask.id)",
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
-                    try request.content.encode(["status": "done"], as: .urlEncodedForm)
+                    try request.content.encode(["status": "done"])
                 }
             )
-            #expect(promoted.status == .seeOther)
-            #expect(promoted.headers.first(name: .location) == storedTask.browserPath)
-            let promotedTask = try #require(try await Task.find(createdTask.id, on: app.db))
-            #expect(promotedTask.status == .done)
+            #expect(promoted.status == .ok)
+            #expect(try promoted.content.decode(TaskResponse.self).status == .done)
 
             let listed = try await app.testing().sendRequest(
                 .GET,
@@ -183,34 +117,7 @@ struct AppTests {
         }
     }
 
-    @Test("Task descriptions render safe Markdown on the server")
-    func taskDescriptionsRenderSafeMarkdown() async throws {
-        try await withApp(configure: configure) { app in
-            let session = try await register(on: app)
-            let task = Task(
-                boardID: session.boardID,
-                title: "Render Markdown",
-                description: "# Release notes\n\n- **Ready**\n\n<script>alert('xss')</script>",
-                position: 1_000,
-                creatorID: session.userID
-            )
-            try await task.create(on: app.db)
-
-            let taskPage = try await app.testing().sendRequest(
-                .GET,
-                String(task.browserPath.dropFirst()),
-                headers: ["Cookie": session.cookie]
-            )
-
-            #expect(taskPage.status == .ok)
-            expectContains(taskPage.body.string, "<h1>Release notes</h1>")
-            expectContains(taskPage.body.string, "<li><strong>Ready</strong></li>")
-            #expect(!taskPage.body.string.contains("<script>alert('xss')</script>"))
-            #expect(!taskPage.body.string.contains("data-controller=\"markdown\""))
-        }
-    }
-
-    @Test("An archived task can be found and restored")
+    @Test("Archived tasks leave active page data and can be restored")
     func archivedTaskRecovery() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
@@ -223,102 +130,40 @@ struct AppTests {
             try await task.create(on: app.db)
             let taskID = try task.requireID()
 
-            let detailPage = try await app.testing().sendRequest(
-                .GET,
-                String(task.browserPath.dropFirst()),
-                headers: ["Cookie": session.cookie]
-            )
-            let csrfMarker = #"name="csrf-token" content=""#
-            let csrfStart = try #require(detailPage.body.string.range(of: csrfMarker)?.upperBound)
-            let csrfEnd = try #require(
-                detailPage.body.string[csrfStart...].firstIndex(of: "\"")
-            )
-            let csrfToken = String(detailPage.body.string[csrfStart..<csrfEnd])
-
             let archived = try await app.testing().sendRequest(
-                .POST,
-                "app/tasks/\(taskID)/archive",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ]
+                .PATCH,
+                "api/v1/tasks/\(taskID)",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(["isArchived": true])
+                }
             )
-            #expect(archived.status == .seeOther)
-            #expect(try #require(try await Task.find(taskID, on: app.db)).isArchived)
+            #expect(archived.status == .ok)
 
             let activeTasks = try await app.testing().sendRequest(
                 .GET,
-                "app/tasks",
+                "api/v1/workspace/tasks",
                 headers: ["Cookie": session.cookie]
             )
             #expect(!activeTasks.body.string.contains("Recover the archived task"))
-
             let archivedTasks = try await app.testing().sendRequest(
                 .GET,
-                "app/tasks/archived",
+                "api/v1/workspace/tasks/archived",
                 headers: ["Cookie": session.cookie]
             )
             #expect(archivedTasks.status == .ok)
-            expectContains(archivedTasks.body.string, "Archived assignments")
             expectContains(archivedTasks.body.string, "Recover the archived task")
-            expectContains(archivedTasks.body.string, ">Restore</button>")
 
             let restored = try await app.testing().sendRequest(
-                .POST,
-                "app/tasks/\(taskID)/archive",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ]
+                .PATCH,
+                "api/v1/tasks/\(taskID)",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(["isArchived": false])
+                }
             )
-            #expect(restored.status == .seeOther)
-            #expect(restored.headers.first(name: .location) == task.browserPath)
+            #expect(restored.status == .ok)
             #expect(!(try #require(try await Task.find(taskID, on: app.db))).isArchived)
         }
     }
-
-    @Test("Task pages use a title slug with a stable case-insensitive key")
-    func taskPagesUseFriendlySlugs() async throws {
-        try await withApp(configure: configure) { app in
-            let session = try await register(on: app)
-            let task = Task(
-                publicID: "a1b2c3",
-                boardID: session.boardID,
-                title: "Add 2 way Focalboard <--> Thinkspace Sync",
-                position: 1_000,
-                creatorID: session.userID
-            )
-            try await task.create(on: app.db)
-            let originalPath = "/app/tasks/add-2-way-focalboard-thinkspace-sync-a1b2c3"
-            #expect(task.browserPath == originalPath)
-
-            let canonical = try await app.testing().sendRequest(
-                .GET,
-                String(originalPath.dropFirst()),
-                headers: ["Cookie": session.cookie]
-            )
-            #expect(canonical.status == .ok)
-            expectContains(canonical.body.string, "Add 2 way Focalboard")
-
-            let uppercase = try await app.testing().sendRequest(
-                .GET,
-                "app/tasks/ADD-2-WAY-FOCALBOARD-THINKSPACE-SYNC-A1B2C3",
-                headers: ["Cookie": session.cookie]
-            )
-            #expect(uppercase.status == .movedPermanently)
-            #expect(uppercase.headers.first(name: .location) == originalPath)
-
-            task.title = "Finish Thinkspace sync"
-            try await task.update(on: app.db)
-            let renamedPath = "/app/tasks/finish-thinkspace-sync-a1b2c3"
-            let oldSlug = try await app.testing().sendRequest(
-                .GET,
-                String(originalPath.dropFirst()),
-                headers: ["Cookie": session.cookie]
-            )
-            #expect(oldSlug.status == .movedPermanently)
-            #expect(oldSlug.headers.first(name: .location) == renamedPath)
-        }
-    }
-
 }

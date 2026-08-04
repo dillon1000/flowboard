@@ -213,83 +213,41 @@ struct TapActionTests {
         }
     }
 
-    @Test("The public Tap runner is small, cacheable, and session-free")
-    func publicRunner() async throws {
-        try await withApp(configure: configure) { app in
-            let response = try await app.testing().sendRequest(.GET, "t")
-            let page = response.body.string
-
-            #expect(response.status == .ok)
-            #expect(response.headers.first(name: .cacheControl)?.contains("public") == true)
-            #expect(response.headers.first(name: "Referrer-Policy") == "no-referrer")
-            let CSS = try text(between: "<style>", and: "</style>", in: page)
-            #expect(CSS.split(separator: "\n").count < 400)
-            #expect(page.utf8.count < 20_000)
-            #expect(!page.contains("/assets/"))
-            #expect(page.contains("/api/v1/taps/prepare"))
-            #expect(page.contains("/api/v1/taps/execute"))
-            #expect(page.contains("/tagneedsrotation.svg"))
-            #expect(page.contains("/scanerror.svg"))
-            let fragmentRemoval = try #require(page.range(of: "history.replaceState")?.lowerBound)
-            let preparationRequest = try #require(page.range(of: "fetch('/api/v1/taps/prepare")?.lowerBound)
-            #expect(fragmentRemoval < preparationRequest)
-        }
-    }
-
     @Test("Board administrators can create, reassign, disable, and rotate Tap actions")
     func managementLifecycle() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
-            let settings = try await app.testing().sendRequest(
-                .GET,
-                "app/boards/\(session.boardID)/settings",
-                headers: ["Cookie": session.cookie]
-            )
-            let csrfToken = try csrfToken(from: settings.body.string)
             let create = try await app.testing().sendRequest(
                 .POST,
-                "app/boards/\(session.boardID)/tap-actions",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ],
+                "api/v1/boards/\(session.boardID)/tap-actions",
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
                     try request.content.encode(
-                        [
-                            "name": "Dock inspection",
-                            "displayDescription": "Leave the clipboard at the loading dock.",
-                            "kind": "create_task",
-                            "targetTaskID": "",
-                            "title": "Inspect the loading dock",
-                            "description": "Created by a physical tag.",
-                            "status": "backlog",
-                            "priority": "high",
-                            "labels": "NFC, inspection",
-                            "expiresAt": "",
-                            "maxUses": "5",
-                            "cooldownSeconds": "2",
-                        ],
-                        as: .urlEncodedForm
+                        TapActionMutationTestRequest(
+                            name: "Dock inspection",
+                            displayDescription: "Leave the clipboard at the loading dock.",
+                            kind: .createTask,
+                            targetTaskID: nil,
+                            title: "Inspect the loading dock",
+                            description: "Created by a physical tag.",
+                            status: "backlog",
+                            priority: "high",
+                            labels: ["NFC", "inspection"],
+                            expiresAt: nil,
+                            maxUses: 5,
+                            cooldownSeconds: 2
+                        )
                     )
                 }
             )
             #expect(create.status == .created)
             #expect(create.headers.first(name: .cacheControl) == "no-store")
-            let createPage = create.body.string
-            let tagURL = try text(
-                between: #"<code class="tap-url-secret" data-tap-provision-target="url">"#,
-                and: "</code>",
-                in: createPage
-            )
+            let created = try create.content.decode(TapActionMutationTestResponse.self)
+            let tagURL = try #require(created.url)
             #expect(tagURL.utf8.count < TapTokenService.maximumURLByteCount)
             #expect(tagURL.contains("/t#fbt_"))
-            #expect(createPage.contains("Write NFC tag"))
 
-            let action = try #require(
-                try await TapAction.query(on: app.db)
-                    .filter(\.$board.$id == session.boardID)
-                    .first()
-            )
+            let action = try #require(try await TapAction.find(created.id, on: app.db))
             let firstTokenHash = action.tokenHash
             #expect(action.name == "Dock inspection")
             #expect(action.displayDescription == "Leave the clipboard at the loading dock.")
@@ -300,7 +258,7 @@ struct TapActionTests {
 
             let laterSettings = try await app.testing().sendRequest(
                 .GET,
-                "app/boards/\(session.boardID)/settings",
+                "api/v1/workspace/boards/\(session.boardID)/settings",
                 headers: ["Cookie": session.cookie]
             )
             #expect(!laterSettings.body.string.contains(tagURL))
@@ -313,33 +271,29 @@ struct TapActionTests {
             )
             try await task.create(on: app.db)
             let update = try await app.testing().sendRequest(
-                .POST,
-                "app/boards/\(session.boardID)/tap-actions/\(action.requireID())/update",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ],
+                .PATCH,
+                "api/v1/boards/\(session.boardID)/tap-actions/\(action.requireID())",
+                headers: ["Cookie": session.cookie],
                 beforeRequest: { request in
                     try request.content.encode(
-                        [
-                            "name": "Finish work order",
-                            "displayDescription": "This work order is now complete.",
-                            "kind": "update_task",
-                            "targetTaskID": try task.requireID().uuidString,
-                            "title": "",
-                            "description": "",
-                            "status": "done",
-                            "priority": "medium",
-                            "labels": "",
-                            "expiresAt": "",
-                            "maxUses": "",
-                            "cooldownSeconds": "3",
-                        ],
-                        as: .urlEncodedForm
+                        TapActionMutationTestRequest(
+                            name: "Finish work order",
+                            displayDescription: "This work order is now complete.",
+                            kind: .updateTask,
+                            targetTaskID: try task.requireID(),
+                            title: nil,
+                            description: nil,
+                            status: "done",
+                            priority: "medium",
+                            labels: [],
+                            expiresAt: nil,
+                            maxUses: nil,
+                            cooldownSeconds: 3
+                        )
                     )
                 }
             )
-            #expect(update.status == .seeOther)
+            #expect(update.status == .ok)
             let reassigned = try #require(try await TapAction.find(action.requireID(), on: app.db))
             #expect(reassigned.kind == .updateTask)
             #expect(reassigned.displayDescription == "This work order is now complete.")
@@ -347,26 +301,24 @@ struct TapActionTests {
             #expect(reassigned.tokenHash == firstTokenHash)
 
             let disabled = try await app.testing().sendRequest(
-                .POST,
-                "app/boards/\(session.boardID)/tap-actions/\(action.requireID())/toggle",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ]
+                .PATCH,
+                "api/v1/boards/\(session.boardID)/tap-actions/\(action.requireID())",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(["isEnabled": false])
+                }
             )
-            #expect(disabled.status == .seeOther)
+            #expect(disabled.status == .ok)
             #expect(!(try #require(try await TapAction.find(action.requireID(), on: app.db))).isEnabled)
 
             let rotated = try await app.testing().sendRequest(
                 .POST,
-                "app/boards/\(session.boardID)/tap-actions/\(action.requireID())/rotate",
-                headers: [
-                    "Cookie": session.cookie,
-                    "X-CSRF-TOKEN": csrfToken,
-                ]
+                "api/v1/boards/\(session.boardID)/tap-actions/\(action.requireID())/rotate",
+                headers: ["Cookie": session.cookie]
             )
             #expect(rotated.status == .ok)
             #expect(rotated.headers.first(name: .cacheControl) == "no-store")
+            #expect(try rotated.content.decode(TapActionMutationTestResponse.self).url != nil)
             #expect(
                 try #require(try await TapAction.find(action.requireID(), on: app.db)).tokenHash
                     != firstTokenHash
@@ -435,16 +387,24 @@ struct TapActionTests {
         )
     }
 
-    private func csrfToken(from page: String) throws -> String {
-        let marker = #"name="csrf-token" content=""#
-        let start = try #require(page.range(of: marker)?.upperBound)
-        let end = try #require(page[start...].firstIndex(of: "\""))
-        return String(page[start..<end])
-    }
+}
 
-    private func text(between startMarker: String, and endMarker: String, in page: String) throws -> String {
-        let start = try #require(page.range(of: startMarker)?.upperBound)
-        let end = try #require(page[start...].range(of: endMarker)?.lowerBound)
-        return String(page[start..<end])
-    }
+private struct TapActionMutationTestRequest: Content {
+    let name: String
+    let displayDescription: String?
+    let kind: TapActionKind
+    let targetTaskID: UUID?
+    let title: String?
+    let description: String?
+    let status: String
+    let priority: String?
+    let labels: [String]
+    let expiresAt: String?
+    let maxUses: Int?
+    let cooldownSeconds: Int
+}
+
+private struct TapActionMutationTestResponse: Content {
+    let id: UUID
+    let url: String?
 }
