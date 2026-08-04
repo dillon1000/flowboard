@@ -5,6 +5,8 @@
 # Keep local dependencies and generated build output out of the remote build context.
 frontend/node_modules
 frontend/dist
+frontend/.svelte-kit
+frontend/build
 frontend/.playwright-cli
 backend/.build
 backend/.swiftpm
