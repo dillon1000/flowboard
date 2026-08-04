@@ -18,7 +18,7 @@
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
   let open = $state(false);
-  let optionButtons: HTMLButtonElement[] = [];
+  let optionButtons = $state<HTMLButtonElement[]>([]);
 
   async function showMenu(): Promise<void> {
     if (disabled) return;

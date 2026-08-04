@@ -35,7 +35,7 @@
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
   let open = $state(false);
-  let optionButtons: HTMLButtonElement[] = [];
+  let optionButtons = $state<HTMLButtonElement[]>([]);
   const selectedOption = $derived(options.find((option: SelectMenuOption) => option.value === value));
 
   onMount(() => {
