@@ -65,7 +65,7 @@ describe('flowboard email worker', () => {
       html: expect.stringContaining('https://app.example/tasks/finish-the-report-abc123')
     });
     expect(getSentMessage()).toMatchObject({
-      html: expect.stringContaining('FLOWBOARD'),
+      html: expect.stringContaining('Flowboard'),
       text: expect.stringContaining('Finish the report')
     });
   });
@@ -99,6 +99,9 @@ describe('flowboard email worker', () => {
     });
 
     expect(result.html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(result.html).toContain('commented on');
+    expect(result.html).not.toContain('A task has a new comment');
+    expect(result.html).not.toContain('Work, in view.');
     expect(result.html).not.toContain('<script>alert(1)</script>');
   });
 });

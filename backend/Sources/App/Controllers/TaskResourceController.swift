@@ -57,15 +57,18 @@ struct TaskResourceController: RouteCollection {
             .filter(\.$task.$id == task.requireID())
             .with(\.$user)
             .all()
+        // Always include the commenter so self-comments notify their author.
+        // Remove the actor from the follower list first to avoid duplicate emails.
+        let recipients = [user] + followers.map(\.user).filter { $0.id != actorID }
         if let configuration = req.application.notificationConfiguration {
-            for follower in followers where follower.$user.id != actorID {
+            for recipient in recipients {
                 await NotificationService.enqueue(
                     try NotificationEvent.taskCommentAdded(
                         comment: comment,
                         task: task,
                         board: board,
                         actor: user,
-                        recipient: follower.user,
+                        recipient: recipient,
                         appURL: configuration.publicAppURL
                     ),
                     for: req
