@@ -26,9 +26,6 @@ importers:
       sanitize-html:
         specifier: ^2.17.6
         version: 2.17.6
-      sortablejs:
-        specifier: ^1.15.7
-        version: 1.15.7
     devDependencies:
       '@sveltejs/adapter-node':
         specifier: ^5.5.7
@@ -45,9 +42,6 @@ importers:
       '@types/sanitize-html':
         specifier: ^2.16.1
         version: 2.16.1
-      '@types/sortablejs':
-        specifier: ^1.15.9
-        version: 1.15.9
       svelte:
         specifier: ^5.56.8
         version: 5.56.8
@@ -467,9 +461,6 @@ packages:
   '@types/sanitize-html@2.16.1':
     resolution: {integrity: sha512-n9wjs8bCOTyN/ynwD8s/nTcTreIHB1vf31vhLMGqUPNHaweKC4/fAl4Dj+hUlCTKYgm4P3k83fmiFfzkZ6sgMA==}
 
-  '@types/sortablejs@1.15.9':
-    resolution: {integrity: sha512-7HP+rZGE2p886PKV9c9OJzLBI6BBJu1O7lJGYnPyG3fS4/duUCcngkNCjsLwIMV+WMqANe3tt4irrXHSIe68OQ==}
-
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
@@ -841,9 +832,6 @@ packages:
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
     engines: {node: '>=18'}
-
-  sortablejs@1.15.7:
-    resolution: {integrity: sha512-Kk8wLQPlS+yi1ZEf48a4+fzHa4yxjC30M/Sr2AnQu+f/MPwvvX9XjZ6OWejiz8crBsLwSq8GHqaxaET7u6ux0A==}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -1296,8 +1284,6 @@ snapshots:
     dependencies:
       htmlparser2: 10.1.0
 
-  '@types/sortablejs@1.15.9': {}
-
   '@types/trusted-types@2.0.7': {}
 
   '@vitest/expect@4.1.10':
@@ -1650,8 +1636,6 @@ snapshots:
       '@polka/url': 1.0.0-next.29
       mrmime: 2.0.1
       totalist: 3.0.1
-
-  sortablejs@1.15.7: {}
 
   source-map-js@1.2.1: {}
 
