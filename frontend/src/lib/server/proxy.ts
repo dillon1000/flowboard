@@ -49,7 +49,10 @@ export function proxy(prefix: string): RequestHandler {
       if (cookie) responseHeaders.append('set-cookie', cookie);
     }
 
-    return new Response(event.request.method === 'HEAD' ? null : await response.arrayBuffer(), {
+    // Fetch rejects bodies on these HTTP statuses, including a zero-byte ArrayBuffer.
+    // Keep the backend status intact so successful no-content mutations stay successful.
+    const responseHasBody = event.request.method !== 'HEAD' && ![204, 205, 304].includes(response.status);
+    return new Response(responseHasBody ? await response.arrayBuffer() : null, {
       status: response.status,
       headers: responseHeaders
     });
