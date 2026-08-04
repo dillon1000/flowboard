@@ -77,7 +77,7 @@
           <div class="field wide"><label for="tap-labels">Labels</label><input class="input" id="tap-labels" name="labels" value={action?.labels ?? ''} /></div>
           <div class="field"><label for="tap-expiration">Expiration date</label><input class="input" id="tap-expiration" type="date" name="expiresAt" value={action?.expiresAtInput ?? ''} /></div>
           <div class="field"><label for="tap-uses">Maximum uses</label><input class="input" id="tap-uses" type="number" name="maxUses" min="1" value={action?.maxUses ?? ''} /></div>
-          <div class="field"><label for="tap-cooldown">Cooldown in seconds</label><input class="input" id="tap-cooldown" type="number" name="cooldownSeconds" min="0" max="86400" value={action?.cooldownSeconds ?? 0} /></div>
+          <div class="field"><label for="tap-cooldown">Cooldown in seconds</label><input class="input" id="tap-cooldown" type="number" name="cooldownSeconds" min="0" max="300" value={action?.cooldownSeconds ?? 0} /></div>
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : action ? 'Save action' : 'Create action'}</button></div>
