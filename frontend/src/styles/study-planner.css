@@ -65,17 +65,7 @@
 }
 
 .study-overview-page .topbar {
-  min-height: 70px;
-  padding-inline: 28px;
-}
-
-.study-overview-page .topbar .menu-button,
-.study-overview-page .topbar .breadcrumbs {
-  visibility: hidden;
-}
-
-.study-overview-page .search-control {
-  width: 304px;
+  display: none;
 }
 
 .study-page {
@@ -613,10 +603,15 @@
 
 .study-day-load {
   display: flex;
+  width: 100%;
+  min-height: 100%;
   align-items: center;
   justify-content: space-between;
-  padding-inline: 20px 24px;
+  padding: 0 24px 0 20px;
+  border: 0;
   color: var(--ds-green-900);
+  background: transparent;
+  cursor: pointer;
   font-size: 15px;
 }
 
@@ -634,6 +629,11 @@
   width: 14px;
   height: 14px;
   color: var(--text-tertiary);
+  transition: transform var(--duration) var(--ease);
+}
+
+.study-day-load.collapsed > svg {
+  transform: rotate(-90deg);
 }
 
 .study-day-load.balanced {
@@ -776,9 +776,10 @@
     display: revert;
   }
 
-  .study-overview-page .topbar .menu-button,
-  .study-overview-page .topbar .breadcrumbs {
-    visibility: visible;
+  .study-overview-page .topbar {
+    display: flex;
+    min-height: var(--topbar-height);
+    padding-inline: 16px;
   }
 
   .study-page {

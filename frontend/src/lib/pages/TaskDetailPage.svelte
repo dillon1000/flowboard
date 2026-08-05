@@ -6,6 +6,7 @@
   import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
+  import TimePicker from '$lib/components/TimePicker.svelte';
   import PromoteMenu from '$lib/components/PromoteMenu.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
@@ -359,8 +360,8 @@
         <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
         <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>
         <div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div>
-        <div class="field"><label for="edit-time">Due time</label><input class="input" id="edit-time" name="dueTime" type="time" value={detail.task.dueTimeInput} /></div>
-        <div class="field"><label for="edit-estimate">Time estimate</label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
+        <div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>
+        <div class="field"><label for="edit-estimate">Time estimate</label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes, e.g. 45" /></div>
         <div class="field"><label for="edit-grade-earned">Points earned</label><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></div>
         <div class="field"><label for="edit-grade-possible">Points possible</label><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0.1" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradePossible : ''} placeholder="e.g. 100" /><span class="field-help">Enter both fields to include this grade in your course total.</span></div>
         <div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div>

@@ -6,6 +6,7 @@
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
   import DatePicker from './DatePicker.svelte';
+  import TimePicker from './TimePicker.svelte';
   import SelectMenu, { type SelectMenuOption } from './SelectMenu.svelte';
 
   let { open = $bindable(false), board } = $props<{ open: boolean; board: BoardPageContext }>();
@@ -78,7 +79,7 @@
           <div class="field"><label for="new-task-priority">Severity</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Severity" /></div>
           <div class="field"><label for="new-task-start">Start date</label><DatePicker id="new-task-start" name="startAt" label="Start date" /></div>
           <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
-          <div class="field"><label for="new-task-time">Due time</label><input class="input" id="new-task-time" name="dueTime" type="time" /></div>
+          <div class="field"><label for="new-task-time">Due time</label><TimePicker id="new-task-time" name="dueTime" label="Due time" /></div>
           <div class="field"><label for="new-task-estimate">Time estimate</label><input class="input" id="new-task-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
           <div class="field wide"><label for="new-task-labels">Labels</label><input class="input" id="new-task-labels" name="labels" value={board.newTaskLabels} maxlength="500" placeholder="Design, Launch" /></div>
         </div>

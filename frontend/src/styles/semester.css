@@ -1,7 +1,7 @@
 /* A timeline presents one week at a time, so a student can scan a full term
    without mistaking a collection of cards for a second task board. */
 .semester-page {
-  max-width: 1120px;
+  max-width: none;
 }
 
 .semester-header {
@@ -26,13 +26,21 @@
   flex: 0 0 auto;
 }
 
-.semester-timeline {
+.semester-layout {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(520px, 1fr) minmax(280px, 340px);
+  gap: 24px;
+  align-items: start;
   margin-top: 24px;
 }
 
+.semester-timeline {
+  display: grid;
+  gap: 12px;
+}
+
 .semester-week {
+  overflow: clip;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-border);
@@ -136,7 +144,142 @@
   color: var(--text-tertiary);
 }
 
+.semester-rail {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.semester-rail-card {
+  overflow: clip;
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.semester-rail-heading {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.semester-rail-heading h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.semester-rail-heading a {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.semester-rail-heading a:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.semester-next-list {
+  display: grid;
+}
+
+.semester-next-list a {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color var(--duration) var(--ease);
+}
+
+.semester-next-list a + a {
+  border-top: 1px solid var(--border);
+}
+
+.semester-next-list a:hover {
+  background: var(--surface-hover);
+}
+
+.semester-next-list a > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.semester-next-list strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semester-next-list small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.semester-rail-card > p {
+  padding: 14px;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.semester-signal {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 12px 14px;
+  margin: 0;
+}
+
+.semester-signal div {
+  min-width: 0;
+}
+
+.semester-signal div + div {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.semester-signal dt {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.semester-signal dd {
+  margin: 5px 0 0;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (width <= 980px) {
+  .semester-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .semester-rail {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (width <= 640px) {
+  .semester-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .semester-week > header {
     align-items: flex-start;
     flex-direction: column;

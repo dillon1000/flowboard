@@ -161,6 +161,22 @@
   line-height: 1.1;
 }
 
+.task-stats {
+  grid-template-columns: repeat(3, minmax(0, 220px));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.task-stats .stat {
+  min-height: 84px;
+  padding: 12px 14px;
+}
+
+.task-stats .stat strong {
+  margin-top: 5px;
+  font-size: 24px;
+}
+
 /* ==========================================================================
    Panels & lists
    ========================================================================== */

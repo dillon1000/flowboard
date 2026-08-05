@@ -414,3 +414,13 @@
 .data-table .muted {
   color: var(--text-tertiary);
 }
+
+.data-table .due-cell {
+  white-space: nowrap;
+}
+
+.data-table .due-time::before {
+  margin: 0 6px;
+  color: var(--text-tertiary);
+  content: '·';
+}
