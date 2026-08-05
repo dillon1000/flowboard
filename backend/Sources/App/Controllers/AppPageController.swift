@@ -27,15 +27,26 @@ struct AppPageController: RouteCollection {
         let tasks = try await taskQuery(boardIDs: boardIDs, on: req.db)
             .sort(\.$dueAt, .ascending)
             .all()
+        let taskContexts = try await makeTaskContexts(tasks, on: req.db)
+        let taskIDs = taskContexts.map(\.id)
+        let studySessions = if taskIDs.isEmpty {
+            [StudySession]()
+        } else {
+            try await StudySession.query(on: req.db)
+                .filter(\.$user.$id == req.auth.require(User.self).requireID())
+                .filter(\.$task.$id ~~ taskIDs)
+                .all()
+        }
 
         return try respond(
             common: common,
             pageTitle: "This week",
             pageKind: .overview,
             overview: OverviewPageContext(
-                tasks: try await makeTaskContexts(tasks, on: req.db),
+                tasks: taskContexts,
                 courses: common.boards,
                 selectedCourseID: selectedCourseID,
+                studySessions: studySessions,
                 timeZoneIdentifier: common.userTimeZone
             ),
         )

@@ -116,6 +116,8 @@ export interface StudyAssignmentContext {
   assigneeName: string;
   dueDisplay: string;
   description: string;
+  studySessionID: string;
+  hasStudySession: boolean;
 }
 
 export interface StudyPlanCandidateContext {
@@ -124,11 +126,14 @@ export interface StudyPlanCandidateContext {
   courseName: string;
   dueDisplay: string;
   effortLabel: string;
+  remainingMinutes: number;
+  remainingDisplay: string;
 }
 
 export interface StudyDayContext {
   weekdayLabel: string;
   dateLabel: string;
+  dateInput: string;
   isToday: boolean;
   assignments: StudyAssignmentContext[];
   assignmentCount: number;
@@ -169,6 +174,14 @@ export interface OverviewPageContext {
   unplannedFocusCount: number;
   hasUnplannedFocus: boolean;
   studyStreakDays: number;
+}
+
+export interface AutoPlanStudySessionsResponse {
+  createdSessionCount: number;
+  updatedSessionCount: number;
+  plannedMinutes: number;
+  remainingMinutes: number;
+  unplannedTaskCount: number;
 }
 
 export interface SemesterAssignmentContext {
