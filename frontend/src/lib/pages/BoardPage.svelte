@@ -110,19 +110,26 @@
 <div class="page framed">
   <div class="board-bar">
     <header class="page-header">
-      <div class="page-title"><h1>{board.name}</h1><p>{board.description || `Shared as ${board.role}.`}</p></div>
+      <div class="page-title"><h1>{board.name}</h1><p>{board.description || (board.canAdmin ? 'Add a course description in Course settings.' : 'Keep assignments, notes, and course material together.')}</p></div>
       <div class="page-actions">
-        {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Board settings</a>{/if}
-        {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />New task</button>{/if}
+        {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Course settings</a>{/if}
+        {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />Add assignment</button>{/if}
       </div>
     </header>
 
-    <nav class="board-toolbar" aria-label="Board views">
+    <div class="course-summary" aria-label="Course planning summary">
+      <span><strong>{board.assignmentCount}</strong> assignments</span>
+      <span><strong>{board.completedAssignmentCount}</strong> completed</span>
+      <span class:needs-attention={board.undatedAssignmentCount > 0}><strong>{board.undatedAssignmentCount}</strong> need dates</span>
+      <span class:needs-attention={board.unestimatedAssignmentCount > 0}><strong>{board.unestimatedAssignmentCount}</strong> need estimates</span>
+    </div>
+
+    <nav class="board-toolbar" aria-label="Course views">
       {#each board.views as view (view.id)}
         {@const Icon = viewIcon(view.type)}
         <a class:active={view.isActive} class="view-tab" href={view.href}><Icon size={15} />{view.name}</a>
       {/each}
-      <span class="toolbar-spacer"></span><span class="badge subtle">Group: {board.groupByName}</span>
+      <span class="toolbar-spacer"></span><span class="badge subtle">Grouped by {board.groupByName}</span>
       {#if board.hasFilters}<span class="badge subtle"><Filter size={12} />{board.filterSummary}</span>{/if}
       {#if board.hasSorts}<span class="badge subtle"><ArrowDownUp size={12} />{board.sortSummary}</span>{/if}
       {#if board.canAdmin}<a class="button ghost small" href={`/app/boards/${board.id}/settings`}><Settings size={14} />Configure</a>{/if}
@@ -149,14 +156,15 @@
                   ondrop={(event) => dropTask(event, column.value, dropTarget?.taskID === task.id ? dropTarget.index : index)}
                 />
               {/each}
+              {#if !column.tasks.length}<p class="column-empty">No assignments in this stage.</p>{/if}
             </div>
           </section>
         {/each}
       </div>
     {:else if board.activeView.isTable}
       {#if board.hasTasks}
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>Task</th><th>Status</th><th>Severity</th><th>Assignee</th><th>Start</th><th>Due</th></tr></thead><tbody>
-          {#each board.tasks as task (task.id)}<tr><td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td><td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td><td class:muted={!task.hasAssignee}>{task.assigneeName}</td><td class="muted">{task.startDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}</td></tr>{/each}
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Assignment</th><th>Status</th><th>Severity</th><th>Estimate</th><th>Start</th><th>Due</th></tr></thead><tbody>
+          {#each board.tasks as task (task.id)}<tr><td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td><td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td><td class:muted={!task.hasEstimate}>{task.estimatedDisplay}</td><td class="muted">{task.startDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}{#if task.hasDueDate} · {task.dueTimeDisplay}{/if}</td></tr>{/each}
         </tbody></table></div>
       {:else}{@render EmptyView('table')}{/if}
     {:else if board.activeView.isCalendar}
@@ -174,5 +182,5 @@
 <NewTaskDialog bind:open={createTaskOpen} {board} />
 
 {#snippet EmptyView(icon: 'table' | 'gallery')}
-  <div class="empty-state"><div><span class="empty-state-icon" aria-hidden="true">{#if icon === 'table'}<Table2 size={22} />{:else}<GalleryHorizontalEnd size={22} />{/if}</span><h2>No tasks in this view</h2><p>Create a task, or loosen this view’s filters in board settings.</p></div></div>
+  <div class="empty-state"><div><span class="empty-state-icon" aria-hidden="true">{#if icon === 'table'}<Table2 size={22} />{:else}<GalleryHorizontalEnd size={22} />{/if}</span><h2>No assignments in this view</h2><p>Add an assignment, or adjust this view’s filters in Course settings.</p></div></div>
 {/snippet}
