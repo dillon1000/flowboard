@@ -221,8 +221,7 @@
           <div class="stage-board">
             {#each columns as column (column.value)}
               <section class="stage-lane" aria-label={`${column.name}, ${column.tasks.length} ${column.tasks.length === 1 ? 'assignment' : 'assignments'}`}>
-                <header class="stage-lane-header">
-                  <span class={`column-dot stage-tint ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span>
+                <header class={`stage-lane-header stage-tint ${column.dotClass}`} style={column.dotStyle}>
                   <strong>{column.name}</strong>
                   <span class="stage-lane-count">{column.tasks.length}</span>
                 </header>
