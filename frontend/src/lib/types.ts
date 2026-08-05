@@ -111,6 +111,14 @@ export interface StudyAssignmentContext {
   description: string;
 }
 
+export interface StudyPlanCandidateContext {
+  id: string;
+  title: string;
+  courseName: string;
+  dueDisplay: string;
+  effortLabel: string;
+}
+
 export interface StudyDayContext {
   weekdayLabel: string;
   dateLabel: string;
@@ -118,6 +126,9 @@ export interface StudyDayContext {
   assignments: StudyAssignmentContext[];
   assignmentCount: number;
   hasAssignments: boolean;
+  focusBlocks: StudyAssignmentContext[];
+  focusBlockCount: number;
+  hasFocusBlocks: boolean;
   workloadMinutes: number;
   unestimatedAssignmentCount: number;
   workloadLabel: string;
@@ -146,6 +157,10 @@ export interface OverviewPageContext {
   hasUnscheduledAssignments: boolean;
   unestimatedAssignmentCount: number;
   hasUnestimatedAssignments: boolean;
+  planCandidates: StudyPlanCandidateContext[];
+  hasPlanCandidates: boolean;
+  unplannedFocusCount: number;
+  hasUnplannedFocus: boolean;
 }
 
 export interface TaskColumnContext {

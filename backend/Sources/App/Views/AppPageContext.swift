@@ -134,6 +134,10 @@ struct OverviewPageContext: Encodable {
     let hasUnscheduledAssignments: Bool
     let unestimatedAssignmentCount: Int
     let hasUnestimatedAssignments: Bool
+    let planCandidates: [StudyPlanCandidateContext]
+    let hasPlanCandidates: Bool
+    let unplannedFocusCount: Int
+    let hasUnplannedFocus: Bool
 
     init(
         tasks: [TaskCardContext],
@@ -155,6 +159,7 @@ struct OverviewPageContext: Encodable {
         let taskContexts = tasks.filter { task in
             selectedCourseID == nil || task.boardID == selectedCourseID
         }
+        let activeTaskContexts = taskContexts.filter { !studyTaskIsCompleted($0) }
 
         self.weekLabel = studyWeekLabel(start: weekStart, calendar: calendar)
         self.courseFilters = activeCourses.map {
@@ -170,13 +175,17 @@ struct OverviewPageContext: Encodable {
         self.returnHref = selectedCourseID.map { "/app?course=\($0.uuidString)" } ?? "/app"
         self.days = weekDates.map { date in
             let dateKey = inputDate(date)
-            let matchingTasks = taskContexts
+            let dueTasks = activeTaskContexts
                 .filter { $0.dueInput == dateKey }
+                .sorted(by: studyTaskOrder)
+            let focusTasks = activeTaskContexts
+                .filter { $0.startInput == dateKey && $0.dueInput != dateKey }
                 .sorted(by: studyTaskOrder)
             return StudyDayContext(
                 date: date,
                 isToday: calendar.isDate(date, inSameDayAs: today),
-                tasks: matchingTasks,
+                dueTasks: dueTasks,
+                focusTasks: focusTasks,
                 courseColors: courseColors
             )
         }
@@ -196,10 +205,17 @@ struct OverviewPageContext: Encodable {
             self.balanceName = "Light week"
             self.balanceDescription = "Room to work ahead."
         }
-        self.unscheduledAssignmentCount = taskContexts.filter { !$0.hasDueDate }.count
+        self.unscheduledAssignmentCount = activeTaskContexts.filter { !$0.hasDueDate }.count
         self.hasUnscheduledAssignments = unscheduledAssignmentCount > 0
         self.unestimatedAssignmentCount = days.reduce(0) { $0 + $1.unestimatedAssignmentCount }
         self.hasUnestimatedAssignments = unestimatedAssignmentCount > 0
+        self.planCandidates = activeTaskContexts
+            .filter { $0.startInput.isEmpty }
+            .sorted(by: studyTaskOrder)
+            .map(StudyPlanCandidateContext.init)
+        self.hasPlanCandidates = !planCandidates.isEmpty
+        self.unplannedFocusCount = planCandidates.count
+        self.hasUnplannedFocus = unplannedFocusCount > 0
     }
 }
 
@@ -226,6 +242,9 @@ struct StudyDayContext: Encodable {
     let assignments: [StudyAssignmentContext]
     let assignmentCount: Int
     let hasAssignments: Bool
+    let focusBlocks: [StudyAssignmentContext]
+    let focusBlockCount: Int
+    let hasFocusBlocks: Bool
     let workloadMinutes: Int
     let unestimatedAssignmentCount: Int
     let workloadLabel: String
@@ -234,13 +253,14 @@ struct StudyDayContext: Encodable {
     init(
         date: Date,
         isToday: Bool,
-        tasks: [TaskCardContext],
+        dueTasks: [TaskCardContext],
+        focusTasks: [TaskCardContext],
         courseColors: [UUID: String]
     ) {
         self.weekdayLabel = studyDateLabel(date, format: "EEE")
         self.dateLabel = studyDateLabel(date, format: "MMM d")
         self.isToday = isToday
-        self.assignments = tasks.map {
+        self.assignments = dueTasks.map {
             StudyAssignmentContext(
                 task: $0,
                 courseColorClass: courseColors[$0.boardID] ?? "course-blue"
@@ -248,8 +268,25 @@ struct StudyDayContext: Encodable {
         }
         self.assignmentCount = assignments.count
         self.hasAssignments = !assignments.isEmpty
-        self.workloadMinutes = assignments.reduce(0) { $0 + $1.estimatedMinutes }
-        self.unestimatedAssignmentCount = assignments.filter { !$0.hasEstimate }.count
+        self.focusBlocks = focusTasks.map {
+            StudyAssignmentContext(
+                task: $0,
+                courseColorClass: courseColors[$0.boardID] ?? "course-blue"
+            )
+        }
+        self.focusBlockCount = focusBlocks.count
+        self.hasFocusBlocks = !focusBlocks.isEmpty
+        let unplannedDueBlocks = dueTasks
+            .filter { $0.startInput.isEmpty }
+            .map {
+                StudyAssignmentContext(
+                    task: $0,
+                    courseColorClass: courseColors[$0.boardID] ?? "course-blue"
+                )
+            }
+        let workloadAssignments = focusBlocks + unplannedDueBlocks
+        self.workloadMinutes = workloadAssignments.reduce(0) { $0 + $1.estimatedMinutes }
+        self.unestimatedAssignmentCount = workloadAssignments.filter { !$0.hasEstimate }.count
         switch workloadMinutes {
         case 0:
             self.workloadLabel = "Unplanned"
@@ -264,6 +301,24 @@ struct StudyDayContext: Encodable {
             self.workloadLabel = "Heavy"
             self.workloadClass = "heavy"
         }
+    }
+}
+
+/// A compact queue item supplies the plan dialog with only the data needed to
+/// choose an assignment and place its work on a day.
+struct StudyPlanCandidateContext: Encodable {
+    let id: UUID
+    let title: String
+    let courseName: String
+    let dueDisplay: String
+    let effortLabel: String
+
+    init(task: TaskCardContext) {
+        self.id = task.id
+        self.title = task.title
+        self.courseName = task.boardName
+        self.dueDisplay = task.dueDisplay
+        self.effortLabel = task.estimatedDisplay
     }
 }
 
@@ -367,6 +422,10 @@ private func studyTaskOrder(_ left: TaskCardContext, _ right: TaskCardContext) -
     return leftOrder == rightOrder
         ? left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
         : leftOrder < rightOrder
+}
+
+private func studyTaskIsCompleted(_ task: TaskCardContext) -> Bool {
+    task.completionStatuses.split(separator: ",").contains(Substring(task.statusValue))
 }
 
 private func studyAssignmentType(title: String, labels: [String]) -> (name: String, icon: String) {

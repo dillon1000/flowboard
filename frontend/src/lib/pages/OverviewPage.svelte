@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { OverviewPageContext, StudyCourseContext, TaskResponse } from '$lib/types';
+  import type { OverviewPageContext, StudyCourseContext, StudyPlanCandidateContext, TaskResponse } from '$lib/types';
   import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, CaretDownIcon as ChevronDown, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, StackIcon as Layers, PlusIcon as Plus, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
@@ -13,10 +13,17 @@
   let { overview } = $props<{ overview: OverviewPageContext }>();
   let createBoardOpen = $state(false);
   let createTaskOpen = $state(false);
+  let planOpen = $state(false);
   let pending = $state(false);
   let requestError = $state('');
   const courseOptions = $derived<SelectMenuOption[]>(
     overview.courseFilters.map((course: StudyCourseContext) => ({ value: course.id, label: course.name }))
+  );
+  const planOptions = $derived<SelectMenuOption[]>(
+    overview.planCandidates.map((assignment: StudyPlanCandidateContext) => ({
+      value: assignment.id,
+      label: `${assignment.title} · ${assignment.courseName}`
+    }))
   );
 
   function estimateMinutes(value: FormDataEntryValue | null): number | null {
@@ -54,6 +61,29 @@
       pending = false;
     }
   }
+
+  async function planAssignment(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const taskID = String(data.get('taskID') ?? '');
+    const focusDate = String(data.get('focusDate') ?? '');
+    if (!taskID || !focusDate) return;
+    pending = true;
+    requestError = '';
+    try {
+      await api(`/api/v1/tasks/${taskID}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ startAt: `${focusDate}T00:00:00Z` })
+      });
+      planOpen = false;
+      await invalidateAll();
+      showToast('Focus block added');
+    } catch (cause) {
+      requestError = messageFor(cause);
+    } finally {
+      pending = false;
+    }
+  }
 </script>
 
 <div class="page study-page">
@@ -81,7 +111,7 @@
           <h1 id="study-week-title">This week</h1>
           <p>{overview.weekLabel}</p>
           <div class="study-week-actions">
-            <a class="button primary large" href="/app/tasks"><CalendarDays size={16} />Plan this week</a>
+            <button class="button primary large" type="button" disabled={!overview.hasPlanCandidates} onclick={() => (planOpen = true)}><CalendarDays size={16} />Plan this week</button>
             <button class="button large" type="button" disabled={!overview.hasCourses} onclick={() => (createTaskOpen = true)}><Plus size={16} />Add assignment</button>
           </div>
         </div>
@@ -114,7 +144,15 @@
                   </a>
                 {/each}
               {:else}
-                <span class="study-no-assignments">No assignments</span>
+                <span class="study-no-assignments">No deadlines</span>
+              {/if}
+              {#if day.hasFocusBlocks}
+                <div class="study-focus-blocks" aria-label={`Planned work for ${day.weekdayLabel}`}>
+                  <span class="study-focus-heading">Plan to work</span>
+                  {#each day.focusBlocks as assignment}
+                    <a class="study-focus-assignment" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}><span><span class={`study-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>{assignment.courseName}</span><strong>{assignment.title}</strong><small><Clock3 size={13} />{assignment.effortLabel}</small></a>
+                  {/each}
+                </div>
               {/if}
             </div>
             <span class={`study-day-load ${day.workloadClass}`}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{day.workloadLabel}</span><ChevronDown size={14} aria-hidden="true" /></span>
@@ -123,7 +161,9 @@
       </div>
 
       <footer class="study-week-footer">
-        {#if overview.hasUnestimatedAssignments}
+        {#if overview.hasUnplannedFocus}
+          <button type="button" onclick={() => (planOpen = true)}><CalendarDays size={15} />{overview.unplannedFocusCount} assignments still need a work day</button>
+        {:else if overview.hasUnestimatedAssignments}
           <a href="/app/tasks"><Clock3 size={15} />{overview.unestimatedAssignmentCount} assignments need time estimates</a>
         {:else if overview.hasUnscheduledAssignments}
           <a href="/app/tasks"><CalendarDays size={15} />{overview.unscheduledAssignmentCount} assignments still need a due date</a>
@@ -154,6 +194,19 @@
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (createTaskOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Adding…' : 'Add assignment'}</button></div>
+    </form>
+  </div>
+{/if}
+
+{#if planOpen}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="plan-week-title" tabindex="-1" use:dialogLayer={{ close: () => (planOpen = false) }}>
+    <form class="dialog" onsubmit={planAssignment}>
+      <div class="dialog-header"><div><h2 id="plan-week-title">Plan your week</h2><p>Choose one assignment and place its work on a day. Its deadline stays unchanged.</p></div><button class="icon-button" type="button" onclick={() => (planOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body">
+        {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
+        <div class="form-grid"><div class="field wide"><label for="plan-assignment">Assignment</label><SelectMenu id="plan-assignment" name="taskID" value={overview.planCandidates[0]?.id ?? ''} options={planOptions} ariaLabel="Assignment to plan" initialFocus /></div><div class="field wide"><label for="plan-date">Work on</label><DatePicker id="plan-date" name="focusDate" label="Work on" required /></div></div>
+      </div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (planOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Planning…' : 'Add focus block'}</button></div>
     </form>
   </div>
 {/if}
