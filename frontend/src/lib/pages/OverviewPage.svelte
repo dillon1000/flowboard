@@ -8,6 +8,7 @@
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
   import DatePicker from '$lib/components/DatePicker.svelte';
+  import TimePicker from '$lib/components/TimePicker.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
 
   let { overview } = $props<{ overview: OverviewPageContext }>();
@@ -16,6 +17,7 @@
   let planOpen = $state(false);
   let pending = $state(false);
   let requestError = $state('');
+  let expandedDays = $state<Record<string, boolean>>({});
   const courseOptions = $derived<SelectMenuOption[]>(
     overview.courseFilters.map((course: StudyCourseContext) => ({ value: course.id, label: course.name }))
   );
@@ -29,6 +31,10 @@
   function estimateMinutes(value: FormDataEntryValue | null): number | null {
     const minutes = Number(value);
     return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
+  }
+
+  function toggleDay(dateLabel: string): void {
+    expandedDays[dateLabel] = !expandedDays[dateLabel];
   }
 
   async function createAssignment(event: SubmitEvent): Promise<void> {
@@ -133,7 +139,7 @@
         {#each overview.days as day}
           <section class:today={day.isToday} class="study-day">
             <div class="study-day-date"><span>{day.weekdayLabel}</span><strong>{day.dateLabel}</strong>{#if day.isToday}<small>Today</small>{/if}</div>
-            <div class="study-day-content">
+            {#if expandedDays[day.dateLabel] !== false}<div class="study-day-content">
               {#if day.hasAssignments}
                 {#each day.assignments as assignment}
                   <a class="study-assignment" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}>
@@ -154,8 +160,8 @@
                   {/each}
                 </div>
               {/if}
-            </div>
-            <span class={`study-day-load ${day.workloadClass}`}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{day.workloadLabel}</span><ChevronDown size={14} aria-hidden="true" /></span>
+            </div>{/if}
+            <button class:collapsed={expandedDays[day.dateLabel] === false} class={`study-day-load ${day.workloadClass}`} type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{day.workloadLabel}</span><ChevronDown size={14} aria-hidden="true" /></button>
           </section>
         {/each}
       </div>
@@ -187,7 +193,7 @@
           <div class="field wide"><label for="assignment-title">Title</label><input class="input" id="assignment-title" name="title" maxlength="120" required data-dialog-focus /></div>
           <div class="field"><label for="assignment-course">Course</label><SelectMenu id="assignment-course" name="boardID" value={overview.defaultCourseID} options={courseOptions} ariaLabel="Course" /></div>
           <div class="field"><label for="assignment-due">Due date</label><DatePicker id="assignment-due" name="dueAt" label="Due date" /></div>
-          <div class="field"><label for="assignment-time">Due time</label><input class="input" id="assignment-time" name="dueTime" type="time" /></div>
+          <div class="field"><label for="assignment-time">Due time</label><TimePicker id="assignment-time" name="dueTime" label="Due time" /></div>
           <div class="field"><label for="assignment-estimate">Time estimate</label><input class="input" id="assignment-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
           <div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="5000"></textarea></div>
           <div class="field wide"><label for="assignment-labels">Type</label><input class="input" id="assignment-labels" name="labels" maxlength="500" placeholder="Lab report, Reading, Discussion" /></div>

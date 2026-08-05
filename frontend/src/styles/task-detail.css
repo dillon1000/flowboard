@@ -280,11 +280,16 @@ progress.progress::-moz-progress-bar {
 
 .checklist-add {
   display: flex;
+  align-items: stretch;
   gap: 8px;
 }
 
 .checklist-add .input {
   flex: 1;
+}
+
+.checklist-add .button {
+  height: 36px;
 }
 
 /* ---- Comments ---- */

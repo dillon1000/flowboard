@@ -34,7 +34,7 @@
   {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
   {#if tasks.hasTasks}
     {#if !archived && !tasks.query}
-      <section class="stats" aria-label="Assignment planning summary">
+      <section class="stats task-stats" aria-label="Assignment planning summary">
         <div class="stat"><span><CheckSquare size={14} />Active assignments</span><strong>{tasks.tasks.length - tasks.completedAssignmentCount}</strong></div>
         <div class="stat"><span><CalendarDays size={14} />Need a due date</span><strong>{tasks.undatedAssignmentCount}</strong></div>
         <div class="stat"><span><Clock size={14} />Need an estimate</span><strong>{tasks.unestimatedAssignmentCount}</strong></div>
@@ -49,7 +49,7 @@
               <td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td>{task.boardName}</td>
               <td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td>
               <td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td>
-              <td class:muted={!task.hasEstimate}>{task.estimatedDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}{#if task.hasDueDate} · {task.dueTimeDisplay}{/if}</td>
+              <td class:muted={!task.hasEstimate}>{task.estimatedDisplay}</td><td class:muted={!task.hasDueDate} class="due-cell"><span>{task.dueDisplay}</span>{#if task.hasDueDate}<span class="due-time">{task.dueTimeDisplay}</span>{/if}</td>
               {#if archived}<td>{#if task.canEdit}<button class="button small" type="button" onclick={() => restore(task.id)}>Restore</button>{:else}<span class="muted">View only</span>{/if}</td>{/if}
             </tr>
           {/each}
