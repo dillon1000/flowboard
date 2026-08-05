@@ -43,6 +43,9 @@ extension AppPageController {
             userName: user.name,
             userEmail: user.email,
             userTimeZone: user.timeZoneIdentifier,
+            dailyBriefEnabled: user.dailyBriefEnabled,
+            weeklyPlanningPromptEnabled: user.weeklyPlanningPromptEnabled,
+            planningEmailHour: user.planningEmailHour,
             userAvatar: AvatarContext(user: user),
             boards: boardContexts
         )

@@ -13,6 +13,7 @@ struct AuthController: RouteCollection {
         protected.patch("me", use: updateProfile)
         protected.post("logout", use: logout)
         try protected.register(collection: APIKeyController())
+        try protected.register(collection: CalendarFeedManagementController())
     }
 
     func configuration(req: Request) -> AuthConfigurationResponse {
@@ -58,6 +59,18 @@ struct AuthController: RouteCollection {
         user.name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
         if let timeZoneIdentifier = try validatedTimeZoneIdentifier(input.timeZone) {
             user.timeZoneIdentifier = timeZoneIdentifier
+        }
+        if let dailyBriefEnabled = input.dailyBriefEnabled {
+            user.dailyBriefEnabled = dailyBriefEnabled
+        }
+        if let weeklyPlanningPromptEnabled = input.weeklyPlanningPromptEnabled {
+            user.weeklyPlanningPromptEnabled = weeklyPlanningPromptEnabled
+        }
+        if let planningEmailHour = input.planningEmailHour {
+            guard (0...23).contains(planningEmailHour) else {
+                throw Abort(.unprocessableEntity, reason: "Choose a delivery hour from 0 to 23.")
+            }
+            user.planningEmailHour = planningEmailHour
         }
         try await user.update(on: req.db)
         return try UserResponse(user: user)

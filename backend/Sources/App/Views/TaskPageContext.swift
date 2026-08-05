@@ -242,7 +242,10 @@ private func taskListOrder(_ left: TaskCardContext, _ right: TaskCardContext) ->
     return left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
 }
 
-struct SettingsPageContext: Encodable {}
+struct SettingsPageContext: Encodable {
+    let notificationsAvailable: Bool
+    let calendarFeed: CalendarFeedStatusResponse
+}
 
 struct TaskDetailPageContext: Encodable {
     let task: TaskCardContext

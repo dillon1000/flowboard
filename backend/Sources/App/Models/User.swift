@@ -22,6 +22,16 @@ final class User: Model, @unchecked Sendable {
     @Field(key: "time_zone")
     var timeZoneIdentifier: String
 
+    @Field(key: "daily_brief_enabled")
+    var dailyBriefEnabled: Bool
+
+    @Field(key: "weekly_planning_prompt_enabled")
+    var weeklyPlanningPromptEnabled: Bool
+
+    /// The local 0...23 hour comes from profile settings. Seven sends at 7 AM.
+    @Field(key: "planning_email_hour")
+    var planningEmailHour: Int
+
     @Children(for: \.$owner)
     var boards: [Board]
 
@@ -39,7 +49,10 @@ final class User: Model, @unchecked Sendable {
         email: String,
         passwordHash: String,
         profilePictureURL: String? = nil,
-        timeZoneIdentifier: String = "UTC"
+        timeZoneIdentifier: String = "UTC",
+        dailyBriefEnabled: Bool = false,
+        weeklyPlanningPromptEnabled: Bool = false,
+        planningEmailHour: Int = 7
     ) {
         self.id = id
         self.name = name
@@ -47,6 +60,9 @@ final class User: Model, @unchecked Sendable {
         self.passwordHash = passwordHash
         self.profilePictureURL = profilePictureURL
         self.timeZoneIdentifier = timeZoneIdentifier
+        self.dailyBriefEnabled = dailyBriefEnabled
+        self.weeklyPlanningPromptEnabled = weeklyPlanningPromptEnabled
+        self.planningEmailHour = planningEmailHour
     }
 }
 
@@ -67,6 +83,9 @@ struct UserResponse: Content {
     let email: String
     let profilePictureURL: String?
     let timeZone: String
+    let dailyBriefEnabled: Bool
+    let weeklyPlanningPromptEnabled: Bool
+    let planningEmailHour: Int
     let createdAt: Date?
 
     init(user: User) throws {
@@ -75,6 +94,9 @@ struct UserResponse: Content {
         self.email = user.email
         self.profilePictureURL = user.profilePictureURL
         self.timeZone = user.timeZoneIdentifier
+        self.dailyBriefEnabled = user.dailyBriefEnabled
+        self.weeklyPlanningPromptEnabled = user.weeklyPlanningPromptEnabled
+        self.planningEmailHour = user.planningEmailHour
         self.createdAt = user.createdAt
     }
 }
@@ -106,6 +128,23 @@ struct LoginRequest: Content, Validatable {
 struct UpdateProfileRequest: Content, Validatable {
     let name: String
     let timeZone: String?
+    let dailyBriefEnabled: Bool?
+    let weeklyPlanningPromptEnabled: Bool?
+    let planningEmailHour: Int?
+
+    init(
+        name: String,
+        timeZone: String? = nil,
+        dailyBriefEnabled: Bool? = nil,
+        weeklyPlanningPromptEnabled: Bool? = nil,
+        planningEmailHour: Int? = nil
+    ) {
+        self.name = name
+        self.timeZone = timeZone
+        self.dailyBriefEnabled = dailyBriefEnabled
+        self.weeklyPlanningPromptEnabled = weeklyPlanningPromptEnabled
+        self.planningEmailHour = planningEmailHour
+    }
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))

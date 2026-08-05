@@ -119,11 +119,18 @@ struct AppPageController: RouteCollection {
 
     func settings(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
+        let userID = try req.auth.require(User.self).requireID()
+        let calendarFeed = try await CalendarFeedCredential.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
         return try respond(
             common: common,
             pageTitle: "Settings",
             pageKind: .settings,
-            settings: SettingsPageContext(),
+            settings: SettingsPageContext(
+                notificationsAvailable: req.application.notificationConfiguration != nil,
+                calendarFeed: CalendarFeedStatusResponse(credential: calendarFeed)
+            ),
         )
     }
 

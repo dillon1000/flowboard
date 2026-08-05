@@ -9,6 +9,8 @@ enum NotificationType: String, Codable, Sendable {
     case taskCommentAdded = "task_comment_added"
     case taskAssigned = "task_assigned"
     case taskReminder = "task_reminder"
+    case dailyBrief = "daily_brief"
+    case weeklyPlanningPrompt = "weekly_planning_prompt"
 }
 
 struct NotificationEvent: Codable, Sendable {
@@ -161,6 +163,54 @@ struct NotificationEvent: Codable, Sendable {
             type: .taskReminder,
             recipient: recipient.email,
             data: data
+        )
+    }
+
+    static func dailyBrief(
+        user: User,
+        dateKey: String,
+        dateLabel: String,
+        studySessionCount: Int,
+        plannedMinutes: Int,
+        deadlineCount: Int,
+        appURL: String
+    ) throws -> Self {
+        let userID = try user.requireID()
+        return Self(
+            deduplicationKey: "daily-brief:\(userID.uuidString):\(dateKey)",
+            type: .dailyBrief,
+            recipient: user.email,
+            data: [
+                "recipientName": user.name,
+                "dateLabel": dateLabel,
+                "studySessionCount": String(studySessionCount),
+                "plannedTime": displayDuration(plannedMinutes),
+                "deadlineCount": String(deadlineCount),
+                "appURL": appURL,
+            ]
+        )
+    }
+
+    static func weeklyPlanningPrompt(
+        user: User,
+        weekKey: String,
+        weekLabel: String,
+        unplannedTaskCount: Int,
+        remainingMinutes: Int,
+        appURL: String
+    ) throws -> Self {
+        let userID = try user.requireID()
+        return Self(
+            deduplicationKey: "weekly-planning:\(userID.uuidString):\(weekKey)",
+            type: .weeklyPlanningPrompt,
+            recipient: user.email,
+            data: [
+                "recipientName": user.name,
+                "weekLabel": weekLabel,
+                "unplannedTaskCount": String(unplannedTaskCount),
+                "remainingTime": displayDuration(remainingMinutes),
+                "appURL": appURL,
+            ]
         )
     }
 }
@@ -416,13 +466,190 @@ enum TaskReminderService {
     }
 }
 
+enum PlanningBriefService {
+    private struct BriefData {
+        let studySessionCount: Int
+        let plannedMinutes: Int
+        let deadlineCount: Int
+        let unplannedTaskCount: Int
+        let remainingMinutes: Int
+    }
+
+    /// Enqueues at most one daily brief and one Monday planning prompt for each
+    /// local calendar period. Outbox keys make late starts and repeated polls safe.
+    static func enqueueDueBriefs(
+        configuration: NotificationConfiguration,
+        database: any Database,
+        logger: Logger,
+        referenceDate: Date = Date()
+    ) async {
+        let users: [User]
+        do {
+            users = try await User.query(on: database)
+                .group(.or) { group in
+                    group.filter(\.$dailyBriefEnabled == true)
+                    group.filter(\.$weeklyPlanningPromptEnabled == true)
+                }
+                .all()
+        } catch {
+            logger.error("Planning brief user query failed: \(error)")
+            return
+        }
+
+        for user in users {
+            do {
+                let calendar = planningCalendar(timeZoneIdentifier: user.timeZoneIdentifier)
+                let localHour = calendar.component(.hour, from: referenceDate)
+                guard localHour >= user.planningEmailHour else { continue }
+                let dateKey = planningDateKey(referenceDate, calendar: calendar)
+                let userID = try user.requireID()
+                let dailyKey = "daily-brief:\(userID.uuidString):\(dateKey)"
+                let isMonday = calendar.component(.weekday, from: referenceDate) == 2
+                let weekStart = startOfWeek(containing: referenceDate, calendar: calendar)
+                let weekKey = planningDateKey(weekStart, calendar: calendar)
+                let weeklyKey = "weekly-planning:\(userID.uuidString):\(weekKey)"
+                let dailyAlreadyQueued = if user.dailyBriefEnabled {
+                    try await isQueued(dailyKey, on: database)
+                } else {
+                    false
+                }
+                let shouldCheckWeekly = user.weeklyPlanningPromptEnabled && isMonday
+                let weeklyAlreadyQueued = if shouldCheckWeekly {
+                    try await isQueued(weeklyKey, on: database)
+                } else {
+                    false
+                }
+                let needsDaily = user.dailyBriefEnabled && !dailyAlreadyQueued
+                let needsWeekly = shouldCheckWeekly && !weeklyAlreadyQueued
+                guard needsDaily || needsWeekly else { continue }
+
+                let data = try await briefData(
+                    user: user,
+                    dateKey: dateKey,
+                    database: database
+                )
+                if needsDaily {
+                    let event = try NotificationEvent.dailyBrief(
+                        user: user,
+                        dateKey: dateKey,
+                        dateLabel: planningDateLabel(
+                            referenceDate,
+                            format: "EEEE, MMMM d",
+                            calendar: calendar
+                        ),
+                        studySessionCount: data.studySessionCount,
+                        plannedMinutes: data.plannedMinutes,
+                        deadlineCount: data.deadlineCount,
+                        appURL: configuration.appURL(path: "/app")
+                    )
+                    try await NotificationOutbox(event: event).create(on: database)
+                }
+                if needsWeekly {
+                    let event = try NotificationEvent.weeklyPlanningPrompt(
+                        user: user,
+                        weekKey: weekKey,
+                        weekLabel: weekLabel(start: weekStart, calendar: calendar),
+                        unplannedTaskCount: data.unplannedTaskCount,
+                        remainingMinutes: data.remainingMinutes,
+                        appURL: configuration.appURL(path: "/app")
+                    )
+                    try await NotificationOutbox(event: event).create(on: database)
+                }
+            } catch {
+                logger.error("Planning brief enqueue failed: \(error)")
+            }
+        }
+    }
+
+    private static func briefData(
+        user: User,
+        dateKey: String,
+        database: any Database
+    ) async throws -> BriefData {
+        let userID = try user.requireID()
+        let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: database)
+        let tasks = if boardIDs.isEmpty {
+            [Task]()
+        } else {
+            try await Task.query(on: database)
+                .filter(\.$board.$id ~~ boardIDs)
+                .filter(\.$isArchived == false)
+                .with(\.$board)
+                .all()
+        }
+        let taskIDs = try tasks.map { try $0.requireID() }
+        let sessions = if taskIDs.isEmpty {
+            [StudySession]()
+        } else {
+            try await StudySession.query(on: database)
+                .filter(\.$user.$id == userID)
+                .filter(\.$task.$id ~~ taskIDs)
+                .all()
+        }
+        let sessionsToday = sessions.filter { $0.scheduledDate == dateKey }
+        let plannedMinutesByTask = Dictionary(grouping: sessions, by: \.$task.id)
+            .mapValues { values in values.reduce(0) { $0 + $1.plannedMinutes } }
+        var unplannedTaskCount = 0
+        var remainingMinutes = 0
+        for task in tasks where !task.board.isCompleted(task.status) {
+            guard let taskID = task.id, let estimate = task.estimatedMinutes else { continue }
+            let legacyMinutes = plannedMinutesByTask[taskID] == nil && task.startAt != nil ? estimate : 0
+            let remaining = max(0, estimate - (plannedMinutesByTask[taskID] ?? 0) - legacyMinutes)
+            if remaining > 0 {
+                unplannedTaskCount += 1
+                remainingMinutes += remaining
+            }
+        }
+        let deadlineCount = tasks.filter {
+            !$0.board.isCompleted($0.status) && $0.dueAt.map(inputDate) == dateKey
+        }.count
+        return BriefData(
+            studySessionCount: sessionsToday.count,
+            plannedMinutes: sessionsToday.reduce(0) { $0 + $1.plannedMinutes },
+            deadlineCount: deadlineCount,
+            unplannedTaskCount: unplannedTaskCount,
+            remainingMinutes: remainingMinutes
+        )
+    }
+
+    private static func isQueued(_ key: String, on database: any Database) async throws -> Bool {
+        try await NotificationOutbox.query(on: database)
+            .filter(\.$deduplicationKey == key)
+            .first() != nil
+    }
+
+    private static func startOfWeek(containing date: Date, calendar: Calendar) -> Date {
+        let day = calendar.startOfDay(for: date)
+        let daysSinceMonday = (calendar.component(.weekday, from: day) + 5) % 7
+        return calendar.date(byAdding: .day, value: -daysSinceMonday, to: day) ?? day
+    }
+
+    private static func weekLabel(start: Date, calendar: Calendar) -> String {
+        let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+        let startLabel = planningDateLabel(start, format: "MMM d", calendar: calendar)
+        let endLabel = planningDateLabel(end, format: "MMM d", calendar: calendar)
+        return startLabel + "–" + endLabel
+    }
+}
+
 actor NotificationDispatchLoop {
     private var task: _Concurrency.Task<Void, Never>?
+    private var nextBriefCheckAt = Date.distantPast
 
     func start(application: Application, configuration: NotificationConfiguration) {
         guard task == nil else { return }
         task = _Concurrency.Task {
             while !_Concurrency.Task.isCancelled {
+                let now = Date()
+                if now >= nextBriefCheckAt {
+                    await PlanningBriefService.enqueueDueBriefs(
+                        configuration: configuration,
+                        database: application.db,
+                        logger: application.logger,
+                        referenceDate: now
+                    )
+                    nextBriefCheckAt = now.addingTimeInterval(60 * 60)
+                }
                 await TaskReminderService.enqueueDueReminders(
                     configuration: configuration,
                     database: application.db,

@@ -28,6 +28,7 @@ func routes(_ app: Application) throws {
     }
     try api.grouped(User.sessionAuthenticator()).register(collection: AuthController())
     try api.register(collection: TapExecutionController())
+    try api.register(collection: CalendarFeedController())
 
     // SvelteKit requests these presentation-ready models during server rendering.
     // They are session-only because they include private workspace navigation.
