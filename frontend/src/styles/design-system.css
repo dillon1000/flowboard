@@ -129,6 +129,8 @@
   --border: var(--ds-gray-alpha-400);
   --border-strong: var(--ds-gray-alpha-500);
   --focus: var(--ds-blue-900);
+  --scrollbar-thumb: var(--ds-gray-alpha-500);
+  --scrollbar-thumb-hover: var(--ds-gray-alpha-600);
 
   /* ---- Motion ---- */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -145,6 +147,38 @@
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Every scroll region uses the same low-contrast thumb. The transparent border
+   keeps the visual rail narrow while preserving a comfortable drag target. */
+* {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 :root[data-theme='dark'] {
