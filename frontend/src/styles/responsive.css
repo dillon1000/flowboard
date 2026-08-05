@@ -222,6 +222,7 @@
   .stats,
   .board-list,
   .form-grid,
+  .assignment-plan-grid,
   .api-endpoints > div {
     grid-template-columns: minmax(0, 1fr);
   }
