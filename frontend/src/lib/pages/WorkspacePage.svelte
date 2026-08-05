@@ -29,8 +29,8 @@
     <BoardPage board={context.board} />
   {:else if context.isTaskDetail && context.taskDetail}
     <TaskDetailPage detail={context.taskDetail} currentUserEmail={context.common.userEmail} {descriptionHTML} />
-  {:else if context.isProfileSettings}
-    <SettingsPage common={context.common} />
+  {:else if context.isProfileSettings && context.settings}
+    <SettingsPage common={context.common} settings={context.settings} />
   {:else if context.isAPIKeys && context.apiKeys}
     <APIKeysPage keys={context.apiKeys} />
   {:else if context.isBoardSettings && context.boardSettings}

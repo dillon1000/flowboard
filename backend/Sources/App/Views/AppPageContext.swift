@@ -78,6 +78,9 @@ struct CommonPageContext: Encodable {
     let userName: String
     let userEmail: String
     let userTimeZone: String
+    let dailyBriefEnabled: Bool
+    let weeklyPlanningPromptEnabled: Bool
+    let planningEmailHour: Int
     let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
 }

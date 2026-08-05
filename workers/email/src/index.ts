@@ -11,7 +11,9 @@ const notificationTypes = [
   'board_member_added',
   'task_comment_added',
   'task_assigned',
-  'task_reminder'
+  'task_reminder',
+  'daily_brief',
+  'weekly_planning_prompt'
 ] as const;
 
 export type NotificationType = (typeof notificationTypes)[number];

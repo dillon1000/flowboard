@@ -19,8 +19,28 @@ export interface CommonPageContext {
   userName: string;
   userEmail: string;
   userTimeZone: string;
+  dailyBriefEnabled: boolean;
+  weeklyPlanningPromptEnabled: boolean;
+  planningEmailHour: number;
   userAvatar: AvatarContext;
   boards: BoardNavigationContext[];
+}
+
+export interface CalendarFeedStatusResponse {
+  isEnabled: boolean;
+  prefix: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface CreatedCalendarFeedResponse {
+  token: string;
+  prefix: string;
+}
+
+export interface SettingsPageContext {
+  notificationsAvailable: boolean;
+  calendarFeed: CalendarFeedStatusResponse;
 }
 
 export interface TaskOptionContext {
@@ -533,7 +553,7 @@ export interface AppPageContext {
   board: BoardPageContext | null;
   tasks: TasksPageContext | null;
   taskDetail: TaskDetailPageContext | null;
-  settings: Record<string, never> | null;
+  settings: SettingsPageContext | null;
   apiKeys: APIKeysPageContext | null;
   boardSettings: BoardSettingsPageContext | null;
 }

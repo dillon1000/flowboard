@@ -29,6 +29,7 @@ type NotificationContent = {
   quote?: string;
   actionLabel?: string;
   actionURL?: string;
+  footer?: string;
 };
 
 const styles = {
@@ -176,7 +177,7 @@ function NotificationEmail(content: NotificationContent): ReactElement {
           <Hr style={styles.divider} />
           <Section style={styles.footer}>
             <Text style={styles.footerText}>
-              You received this because something changed in your Flowboard workspace.
+              {content.footer ?? 'You received this because something changed in your Flowboard workspace.'}
             </Text>
           </Section>
         </Container>
@@ -271,6 +272,48 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
         actionLabel: 'View task'
       };
     }
+    case 'daily_brief': {
+      const dateLabel = dataValue(payload.data, 'dateLabel') || 'Today';
+      const studySessions = countPhrase(
+        dataValue(payload.data, 'studySessionCount'),
+        'study session'
+      );
+      const plannedTime = dataValue(payload.data, 'plannedTime') || 'no time';
+      const deadlines = countPhrase(dataValue(payload.data, 'deadlineCount'), 'deadline');
+      return {
+        subject: safeLine(`Your ${dateLabel} brief`),
+        preview: safeLine(`${studySessions} and ${deadlines} today.`),
+        heading: 'Today at a glance',
+        greeting: `Hi ${recipientName},`,
+        body: (
+          <Text style={styles.paragraph}>
+            You have <strong>{studySessions}</strong> with <strong>{plannedTime}</strong> planned, and{' '}
+            <strong>{deadlines}</strong> today.
+          </Text>
+        ),
+        actionURL: appURL,
+        actionLabel: 'Open today',
+        footer: 'You received this because you enabled planning emails in Flowboard.'
+      };
+    }
+    case 'weekly_planning_prompt': {
+      const weekLabel = dataValue(payload.data, 'weekLabel') || 'this week';
+      const taskCount = normalizedCount(dataValue(payload.data, 'unplannedTaskCount'));
+      const remainingTime = dataValue(payload.data, 'remainingTime') || 'no time';
+      const body = taskCount === 0
+        ? 'Your estimated work is fully planned for this week.'
+        : `${countPhrase(String(taskCount), 'assignment')} still need ${remainingTime} of study time.`;
+      return {
+        subject: safeLine(`Plan ${weekLabel}`),
+        preview: safeLine(body),
+        heading: 'Plan this week',
+        greeting: `Hi ${recipientName},`,
+        body: <Text style={styles.paragraph}>{body}</Text>,
+        actionURL: appURL,
+        actionLabel: 'Plan this week',
+        footer: 'You received this because you enabled planning emails in Flowboard.'
+      };
+    }
   }
 }
 
@@ -301,4 +344,14 @@ function safeURL(value: string | undefined): string | undefined {
 
 function dataValue(data: Record<string, string>, key: string): string {
   return data[key] ?? '';
+}
+
+function normalizedCount(value: string): number {
+  const count = Number.parseInt(value, 10);
+  return Number.isSafeInteger(count) && count >= 0 ? count : 0;
+}
+
+function countPhrase(value: string, singular: string): string {
+  const count = normalizedCount(value);
+  return `${count} ${count === 1 ? singular : `${singular}s`}`;
 }

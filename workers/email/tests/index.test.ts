@@ -125,4 +125,46 @@ describe('flowboard email worker', () => {
     expect(result.text).toContain('Due Wed, Aug 5 at 17:00');
     expect(result.html).toContain('https://app.example/tasks/finish-the-report-abc123');
   });
+
+  it('renders a daily planning brief', async () => {
+    const result = await renderNotification({
+      eventID: 'brief-1',
+      type: 'daily_brief',
+      to: 'person@example.com',
+      data: {
+        recipientName: 'Person',
+        dateLabel: 'Monday, August 3',
+        studySessionCount: '2',
+        plannedTime: '1h 30m',
+        deadlineCount: '1',
+        appURL: 'https://app.example/app'
+      }
+    });
+
+    expect(result.subject).toBe('Your Monday, August 3 brief');
+    expect(result.text).toContain('2 study sessions');
+    expect(result.text).toContain('1h 30m');
+    expect(result.text).toContain('1 deadline');
+    expect(result.html).toContain('https://app.example/app');
+  });
+
+  it('renders a weekly planning prompt', async () => {
+    const result = await renderNotification({
+      eventID: 'planning-1',
+      type: 'weekly_planning_prompt',
+      to: 'person@example.com',
+      data: {
+        recipientName: 'Person',
+        weekLabel: 'August 3–9',
+        unplannedTaskCount: '3',
+        remainingTime: '4h 15m',
+        appURL: 'https://app.example/app'
+      }
+    });
+
+    expect(result.subject).toBe('Plan August 3–9');
+    expect(result.text).toContain('3 assignments still need 4h 15m of study time.');
+    expect(result.text).toContain('You received this because you enabled planning emails');
+    expect(result.html).toContain('Plan this week');
+  });
 });
