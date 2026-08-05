@@ -1,9 +1,9 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { AvatarContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
+  import type { AvatarContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
+  import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
@@ -33,6 +33,9 @@
   let uploadPending = $state(false);
   let uploadProgress = $state(0);
   let uploadError = $state('');
+  let notesEditing = $state(false);
+  let notesDraft = $state('');
+  let editingProperty = $state('');
 
   const completedChecklist = $derived(
     checklist.filter((item: ChecklistContext) => item.isCompleted).length
@@ -132,6 +135,77 @@
     if (saved) editOpen = false;
   }
 
+  function editNotes(): void {
+    notesDraft = detail.task.description;
+    notesEditing = true;
+  }
+
+  async function saveNotes(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const description = String(new FormData(event.currentTarget as HTMLFormElement).get('description') ?? '').trim();
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ description: description || null }) }, 'Notes saved')) {
+      notesEditing = false;
+    }
+  }
+
+  async function saveInlineProperty(event: SubmitEvent, property: string): Promise<void> {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    let body: Record<string, string | number | null> = {};
+    switch (property) {
+      case 'status':
+        body = { status: String(data.get('status') ?? '') };
+        break;
+      case 'priority':
+        body = { priority: String(data.get('priority') ?? '') };
+        break;
+      case 'estimatedMinutes':
+        body = { estimatedMinutes: estimateMinutes(data.get('estimatedMinutes')) };
+        break;
+      case 'grade':
+        body = { gradeEarned: score(data.get('gradeEarned')), gradePossible: score(data.get('gradePossible')) };
+        break;
+      case 'assigneeID': {
+        const assigneeID = String(data.get('assigneeID') ?? '');
+        body = { assigneeID: assigneeID || null };
+        break;
+      }
+      case 'startAt':
+        body = { startAt: apiDate(data.get('startAt')) };
+        break;
+      case 'dueAt': {
+        const dueAt = apiDate(data.get('dueAt'));
+        body = { dueAt, dueTime: dueAt ? String(data.get('dueTime') ?? '') || null : null };
+        break;
+      }
+    }
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify(body) }, 'Property updated')) {
+      editingProperty = '';
+    }
+  }
+
+  /** Saves one custom field while preserving every other field in the task. */
+  async function saveCustomProperty(event: SubmitEvent, property: TaskPropertyContext): Promise<void> {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const properties: Record<string, string> = Object.fromEntries(
+      detail.properties.filter((item: TaskPropertyContext) => item.inputValue).map((item: TaskPropertyContext) => [item.id, item.inputValue])
+    );
+    let value = '';
+    if (property.usesMultiSelect) {
+      value = JSON.stringify(property.options.filter((option) => data.has(`property-${property.id}-${option.id}`)).map((option) => option.id));
+    } else if (property.usesCheckbox) {
+      value = data.has(`property-${property.id}`) ? 'true' : 'false';
+    } else {
+      value = String(data.get(`property-${property.id}`) ?? '').trim();
+    }
+    if (value) properties[property.id] = value;
+    else delete properties[property.id];
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ properties }) }, 'Property updated')) {
+      editingProperty = '';
+    }
+  }
+
   async function toggleChecklist(itemID: string, isCompleted: boolean): Promise<void> {
     if (pendingChecklistIDs.includes(itemID)) return;
     const item = checklist.find((candidate) => candidate.id === itemID);
@@ -185,24 +259,6 @@
     event.preventDefault();
     const textarea = event.currentTarget as HTMLTextAreaElement;
     if (!pending && commentBody.trim()) textarea.form?.requestSubmit();
-  }
-
-  async function saveProperties(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    const properties: Record<string, string> = {};
-    for (const property of detail.properties) {
-      if (property.usesMultiSelect) {
-        const selected = property.options
-          .filter((option: TaskPropertyOptionContext) => data.has(`property-${property.id}-${option.id}`))
-          .map((option: TaskPropertyOptionContext) => option.id);
-        if (selected.length) properties[property.id] = JSON.stringify(selected);
-      } else {
-        const value = String(data.get(`property-${property.id}`) ?? '').trim();
-        if (value) properties[property.id] = value;
-      }
-    }
-    await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ properties }) }, 'Custom fields saved');
   }
 
   async function uploadAttachment(event: SubmitEvent): Promise<void> {
@@ -313,11 +369,11 @@
         {#if !detail.task.hasDueDate || !detail.task.hasEstimate}<p class="assignment-plan-note">Add a due date and time estimate to keep this assignment visible in your weekly plan.</p>{/if}
       </section>
 
-      <section class="card"><div class="card-header"><h2>Notes</h2>{#if detail.canEdit && !detail.task.hasDescription}<span class="spacer"></span><button class="button ghost small" type="button" onclick={() => (editOpen = true)}>Add notes</button>{/if}</div><div class="card-body">{#if detail.task.hasDescription}<div class="task-description markdown">{@html descriptionHTML}</div>{:else}<div class="task-description empty">Add instructions, links, and submission requirements here.</div>{/if}</div></section>
+      <section class="card"><div class="card-header"><h2>Notes</h2>{#if detail.canEdit && !notesEditing}<span class="spacer"></span><button class="button ghost small" type="button" onclick={editNotes}>{detail.task.hasDescription ? 'Edit notes' : 'Add notes'}</button>{/if}</div><div class="card-body">{#if notesEditing}<form class="notes-editor" onsubmit={saveNotes}><label class="sr-only" for="task-notes">Assignment notes</label><textarea class="textarea" id="task-notes" name="description" bind:value={notesDraft} maxlength="5000" placeholder="Add instructions, links, and submission requirements…"></textarea><div class="notes-editor-footer"><span>Markdown is supported.</span><div><button class="button small" type="button" onclick={() => (notesEditing = false)}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save notes</button></div></div></form>{:else if detail.task.hasDescription}<div class="task-description markdown">{@html descriptionHTML}</div>{:else}<div class="task-description empty">Add instructions, links, and submission requirements here.</div>{/if}</div></section>
 
       <section class="card">
         <div class="card-header"><h2>Checklist</h2><span class="checklist-progress"><span>{checklist.length ? `${completedChecklist} of ${checklist.length}` : 'No items'}</span><progress class="progress" value={completedChecklist} max={checklist.length || 1}></progress></span></div>
-        {#if checklist.length}<div class="card-body"><div class="checklist">{#each checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item" data-pending={pendingChecklistIDs.includes(item.id) ? 'true' : undefined}><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pendingChecklistIDs.includes(item.id)} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span>{#if detail.canEdit}<button class="icon-button checklist-delete" type="button" onclick={() => deleteChecklist(item.id)} disabled={pendingChecklistIDs.includes(item.id)} aria-label={`Remove “${item.title}”`} title="Remove checklist item"><Trash2 size={14} /></button>{/if}</div>{/each}</div></div>{:else}<p class="card-empty">Break the assignment into smaller steps, then check them off as you work.</p>{/if}
+        {#if checklist.length}<div class="card-body"><div class="checklist">{#each checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item" data-pending={pendingChecklistIDs.includes(item.id) ? 'true' : undefined}><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pendingChecklistIDs.includes(item.id)} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span>{#if detail.canEdit}<button class="icon-button checklist-delete" type="button" onclick={() => deleteChecklist(item.id)} disabled={pendingChecklistIDs.includes(item.id)} aria-label={`Remove “${item.title}”`} title="Remove checklist item"><Trash2 size={14} /></button>{/if}</div>{/each}</div>{#if detail.canEdit && completedChecklist === checklist.length && completionOption && !completionOption.isSelected}<div class="checklist-complete-hint" role="status"><CheckCircle size={18} /><span><strong>All checklist items are done.</strong> Do you want to mark this as complete?</span><button class="button primary small" type="button" onclick={() => changeStatus(completionOption.value)} disabled={pending}>Mark complete</button></div>{/if}</div>{:else}<p class="card-empty">Break the assignment into smaller steps, then check them off as you work.</p>{/if}
         {#if detail.canEdit}<div class="card-footer"><form class="checklist-add" onsubmit={addChecklist}><input class="input" name="title" placeholder="Add checklist item" maxlength="200" required aria-label="New checklist item" /><button class="button" type="submit" disabled={pending}><Plus size={14} />Add</button></form></div>{/if}
       </section>
 
@@ -339,9 +395,22 @@
     </div>
 
     <aside class="task-sidebar">
-      <div class="card"><div class="card-header"><h2>Properties</h2></div><dl class="property-list"><div class="property-row"><dt>Status</dt><dd><span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span></dd></div><div class="property-row"><dt>Severity</dt><dd><span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span></dd></div><div class="property-row"><dt>Estimate</dt><dd class:muted={!detail.task.hasEstimate}>{detail.task.estimatedDisplay}</dd></div><div class="property-row"><dt>Grade</dt><dd class:muted={!detail.task.hasGrade}>{detail.task.gradeDisplay}</dd></div><div class="property-row"><dt>Assignee</dt><dd>{detail.task.assigneeName}</dd></div><div class="property-row"><dt>Creator</dt><dd>{detail.creatorName}</dd></div><div class="property-row"><dt>Start</dt><dd class="muted">{detail.task.startDisplay}</dd></div><div class="property-row"><dt>Due</dt><dd>{detail.task.dueDisplay}{#if detail.task.hasDueDate} · {detail.task.dueTimeDisplay}{/if}</dd></div>{#each detail.properties as property}<div class="property-row"><dt>{property.name}</dt><dd>{property.value}</dd></div>{/each}</dl></div>
-
-      {#if detail.canEdit && detail.hasProperties}<section class="card"><div class="card-header"><h2>Custom fields</h2></div><form class="card-body" onsubmit={saveProperties}>{#each detail.properties as property}<div class="field"><label for={`property-${property.id}`}>{property.name}</label>{#if property.usesInput}{#if property.inputType === 'date'}<DatePicker id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} label={property.name} />{:else}<input class="input" type={property.inputType} step="any" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} />{/if}{:else if property.usesSelect}<SelectMenu id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} ariaLabel={property.name} options={[{ value: '', label: 'No value' }, ...property.options.map((option: TaskPropertyOptionContext) => ({ value: option.id, label: option.name }))]} />{:else if property.usesMultiSelect}<div class="property-options" id={`property-${property.id}`}>{#each property.options as option}<label class="property-option"><input type="checkbox" name={`property-${property.id}-${option.id}`} checked={option.isSelected} /><span>{option.name}</span></label>{/each}</div>{:else if property.usesCheckbox}<label class="property-boolean"><input type="checkbox" name={`property-${property.id}`} value="true" checked={property.isChecked} /><span>Checked</span></label>{/if}</div>{/each}<div class="form-actions"><button class="button small" type="submit" disabled={pending}>Save fields</button></div></form></section>{/if}
+      <div class="card">
+        <div class="card-header"><h2>Properties</h2></div>
+        <dl class="property-list">
+          <div class:editing={editingProperty === 'status'} class="property-row"><dt>Status</dt><dd>{#if editingProperty === 'status'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'status')}><SelectMenu id="inline-status" name="status" value={detail.task.statusValue} options={statusMenuOptions} ariaLabel="Status" /><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'status')} aria-label="Edit status"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          <div class:editing={editingProperty === 'priority'} class="property-row"><dt>Severity</dt><dd>{#if editingProperty === 'priority'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'priority')}><SelectMenu id="inline-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Severity" /><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'priority')} aria-label="Edit severity"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          <div class:editing={editingProperty === 'estimatedMinutes'} class="property-row"><dt>Estimate</dt><dd class:muted={!detail.task.hasEstimate}>{#if editingProperty === 'estimatedMinutes'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'estimatedMinutes')}><input class="input" name="estimatedMinutes" type="number" min="5" max="1440" step="5" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes" /><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span>{detail.task.estimatedDisplay}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'estimatedMinutes')} aria-label="Edit estimate"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          <div class:editing={editingProperty === 'grade'} class="property-row"><dt>Grade</dt><dd class:muted={!detail.task.hasGrade}>{#if editingProperty === 'grade'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'grade')}><div class="property-score-inputs"><input class="input" name="gradeEarned" type="number" min="0" max="100000" step="0.1" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} aria-label="Points earned" placeholder="Earned" /><span>/</span><input class="input" name="gradePossible" type="number" min="0.1" max="100000" step="0.1" value={detail.task.hasGrade ? detail.task.gradePossible : ''} aria-label="Points possible" placeholder="Possible" /></div><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span>{detail.task.gradeDisplay}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'grade')} aria-label="Edit grade"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          <div class:editing={editingProperty === 'assigneeID'} class="property-row"><dt>Assignee</dt><dd>{#if editingProperty === 'assigneeID'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'assigneeID')}><SelectMenu id="inline-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span>{detail.task.assigneeName}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'assigneeID')} aria-label="Edit assignee"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          <div class="property-row"><dt>Creator</dt><dd>{detail.creatorName}</dd></div>
+          <div class:editing={editingProperty === 'startAt'} class="property-row"><dt>Start</dt><dd class="muted">{#if editingProperty === 'startAt'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'startAt')}><DatePicker id="inline-start" name="startAt" value={detail.task.startInput} label="Start date" /><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span>{detail.task.startDisplay}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'startAt')} aria-label="Edit start date"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          <div class:editing={editingProperty === 'dueAt'} class="property-row"><dt>Due</dt><dd>{#if editingProperty === 'dueAt'}<form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'dueAt')}><DatePicker id="inline-due" name="dueAt" value={detail.task.dueInput} label="Due date" /><TimePicker id="inline-due-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /><div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span>{detail.task.dueDisplay}{#if detail.task.hasDueDate} · {detail.task.dueTimeDisplay}{/if}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = 'dueAt')} aria-label="Edit due date and time"><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          {#each detail.properties as property}
+            <div class:editing={editingProperty === property.id} class="property-row"><dt>{property.name}</dt><dd>{#if editingProperty === property.id}<form class="property-inline-form" onsubmit={(event) => saveCustomProperty(event, property)}>{#if property.usesInput}{#if property.inputType === 'date'}<DatePicker id={`inline-property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} label={property.name} />{:else}<input class="input" type={property.inputType} step="any" id={`inline-property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} />{/if}{:else if property.usesSelect}<SelectMenu id={`inline-property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} ariaLabel={property.name} options={[{ value: '', label: 'No value' }, ...property.options.map((option: TaskPropertyOptionContext) => ({ value: option.id, label: option.name }))]} />{:else if property.usesMultiSelect}<div class="property-options" id={`inline-property-${property.id}`}>{#each property.options as option}<label class="property-option"><input type="checkbox" name={`property-${property.id}-${option.id}`} checked={option.isSelected} /><span>{option.name}</span></label>{/each}</div>{:else if property.usesCheckbox}<label class="property-boolean"><input type="checkbox" name={`property-${property.id}`} value="true" checked={property.isChecked} /><span>Checked</span></label>{/if}<div class="property-inline-actions"><button class="button small" type="button" onclick={() => (editingProperty = '')}>Cancel</button><button class="button primary small" type="submit" disabled={pending}>Save</button></div></form>{:else}<span>{property.value}</span>{#if detail.canEdit}<button class="property-edit-button" type="button" onclick={() => (editingProperty = property.id)} aria-label={`Edit ${property.name}`}><Pencil size={13} /></button>{/if}{/if}</dd></div>
+          {/each}
+        </dl>
+      </div>
 
       {#if detail.canEdit}<section class="card danger-zone"><div class="card-header"><h2>Danger zone</h2></div><div class="card-rows"><div class="panel-row"><span class="panel-row-main"><strong>{detail.task.isArchived ? 'Restore task' : 'Archive task'}</strong><span>Archived tasks leave active views.</span></span><button class="button small" type="button" onclick={archiveTask} disabled={pending}><Archive size={13} />{detail.task.isArchived ? 'Restore' : 'Archive'}</button></div><div class="panel-row"><span class="panel-row-main"><strong>Delete task</strong><span>Permanently remove this task.</span></span><button class="button danger small" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div></div></section>{/if}
     </aside>
