@@ -3,7 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { AvatarContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
+  import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import PromoteMenu from '$lib/components/PromoteMenu.svelte';
@@ -46,6 +46,9 @@
     { value: '', label: 'Unassigned' },
     ...detail.members.map((member: MemberOptionContext) => ({ value: member.id, label: `${member.name} · ${member.email}` }))
   ]);
+  const completionOption = $derived(
+    detail.task.statusOptions.find((option: TaskOptionContext) => option.isCompleted)
+  );
   const commentDraftKey = $derived(`flowboard-comment-draft:${detail.task.id}`);
 
   $effect(() => {
@@ -147,6 +150,10 @@
     const form = event.currentTarget as HTMLFormElement;
     const title = String(new FormData(form).get('title') ?? '');
     if (await mutate(`/api/v1/tasks/${detail.task.id}/checklist`, { method: 'POST', body: JSON.stringify({ title }) }, 'Checklist item added')) form.reset();
+  }
+
+  async function deleteChecklist(itemID: string): Promise<void> {
+    await mutate(`/api/v1/tasks/${detail.task.id}/checklist/${itemID}`, { method: 'DELETE' }, 'Checklist item removed');
   }
 
   async function addComment(event: SubmitEvent): Promise<void> {
@@ -281,6 +288,7 @@
     </div>
     <div class="page-actions">
       {#if detail.canEdit}<PromoteMenu value={detail.task.statusValue} options={detail.task.statusOptions} disabled={pending} onchange={changeStatus} />{/if}
+      {#if detail.canEdit && completionOption && !completionOption.isSelected}<button class="button primary" type="button" onclick={() => changeStatus(completionOption.value)} disabled={pending}><CheckCircle size={15} />Mark complete</button>{/if}
       <button class="button" type="button" onclick={toggleFollow} disabled={pending}><Bell size={15} />{detail.isFollowing ? 'Unfollow' : 'Follow'}<span class="badge count tabular">{detail.followerCount}</span></button>
       {#if detail.canEdit}<button class="button" type="button" onclick={() => (editOpen = true)}>Edit task</button>{/if}
     </div>
@@ -289,11 +297,17 @@
 
   <div class="split-layout">
     <div class="task-main">
-      <section class="card"><div class="card-header"><h2>Description</h2></div><div class="card-body">{#if detail.task.hasDescription}<div class="task-description markdown">{@html descriptionHTML}</div>{:else}<div class="task-description empty">No description yet.</div>{/if}</div></section>
+      <section class="card assignment-plan" aria-labelledby="assignment-plan-title">
+        <div class="card-header"><h2 id="assignment-plan-title">Assignment plan</h2>{#if detail.canEdit}<span class="spacer"></span><button class="button ghost small" type="button" onclick={() => (editOpen = true)}>Edit plan</button>{/if}</div>
+        <dl class="assignment-plan-grid"><div><dt>Due</dt><dd class:muted={!detail.task.hasDueDate}>{detail.task.hasDueDate ? `${detail.task.dueDisplay} · ${detail.task.dueTimeDisplay}` : 'Add a due date'}</dd></div><div><dt>Estimate</dt><dd class:muted={!detail.task.hasEstimate}>{detail.task.estimatedDisplay}</dd></div><div><dt>Course</dt><dd>{detail.boardName}</dd></div></dl>
+        {#if !detail.task.hasDueDate || !detail.task.hasEstimate}<p class="assignment-plan-note">Add a due date and time estimate to keep this assignment visible in your weekly plan.</p>{/if}
+      </section>
+
+      <section class="card"><div class="card-header"><h2>Notes</h2>{#if detail.canEdit && !detail.task.hasDescription}<span class="spacer"></span><button class="button ghost small" type="button" onclick={() => (editOpen = true)}>Add notes</button>{/if}</div><div class="card-body">{#if detail.task.hasDescription}<div class="task-description markdown">{@html descriptionHTML}</div>{:else}<div class="task-description empty">Add instructions, links, and submission requirements here.</div>{/if}</div></section>
 
       <section class="card">
         <div class="card-header"><h2>Checklist</h2><span class="checklist-progress"><span>{checklist.length ? `${completedChecklist} of ${checklist.length}` : 'No items'}</span><progress class="progress" value={completedChecklist} max={checklist.length || 1}></progress></span></div>
-        {#if checklist.length}<div class="card-body"><div class="checklist">{#each checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item" data-pending={pendingChecklistIDs.includes(item.id) ? 'true' : undefined}><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pendingChecklistIDs.includes(item.id)} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span></div>{/each}</div></div>{:else}<p class="card-empty">Nothing to check off yet.</p>{/if}
+        {#if checklist.length}<div class="card-body"><div class="checklist">{#each checklist as item (item.id)}<div class:completed={item.isCompleted} class="checklist-item" data-pending={pendingChecklistIDs.includes(item.id) ? 'true' : undefined}><button class:checked={item.isCompleted} class="custom-checkbox" type="button" onclick={() => toggleChecklist(item.id, item.isCompleted)} disabled={!detail.canEdit || pendingChecklistIDs.includes(item.id)} aria-label={`Toggle “${item.title}”`}><Check size={13} /></button><span>{item.title}</span>{#if detail.canEdit}<button class="icon-button checklist-delete" type="button" onclick={() => deleteChecklist(item.id)} disabled={pendingChecklistIDs.includes(item.id)} aria-label={`Remove “${item.title}”`} title="Remove checklist item"><Trash2 size={14} /></button>{/if}</div>{/each}</div></div>{:else}<p class="card-empty">Break the assignment into smaller steps, then check them off as you work.</p>{/if}
         {#if detail.canEdit}<div class="card-footer"><form class="checklist-add" onsubmit={addChecklist}><input class="input" name="title" placeholder="Add checklist item" maxlength="200" required aria-label="New checklist item" /><button class="button" type="submit" disabled={pending}><Plus size={14} />Add</button></form></div>{/if}
       </section>
 
@@ -302,13 +316,13 @@
         {#if detail.hasAttachments}<div class="card-body"><div class="attachment-grid">{#each detail.attachments as attachment (attachment.id)}<div class="attachment">
           {#if attachment.isImage}<a class="attachment-media attachment-image" href={attachment.previewHref} target="_blank" rel="noopener"><img src={attachment.previewHref} alt="" loading="lazy" /></a>{:else if attachment.isAudio}<div class="attachment-media attachment-audio"><audio controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`}></audio></div>{:else if attachment.isVideo}<div class="attachment-media attachment-video"><!-- svelte-ignore a11y_media_has_caption --><video controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`} playsinline></video></div>{:else}<span class="attachment-file-icon"><Paperclip size={20} /></span>{/if}
           <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={attachment.href}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this attachment?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' }, 'Attachment deleted')}><Trash2 size={13} />Delete</button>{/if}</span></div>
-        </div>{/each}</div></div>{:else}<p class="card-empty">No files attached.</p>{/if}
+        </div>{/each}</div></div>{:else}<p class="card-empty">Add a rubric, reading, or final file here so it stays with the assignment.</p>{/if}
         {#if detail.canEdit}<div class="card-footer"><form class="attachment-upload-form" onsubmit={uploadAttachment}><span class="file-field"><label class="button small" aria-disabled={uploadPending}><Upload size={13} />Choose file<input class="sr-only" type="file" name="file" required disabled={uploadPending} onchange={selectAttachment} /></label><span class="file-name">{selectedFileName}</span><button class="button small primary" type="submit" disabled={uploadPending || !!uploadError}>{uploadPending ? 'Uploading…' : 'Upload'}</button></span>{#if uploadPending}<div class="upload-progress" aria-live="polite"><div class="upload-progress-meta"><span>Uploading attachment</span><span class="tabular">{uploadProgress}%</span></div><progress class="upload-progress-bar" max="100" value={uploadProgress}></progress></div>{/if}{#if uploadError}<p class="upload-error" role="alert">{uploadError}</p>{/if}</form></div>{/if}
       </section>
 
       <section class="card">
         <div class="card-header"><h2>Comments</h2><span class="badge count tabular">{detail.comments.length}</span></div>
-        {#if !detail.hasComments}<p class="card-empty">No comments yet.</p>{/if}
+        {#if !detail.hasComments}<p class="card-empty">Use comments to record questions, feedback, and handoff notes.</p>{/if}
         <div class="comment-thread">{#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' }, 'Comment deleted')}>Delete</button></div>{/if}</div></div>{/each}</div>
         {#if detail.canComment}<form class="comment-composer" onsubmit={addComment}><Avatar avatar={currentUserAvatar} /><div><label class="sr-only" for="new-comment">Add a comment</label><textarea class="textarea" id="new-comment" value={commentBody} oninput={updateCommentDraft} onkeydown={submitCommentShortcut} maxlength="4000" placeholder="Leave a comment…" required></textarea><div class="form-actions"><span class="comment-draft-meta"><span class="tabular">{commentBody.length} / 4000</span><kbd>⌘/Ctrl Enter</kbd></span><button class="button primary" type="submit" disabled={pending || !commentBody.trim()}>Comment</button></div></div></form>{/if}
       </section>
