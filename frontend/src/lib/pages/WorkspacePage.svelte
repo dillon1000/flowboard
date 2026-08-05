@@ -5,6 +5,7 @@
   import BoardPage from './BoardPage.svelte';
   import BoardSettingsPage from './BoardSettingsPage.svelte';
   import OverviewPage from './OverviewPage.svelte';
+  import SemesterPage from './SemesterPage.svelte';
   import SettingsPage from './SettingsPage.svelte';
   import TaskDetailPage from './TaskDetailPage.svelte';
   import TasksPage from './TasksPage.svelte';
@@ -20,6 +21,8 @@
 <AppShell {context}>
   {#if context.isOverview && context.overview}
     <OverviewPage overview={context.overview} />
+  {:else if context.isSemester && context.semester}
+    <SemesterPage semester={context.semester} />
   {:else if context.isTasks && context.tasks}
     <TasksPage tasks={context.tasks} archived={context.isArchivedTasks} />
   {:else if context.isBoard && context.board}

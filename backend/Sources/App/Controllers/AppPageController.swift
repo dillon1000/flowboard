@@ -5,6 +5,7 @@ import Vapor
 struct AppPageController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         routes.get(use: overview)
+        routes.get("semester", use: semester)
         routes.get("tasks", use: allTasks)
         routes.get("tasks", "archived", use: archivedTasks)
         routes.get("settings", use: settings)
@@ -36,6 +37,24 @@ struct AppPageController: RouteCollection {
                 courses: common.boards,
                 selectedCourseID: selectedCourseID
             ),
+        )
+    }
+
+    /// Builds one cross-course horizon from existing deadlines. The view stays
+    /// read-only because students plan individual work days from the weekly page.
+    func semester(req: Request) async throws -> Response {
+        let common = try await commonContext(for: req)
+        let tasks = try await taskQuery(boardIDs: common.boards.map(\.id), on: req.db)
+            .sort(\.$dueAt, .ascending)
+            .all()
+        return try respond(
+            common: common,
+            pageTitle: "Semester",
+            pageKind: .semester,
+            semester: SemesterPageContext(
+                tasks: try await makeTaskContexts(tasks, on: req.db),
+                courses: common.boards
+            )
         )
     }
 

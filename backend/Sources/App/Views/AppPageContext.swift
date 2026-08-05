@@ -2,6 +2,7 @@ import Foundation
 
 enum AppPageKind {
     case overview
+    case semester
     case board
     case tasks
     case archivedTasks
@@ -16,6 +17,7 @@ struct AppPageContext: Encodable {
     let pageTitle: String
     let documentTitle: String
     let isOverview: Bool
+    let isSemester: Bool
     let isBoard: Bool
     let isTasks: Bool
     let isActiveTasks: Bool
@@ -26,6 +28,7 @@ struct AppPageContext: Encodable {
     let isAPIKeys: Bool
     let isBoardSettings: Bool
     let overview: OverviewPageContext?
+    let semester: SemesterPageContext?
     let board: BoardPageContext?
     let tasks: TasksPageContext?
     let taskDetail: TaskDetailPageContext?
@@ -38,6 +41,7 @@ struct AppPageContext: Encodable {
         pageTitle: String,
         pageKind: AppPageKind,
         overview: OverviewPageContext?,
+        semester: SemesterPageContext?,
         board: BoardPageContext?,
         tasks: TasksPageContext?,
         taskDetail: TaskDetailPageContext?,
@@ -49,6 +53,7 @@ struct AppPageContext: Encodable {
         self.pageTitle = pageTitle
         self.documentTitle = "\(pageTitle) · Flowboard"
         self.isOverview = pageKind == .overview
+        self.isSemester = pageKind == .semester
         self.isBoard = pageKind == .board
         self.isTasks = pageKind == .tasks || pageKind == .archivedTasks
         self.isActiveTasks = pageKind == .tasks
@@ -59,6 +64,7 @@ struct AppPageContext: Encodable {
         self.isAPIKeys = pageKind == .apiKeys
         self.isBoardSettings = pageKind == .boardSettings
         self.overview = overview
+        self.semester = semester
         self.board = board
         self.tasks = tasks
         self.taskDetail = taskDetail

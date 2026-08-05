@@ -79,6 +79,37 @@ struct StudyPlannerTests {
             expectContains(response.body.string, #""name":"My board""#)
         }
     }
+
+    @Test("The semester horizon groups saved deadlines by week")
+    func groupsSemesterDeadlines() throws {
+        let courseID = UUID()
+        let course = Board(id: courseID, name: "CHEM 201", slug: "chem-201")
+        course.$tasks.value = []
+        let navigation = try BoardNavigationContext(
+            board: course,
+            firstViewID: nil,
+            courseColorClass: "course-green"
+        )
+        let firstWeek = try #require(studyDate("2026-08-03"))
+        let deadline = try studyTaskContext(
+            board: course,
+            title: "Prepare lab report",
+            dueAt: try #require(studyDate("2026-08-06")),
+            priority: .high,
+            estimatedMinutes: 480
+        )
+
+        let horizon = SemesterPageContext(
+            tasks: [deadline],
+            courses: [navigation],
+            referenceDate: firstWeek
+        )
+
+        #expect(horizon.weeks.count == 16)
+        #expect(horizon.scheduledAssignmentCount == 1)
+        #expect(horizon.highLoadWeekCount == 1)
+        #expect(horizon.weeks[0].assignments.first?.title == "Prepare lab report")
+    }
 }
 
 private func studyDate(_ value: String) -> Date? {

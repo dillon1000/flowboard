@@ -1,0 +1,154 @@
+/* A timeline presents one week at a time, so a student can scan a full term
+   without mistaking a collection of cards for a second task board. */
+.semester-page {
+  max-width: 1120px;
+}
+
+.semester-header {
+  margin-bottom: 24px;
+}
+
+.semester-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  margin: 16px 0 0;
+  border-radius: var(--radius-medium);
+  color: var(--ds-amber-900);
+  background: color-mix(in srgb, var(--ds-amber-600) 10%, var(--surface));
+  font-size: 13px;
+}
+
+.semester-notice svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.semester-timeline {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.semester-week {
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.semester-week > header {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+}
+
+.semester-week h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.semester-week header span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.semester-week > header > strong {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.semester-week[data-load='high'] > header > strong {
+  color: var(--ds-amber-900);
+}
+
+.semester-week[data-load='needs-estimates'] > header > strong {
+  color: var(--ds-blue-900);
+}
+
+.semester-assignments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  border-top: 1px solid var(--border);
+}
+
+.semester-assignment {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 14px 18px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color var(--duration) var(--ease);
+}
+
+.semester-assignment:hover {
+  background: var(--surface-hover);
+}
+
+.semester-assignment + .semester-assignment {
+  border-left: 1px solid var(--border);
+}
+
+.semester-assignment-course,
+.semester-assignment-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.semester-assignment > strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.semester-assignment-meta {
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.semester-assignment-meta > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.semester-assignment-meta svg {
+  width: 13px;
+  height: 13px;
+}
+
+.semester-assignment-meta .muted {
+  color: var(--text-tertiary);
+}
+
+@media (width <= 640px) {
+  .semester-week > header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .semester-assignments {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .semester-assignment + .semester-assignment {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}

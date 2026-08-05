@@ -163,6 +163,36 @@ export interface OverviewPageContext {
   hasUnplannedFocus: boolean;
 }
 
+export interface SemesterAssignmentContext {
+  href: string;
+  title: string;
+  courseName: string;
+  courseColorClass: string;
+  dueInput: string;
+  dueLabel: string;
+  estimatedMinutes: number;
+  effortLabel: string;
+  hasEstimate: boolean;
+}
+
+export interface SemesterWeekContext {
+  label: string;
+  assignments: SemesterAssignmentContext[];
+  assignmentCount: number;
+  workloadLabel: string;
+  workloadClass: string;
+  isHighLoad: boolean;
+}
+
+export interface SemesterPageContext {
+  rangeLabel: string;
+  weeks: SemesterWeekContext[];
+  scheduledAssignmentCount: number;
+  highLoadWeekCount: number;
+  undatedAssignmentCount: number;
+  hasUndatedAssignments: boolean;
+}
+
 export interface TaskColumnContext {
   value: string;
   name: string;
@@ -456,6 +486,7 @@ export interface AppPageContext {
   pageTitle: string;
   documentTitle: string;
   isOverview: boolean;
+  isSemester: boolean;
   isBoard: boolean;
   isTasks: boolean;
   isActiveTasks: boolean;
@@ -466,6 +497,7 @@ export interface AppPageContext {
   isAPIKeys: boolean;
   isBoardSettings: boolean;
   overview: OverviewPageContext | null;
+  semester: SemesterPageContext | null;
   board: BoardPageContext | null;
   tasks: TasksPageContext | null;
   taskDetail: TaskDetailPageContext | null;
