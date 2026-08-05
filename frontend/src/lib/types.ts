@@ -333,6 +333,13 @@ export interface TaskPropertyContext {
   options: TaskPropertyOptionContext[];
 }
 
+export interface TaskReminderContext {
+  id: string;
+  remindAt: string;
+  remindAtDisplay: string;
+  timeZone: string;
+}
+
 export interface TaskDetailPageContext {
   task: TaskCardContext;
   boardName: string;
@@ -351,6 +358,8 @@ export interface TaskDetailPageContext {
   members: MemberOptionContext[];
   properties: TaskPropertyContext[];
   hasProperties: boolean;
+  reminders: TaskReminderContext[];
+  notificationsEnabled: boolean;
 }
 
 export interface APIKeyPageItemContext {

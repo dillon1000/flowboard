@@ -578,6 +578,133 @@ progress.progress::-moz-progress-bar {
   font-size: 11px;
 }
 
+/* Reminder settings stay compact because they are supporting controls, not a
+   second task editor. The list and form share one clear vertical rhythm. */
+.reminder-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.reminder-dialog-body {
+  display: grid;
+  gap: 16px;
+}
+
+.reminder-recipient,
+.reminder-row {
+  display: grid;
+  align-items: center;
+}
+
+.reminder-recipient {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+}
+
+.reminder-recipient > svg {
+  color: var(--ds-blue-900);
+}
+
+.reminder-recipient > span:nth-child(2),
+.reminder-row > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.reminder-recipient strong,
+.reminder-row strong,
+.reminder-form-heading strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.reminder-recipient small,
+.reminder-row small,
+.reminder-form-heading span {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.reminder-list {
+  overflow: clip;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+}
+
+.reminder-row {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 10px;
+}
+
+.reminder-row + .reminder-row {
+  border-top: 1px solid var(--border);
+}
+
+.reminder-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: var(--radius-small);
+  background: var(--ds-blue-200);
+  color: var(--ds-blue-900);
+}
+
+.reminder-empty,
+.reminder-unavailable {
+  padding: 12px;
+  margin: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-medium);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.reminder-unavailable {
+  border-style: solid;
+  border-color: var(--ds-amber-500);
+  background: var(--ds-amber-100);
+}
+
+.reminder-form {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.reminder-form-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reminder-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.reminder-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reminder-error {
+  margin: 0;
+}
+
 @media (width <= 960px) {
   .comments-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -592,5 +719,14 @@ progress.progress::-moz-progress-bar {
 @media (width <= 520px) {
   .grade-input-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reminder-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reminder-form-heading {
+    display: grid;
+    gap: 3px;
   }
 }
