@@ -260,6 +260,7 @@
 }
 
 .study-workload {
+  position: relative;
   display: grid;
   width: 388px;
   min-height: 154px;
@@ -287,10 +288,76 @@
   align-self: stretch;
 }
 
-.study-workload-chart h2 svg {
+.study-workload-info {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.study-workload-info:hover,
+.study-workload-info[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.study-workload-info svg {
   width: 14px;
   height: 14px;
   color: var(--text-tertiary);
+}
+
+.study-workload-settings {
+  position: absolute;
+  z-index: 6;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  width: 300px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-large);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-border), var(--shadow-menu);
+}
+
+.study-workload-settings > div,
+.study-workload-settings label {
+  display: flex;
+  align-items: center;
+}
+
+.study-workload-settings > div {
+  justify-content: space-between;
+}
+
+.study-workload-settings p {
+  margin: -4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.study-workload-settings label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px 50px;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.study-workload-settings .input {
+  height: 32px;
+}
+
+.study-workload-settings .button {
+  justify-self: end;
 }
 
 .study-workload-bars {
@@ -427,6 +494,36 @@
   min-width: 0;
 }
 
+.study-assignment-scroller {
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.study-assignment-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.study-assignment-scroller[data-scroll-left='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 100%);
+}
+
+.study-assignment-scroller[data-scroll-right='true'] {
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent);
+}
+
+.study-assignment-scroller[data-scroll-left='true'][data-scroll-right='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+.study-assignment-track {
+  display: grid;
+  min-width: 100%;
+  grid-auto-columns: minmax(290px, 1fr);
+  grid-auto-flow: column;
+}
+
 .study-no-assignments {
   display: flex;
   min-height: 95px;
@@ -439,17 +536,18 @@
 .study-assignment {
   display: grid;
   min-height: 95px;
-  grid-template-columns: 314px 38px 96px 38px 142px 36px minmax(76px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0;
-  padding: 14px 12px 14px 32px;
+  gap: 8px 16px;
+  padding: 14px 20px;
   color: var(--text);
   text-decoration: none;
   transition: background-color var(--duration) var(--ease);
 }
 
 .study-assignment + .study-assignment {
-  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 
 .study-assignment:hover {
@@ -457,7 +555,7 @@
 }
 
 .study-assignment-main {
-  grid-column: 1;
+  grid-column: 1 / -1;
   display: grid;
   min-width: 0;
   gap: 4px;
@@ -490,15 +588,16 @@
 }
 
 .study-assignment > .study-assignment-meta:nth-child(2) {
-  grid-column: 3;
+  grid-column: auto;
 }
 
 .study-assignment-type {
-  grid-column: 5;
+  display: none;
 }
 
 .study-assignment > .study-assignment-meta:last-child {
-  grid-column: 7;
+  grid-column: auto;
+  justify-self: end;
 }
 
 .study-assignment-meta > span {
@@ -698,17 +797,8 @@
     width: 286px;
   }
 
-  .study-assignment {
-    grid-template-columns: minmax(180px, 1fr) 86px 110px 62px;
-    gap: 12px;
-    padding-left: 24px;
-  }
-
-  .study-assignment-main,
-  .study-assignment > .study-assignment-meta:nth-child(2),
-  .study-assignment-type,
-  .study-assignment > .study-assignment-meta:last-child {
-    grid-column: auto;
+  .study-assignment-track {
+    grid-auto-columns: minmax(270px, 1fr);
   }
 }
 
@@ -719,10 +809,6 @@
 
   .study-week-header {
     min-height: 184px;
-  }
-
-  .study-assignment {
-    grid-template-columns: minmax(180px, 1fr) 84px 64px;
   }
 
   .study-day {
@@ -857,7 +943,7 @@
 
   .study-assignment {
     min-height: 88px;
-    grid-template-columns: minmax(0, 1fr) 68px;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     padding: 12px 14px;
   }
