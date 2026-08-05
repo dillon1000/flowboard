@@ -83,6 +83,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateTapActions())
     app.migrations.add(AddTapActionDisplayDescription())
     app.migrations.add(CreateNotificationOutbox())
+    app.migrations.add(AddStudyTaskPlanningFields())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

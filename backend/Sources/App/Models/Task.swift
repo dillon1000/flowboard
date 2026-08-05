@@ -102,6 +102,16 @@ final class Task: Model, @unchecked Sendable {
     @OptionalField(key: "due_at")
     var dueAt: Date?
 
+    /// Stores an optional local deadline time separately from the date. A time is
+    /// not inferred for date-only assignments, so the planner can show all-day work honestly.
+    @OptionalField(key: "due_time")
+    var dueTime: String?
+
+    /// A student-owned work estimate in minutes. Priority communicates importance;
+    /// it does not predict how long the work will take.
+    @OptionalField(key: "estimated_minutes")
+    var estimatedMinutes: Int?
+
     @OptionalParent(key: "assignee_id")
     var assignee: User?
 
@@ -148,6 +158,8 @@ final class Task: Model, @unchecked Sendable {
         labels: [String] = [],
         startAt: Date? = nil,
         dueAt: Date? = nil,
+        dueTime: String? = nil,
+        estimatedMinutes: Int? = nil,
         creatorID: UUID? = nil
     ) {
         self.id = id
@@ -161,6 +173,8 @@ final class Task: Model, @unchecked Sendable {
         self.labels = labels
         self.startAt = startAt
         self.dueAt = dueAt
+        self.dueTime = dueTime
+        self.estimatedMinutes = estimatedMinutes
         self.$creator.id = creatorID
         self.properties = [:]
         self.isArchived = false
@@ -232,6 +246,8 @@ struct TaskResponse: Content {
     let labels: [String]
     let startAt: Date?
     let dueAt: Date?
+    let dueTime: String?
+    let estimatedMinutes: Int?
     let assigneeID: UUID?
     let creatorID: UUID?
     let properties: [String: String]
@@ -253,6 +269,8 @@ struct TaskResponse: Content {
         self.labels = task.labels
         self.startAt = task.startAt
         self.dueAt = task.dueAt
+        self.dueTime = task.dueTime
+        self.estimatedMinutes = task.estimatedMinutes
         self.assigneeID = task.$assignee.id
         self.creatorID = task.$creator.id
         self.properties = task.properties ?? [:]
@@ -272,6 +290,8 @@ struct CreateTaskRequest: Content, Validatable {
     let labels: [String]?
     let startAt: Date?
     let dueAt: Date?
+    let dueTime: String?
+    let estimatedMinutes: Int?
     let assigneeID: UUID?
     let properties: [String: String]?
 
@@ -284,6 +304,8 @@ struct CreateTaskRequest: Content, Validatable {
         labels: [String]?,
         startAt: Date? = nil,
         dueAt: Date?,
+        dueTime: String? = nil,
+        estimatedMinutes: Int? = nil,
         assigneeID: UUID? = nil,
         properties: [String: String]? = nil
     ) {
@@ -295,6 +317,8 @@ struct CreateTaskRequest: Content, Validatable {
         self.labels = labels
         self.startAt = startAt
         self.dueAt = dueAt
+        self.dueTime = dueTime
+        self.estimatedMinutes = estimatedMinutes
         self.assigneeID = assigneeID
         self.properties = properties
     }
@@ -314,6 +338,8 @@ struct UpdateTaskRequest: Content, Validatable {
     let labels: [String]
     let startAt: Date?
     let dueAt: Date?
+    let dueTime: String?
+    let estimatedMinutes: Int?
     let assigneeID: UUID?
     let properties: [String: String]?
 
@@ -325,6 +351,8 @@ struct UpdateTaskRequest: Content, Validatable {
         labels: [String],
         startAt: Date? = nil,
         dueAt: Date?,
+        dueTime: String? = nil,
+        estimatedMinutes: Int? = nil,
         assigneeID: UUID? = nil,
         properties: [String: String]? = nil
     ) {
@@ -335,6 +363,8 @@ struct UpdateTaskRequest: Content, Validatable {
         self.labels = labels
         self.startAt = startAt
         self.dueAt = dueAt
+        self.dueTime = dueTime
+        self.estimatedMinutes = estimatedMinutes
         self.assigneeID = assigneeID
         self.properties = properties
     }
@@ -356,6 +386,8 @@ struct PatchTaskRequest: Content {
     @PatchField var labels: PatchField<[String]>.State
     @PatchField var startAt: PatchField<Date>.State
     @PatchField var dueAt: PatchField<Date>.State
+    @PatchField var dueTime: PatchField<String>.State
+    @PatchField var estimatedMinutes: PatchField<Int>.State
     @PatchField var assigneeID: PatchField<UUID>.State
     @PatchField var properties: PatchField<[String: String]>.State
     @PatchField var isArchived: PatchField<Bool>.State

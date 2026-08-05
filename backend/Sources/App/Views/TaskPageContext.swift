@@ -87,6 +87,12 @@ struct TaskCardContext: Encodable {
     let dueInput: String
     let dueDisplay: String
     let hasDueDate: Bool
+    let dueTimeInput: String
+    let dueTimeDisplay: String
+    let hasDueTime: Bool
+    let estimatedMinutes: Int
+    let estimatedDisplay: String
+    let hasEstimate: Bool
     let assigneeID: String
     let assigneeName: String
     let hasAssignee: Bool
@@ -132,6 +138,12 @@ struct TaskCardContext: Encodable {
         self.dueInput = task.dueAt.map(inputDate) ?? ""
         self.dueDisplay = task.dueAt.map(displayDateOnly) ?? "No due date"
         self.hasDueDate = task.dueAt != nil
+        self.dueTimeInput = task.dueTime ?? ""
+        self.dueTimeDisplay = task.dueTime.map(displayTime) ?? "All day"
+        self.hasDueTime = task.dueTime != nil
+        self.estimatedMinutes = task.estimatedMinutes ?? 0
+        self.estimatedDisplay = task.estimatedMinutes.map(displayDuration) ?? "Not estimated"
+        self.hasEstimate = task.estimatedMinutes != nil
         self.assigneeID = assignee?.id?.uuidString ?? ""
         self.assigneeName = assignee?.name ?? "Unassigned"
         self.hasAssignee = assignee != nil
@@ -153,6 +165,28 @@ struct TaskCardContext: Encodable {
             .map(\.id)
             .joined(separator: ",")
     }
+}
+
+/// Formats the stored 24-hour clock value for the study UI without applying a
+/// timezone conversion to a student-entered local deadline.
+private func displayTime(_ value: String) -> String {
+    let parser = DateFormatter()
+    parser.locale = Locale(identifier: "en_US_POSIX")
+    parser.dateFormat = "HH:mm"
+    guard let date = parser.date(from: value) else { return value }
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.dateFormat = "h:mm a"
+    return formatter.string(from: date)
+}
+
+/// Uses compact, readable units so estimates fit in cards, tables, and the
+/// weekly planner without hiding the actual work the student entered.
+func displayDuration(_ minutes: Int) -> String {
+    if minutes < 60 { return "\(minutes) min" }
+    let hours = minutes / 60
+    let remainder = minutes % 60
+    return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
 }
 
 struct CalendarDayContext: Encodable {

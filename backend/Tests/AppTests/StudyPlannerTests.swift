@@ -22,13 +22,15 @@ struct StudyPlannerTests {
             board: course,
             title: "Finish calculus problem set",
             dueAt: wednesday,
-            priority: .high
+            priority: .high,
+            estimatedMinutes: 180
         )
         let unscheduledTask = try studyTaskContext(
             board: course,
             title: "Review flashcards",
             dueAt: nil,
-            priority: .low
+            priority: .low,
+            estimatedMinutes: nil
         )
 
         let planner = OverviewPageContext(
@@ -45,6 +47,7 @@ struct StudyPlannerTests {
         #expect(planner.days[2].assignments.first?.title == "Finish calculus problem set")
         #expect(planner.days[2].assignments.first?.typeName == "Problem Set")
         #expect(planner.days[2].workloadLabel == "Heavy")
+        #expect(planner.days[2].workloadMinutes == 180)
         #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 1)
         #expect(planner.unscheduledAssignmentCount == 1)
     }
@@ -81,7 +84,8 @@ private func studyTaskContext(
     board: Board,
     title: String,
     dueAt: Date?,
-    priority: TaskPriority
+    priority: TaskPriority,
+    estimatedMinutes: Int?
 ) throws -> TaskCardContext {
     let task = Task(
         id: UUID(),
@@ -90,7 +94,8 @@ private func studyTaskContext(
         title: title,
         priority: priority,
         position: 1_000,
-        dueAt: dueAt
+        dueAt: dueAt,
+        estimatedMinutes: estimatedMinutes
     )
     task.$board.value = board
     return try TaskCardContext(task: task, assignee: nil, board: board)

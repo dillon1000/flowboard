@@ -179,11 +179,15 @@ struct OverviewPageContext: Encodable {
             )
         }
         self.workloadDays = days.map(StudyWorkloadDayContext.init)
-        let totalHours = days.reduce(0) { $0 + $1.workloadHours }
-        if totalHours >= 18 {
+        let totalMinutes = days.reduce(0) { $0 + $1.workloadMinutes }
+        let unestimatedCount = days.reduce(0) { $0 + $1.unestimatedAssignmentCount }
+        if unestimatedCount > 0 {
+            self.balanceName = "Needs estimates"
+            self.balanceDescription = "Add time estimates to see your real workload."
+        } else if totalMinutes >= 18 * 60 {
             self.balanceName = "Heavy week"
             self.balanceDescription = "Protect time for the busiest days."
-        } else if totalHours >= 8 {
+        } else if totalMinutes >= 8 * 60 {
             self.balanceName = "Balanced"
             self.balanceDescription = "Good mix across the week."
         } else {
@@ -218,7 +222,8 @@ struct StudyDayContext: Encodable {
     let assignments: [StudyAssignmentContext]
     let assignmentCount: Int
     let hasAssignments: Bool
-    let workloadHours: Int
+    let workloadMinutes: Int
+    let unestimatedAssignmentCount: Int
     let workloadLabel: String
     let workloadClass: String
 
@@ -239,11 +244,18 @@ struct StudyDayContext: Encodable {
         }
         self.assignmentCount = assignments.count
         self.hasAssignments = !assignments.isEmpty
-        self.workloadHours = assignments.reduce(0) { $0 + $1.effortHours }
-        switch workloadHours {
-        case 0...2:
+        self.workloadMinutes = assignments.reduce(0) { $0 + $1.estimatedMinutes }
+        self.unestimatedAssignmentCount = assignments.filter { !$0.hasEstimate }.count
+        switch workloadMinutes {
+        case 0:
+            self.workloadLabel = "Unplanned"
+            self.workloadClass = "empty"
+        case 1..<120:
             self.workloadLabel = "Light"
             self.workloadClass = "light"
+        case 120..<240:
+            self.workloadLabel = "Moderate"
+            self.workloadClass = "medium"
         default:
             self.workloadLabel = "Heavy"
             self.workloadClass = "heavy"
@@ -259,8 +271,9 @@ struct StudyAssignmentContext: Encodable {
     let dueTime: String
     let typeName: String
     let typeIcon: String
-    let effortHours: Int
+    let estimatedMinutes: Int
     let effortLabel: String
+    let hasEstimate: Bool
     let statusName: String
     let statusValue: String
     let statusColorClass: String
@@ -279,11 +292,12 @@ struct StudyAssignmentContext: Encodable {
         self.title = task.title
         self.courseName = task.boardName
         self.courseColorClass = courseColorClass
-        self.dueTime = "11:59 PM"
+        self.dueTime = task.dueTimeDisplay
         self.typeName = assignmentType.name
         self.typeIcon = assignmentType.icon
-        self.effortHours = studyEffortHours(priority: task.priorityValue)
-        self.effortLabel = "\(effortHours)h"
+        self.estimatedMinutes = task.estimatedMinutes
+        self.effortLabel = task.estimatedDisplay
+        self.hasEstimate = task.hasEstimate
         self.statusName = task.statusName
         self.statusValue = task.statusValue
         self.statusColorClass = task.statusColorClass
@@ -305,13 +319,13 @@ struct StudyWorkloadDayContext: Encodable {
 
     init(day: StudyDayContext) {
         self.dayLabel = String(day.weekdayLabel.prefix(1))
-        self.barClass = switch day.workloadHours {
+        self.barClass = switch day.workloadMinutes {
         case 0: "empty"
-        case 1...2: "light"
-        case 3: "medium"
+        case 1..<120: "light"
+        case 120..<240: "medium"
         default: "heavy"
         }
-        self.accessibilityLabel = "\(day.weekdayLabel): \(day.workloadLabel), \(day.workloadHours) estimated hours"
+        self.accessibilityLabel = "\(day.weekdayLabel): \(day.workloadLabel), \(displayDuration(day.workloadMinutes)) planned"
     }
 }
 
@@ -349,15 +363,6 @@ private func studyTaskOrder(_ left: TaskCardContext, _ right: TaskCardContext) -
     return leftOrder == rightOrder
         ? left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
         : leftOrder < rightOrder
-}
-
-private func studyEffortHours(priority: String) -> Int {
-    switch priority {
-    case "low": 1
-    case "high": 3
-    case "urgent": 4
-    default: 2
-    }
 }
 
 private func studyAssignmentType(title: String, labels: [String]) -> (name: String, icon: String) {
