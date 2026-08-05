@@ -55,7 +55,7 @@ struct AppTests {
             let viewCount = try await BoardView.query(on: app.db)
                 .filter(\.$board.$id == session.boardID)
                 .count()
-            #expect(viewCount == 4)
+            #expect(viewCount == 5)
         }
     }
 

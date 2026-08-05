@@ -336,7 +336,7 @@ struct RESTAPITests {
                     try request.content.encode(
                         CreateBoardViewRequest(
                             name: "Release queue",
-                            type: .table,
+                            type: .gantt,
                             configuration: nil
                         )
                     )
@@ -344,6 +344,7 @@ struct RESTAPITests {
             )
             #expect(createdView.status == .created)
             let view = try createdView.content.decode(BoardViewResponse.self)
+            #expect(view.type == .gantt)
             let updatedView = try await jsonRequest(
                 app: app,
                 method: .PATCH,
