@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TaskOptionContext } from '$lib/types';
-  import { ArrowUpRightIcon as ArrowUpRight, CaretDownIcon as ChevronDown } from 'phosphor-svelte';
+  import { ArrowCircleUpRightIcon as ArrowCircleUpRight, CaretDownIcon as ChevronDown } from 'phosphor-svelte';
   import { tick } from 'svelte';
 
   let {
@@ -70,7 +70,7 @@
     aria-expanded={open}
     onclick={() => (open ? hideMenu() : void showMenu())}
   >
-    <ArrowUpRight size={15} /><span>Promote</span><ChevronDown size={14} />
+    <ArrowCircleUpRight size={15} /><span>Promote</span><ChevronDown size={14} />
   </button>
   {#if open}
     <div class="menu-panel right" role="listbox" aria-label="Change task status">

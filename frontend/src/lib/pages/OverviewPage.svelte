@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { OverviewPageContext, StudyCourseContext, StudyDayContext, StudyPlanCandidateContext, TaskResponse } from '$lib/types';
-  import { ArrowUpRightIcon as OpenAssignment, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, StrategyIcon as Strategy, XIcon as X } from 'phosphor-svelte';
+  import { ArrowCircleUpRightIcon as OpenAssignment, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, StrategyIcon as Strategy, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
@@ -36,7 +36,7 @@
   );
   const workloadSummary = $derived.by(() => {
     if (overview.hasUnestimatedAssignments) {
-      return { name: 'Needs estimates', description: `${overview.unestimatedAssignmentCount} assignments are not counted yet.` };
+      return { name: 'Needs estimates 🤔', description: `${overview.unestimatedAssignmentCount} assignments are not counted yet.` };
     }
     if (overview.days.some((day: StudyDayContext) => day.workloadMinutes >= heavyMinutes)) {
       return { name: 'Heavy day 😓', description: 'One or more days exceed your heavy limit.' };
