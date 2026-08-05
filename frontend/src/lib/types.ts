@@ -385,6 +385,7 @@ export interface APIKeysPageContext {
 export interface BoardSettingsViewContext {
   id: string;
   name: string;
+  type: string;
   typeName: string;
   groupBy: string;
   groupByName: string;

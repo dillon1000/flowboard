@@ -11,6 +11,7 @@
     BoardSettingsPageContext,
     BoardSettingsViewContext,
     TapActionContext,
+    TaskOptionContext,
     TaskResponse
   } from '$lib/types';
   import { showToast } from '$lib/ui/toast';
@@ -43,6 +44,10 @@
   let tapOpen = $state(false);
   let editingTap = $state<TapActionContext | null>(null);
   let editingView = $state<BoardSettingsViewContext | null>(null);
+  let editingWorkflowOption = $state<{
+    kind: 'status' | 'severity';
+    option: TaskOptionContext;
+  } | null>(null);
   let provisionedURLOverride = $state('');
   let provisionStatus = $state('');
   let copied = $state(false);
@@ -163,6 +168,8 @@
       {
         method: 'PATCH',
         body: JSON.stringify({
+          name: String(data.get('name') ?? ''),
+          type: String(data.get('type') ?? 'board'),
           configuration: {
             groupBy: String(data.get('groupBy') ?? 'status'),
             filters: filterField && filterValue
@@ -177,6 +184,27 @@
       'View saved'
     );
     if (saved) editingView = null;
+  }
+
+  async function editWorkflowOption(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    if (!editingWorkflowOption) return;
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const { kind, option } = editingWorkflowOption;
+    const saved = await mutate(
+      `/api/v1/boards/${board.id}/task-options/${option.value}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          kind,
+          name: String(data.get('name') ?? ''),
+          color: String(data.get('color') ?? 'gray'),
+          isCompleted: kind === 'status' && data.has('isCompleted')
+        })
+      },
+      kind === 'status' ? 'Status saved' : 'Severity saved'
+    );
+    if (saved) editingWorkflowOption = null;
   }
 
   async function addWorkflowOption(event: SubmitEvent, kind: 'status' | 'severity'): Promise<void> {
@@ -428,7 +456,13 @@
         <div class="settings-split">
           <div class="panel">
             <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward board progress.</span></span></div>
-            {#each board.statuses as option}<div class="panel-row"><span class={`badge status ${option.colorClass}`} style={option.colorStyle}>{option.name}</span><span class="panel-row-main"><span>{option.isCompleted ? 'Counts as completed' : 'Active work'}</span></span></div>{/each}
+            {#each board.statuses as option (option.value)}
+              <div class="panel-row">
+                <span class={`badge status ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
+                <span class="panel-row-main"><span>{option.isCompleted ? 'Counts as completed' : 'Active work'}</span></span>
+                <button class="button small" type="button" aria-label={`Edit status ${option.name}`} onclick={() => (editingWorkflowOption = { kind: 'status', option })}>Edit</button>
+              </div>
+            {/each}
             <form class="panel-row workflow-option-form" onsubmit={(event) => addWorkflowOption(event, 'status')}>
               <input class="input" name="name" placeholder="Status name" maxlength="40" required />
               <WorkflowColorField />
@@ -439,7 +473,13 @@
 
           <div class="panel">
             <div class="panel-row"><span class="panel-row-main"><strong>Severities</strong><span>Severity describes the effect or urgency of a task.</span></span></div>
-            {#each board.severities as option}<div class="panel-row"><span class={`badge ${option.colorClass}`} style={option.colorStyle}>{option.name}</span></div>{/each}
+            {#each board.severities as option (option.value)}
+              <div class="panel-row">
+                <span class={`badge ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
+                <span class="panel-row-main"></span>
+                <button class="button small" type="button" aria-label={`Edit severity ${option.name}`} onclick={() => (editingWorkflowOption = { kind: 'severity', option })}>Edit</button>
+              </div>
+            {/each}
             <form class="panel-row workflow-option-form" onsubmit={(event) => addWorkflowOption(event, 'severity')}>
               <input class="input" name="name" placeholder="Severity name" maxlength="40" required />
               <WorkflowColorField />
@@ -542,8 +582,12 @@
 {#if editingView}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="configure-view-title" tabindex="-1" use:dialogLayer={{ close: () => (editingView = null) }}>
     <form class="dialog" onsubmit={(event) => configureView(event, editingView!.id)}>
-      <div class="dialog-header"><div><h2 id="configure-view-title">Configure {editingView.name}</h2><p>Set grouping, one filter, and one sort rule.</p></div><button class="icon-button" type="button" onclick={() => (editingView = null)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-header"><div><h2 id="configure-view-title">Configure {editingView.name}</h2><p>Change the name, layout, grouping, filter, and sort rule.</p></div><button class="icon-button" type="button" onclick={() => (editingView = null)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body">
+        <div class="form-grid">
+          <div class="field"><label for="view-name">Name</label><input class="input" id="view-name" name="name" value={editingView.name} minlength="1" maxlength="80" required /></div>
+          <div class="field"><label for="view-type">Layout</label><SelectMenu id="view-type" name="type" value={editingView.type} options={viewTypeOptions} ariaLabel="Layout" /></div>
+        </div>
         <div class="field"><label for="view-group">Group board cards by</label><SelectMenu id="view-group" name="groupBy" value={editingView.groupBy} options={groupOptions} ariaLabel="Group board cards by" initialFocus /></div>
         <div class="form-grid">
           <div class="field"><label for="view-filter-field">Filter field</label><input class="input" id="view-filter-field" name="filterField" value={editingView.filterField} placeholder="status, priority, or label" /></div>
@@ -553,6 +597,25 @@
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingView = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save view</button></div>
+    </form>
+  </div>
+{/if}
+
+{#if editingWorkflowOption}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-workflow-title" tabindex="-1" use:dialogLayer={{ close: () => (editingWorkflowOption = null) }}>
+    <form class="dialog" onsubmit={editWorkflowOption}>
+      <div class="dialog-header">
+        <div><h2 id="edit-workflow-title">Edit {editingWorkflowOption.kind}</h2><p>The updated name and color apply everywhere on this board.</p></div>
+        <button class="icon-button" type="button" onclick={() => (editingWorkflowOption = null)} aria-label="Close"><X size={16} /></button>
+      </div>
+      <div class="dialog-body">
+        <div class="field"><label for="workflow-option-name">Name</label><input class="input" id="workflow-option-name" name="name" value={editingWorkflowOption.option.name} minlength="1" maxlength="40" required data-dialog-focus /></div>
+        <div class="field"><span class="field-label">Color</span><WorkflowColorField value={editingWorkflowOption.option.customColor || editingWorkflowOption.option.colorClass.replace('workflow-', '')} /></div>
+        {#if editingWorkflowOption.kind === 'status'}
+          <label class="checkbox-label"><input class="checkbox-input" type="checkbox" name="isCompleted" value="true" checked={editingWorkflowOption.option.isCompleted} /><span class="checkbox-control" aria-hidden="true"><Check size={13} /></span><span>Counts as completed</span></label>
+        {/if}
+      </div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingWorkflowOption = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save {editingWorkflowOption.kind}</button></div>
     </form>
   </div>
 {/if}

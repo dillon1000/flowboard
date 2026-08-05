@@ -4,6 +4,7 @@
 
   type ColorPickerElement = HTMLElement & { color: string };
 
+  let { value = 'gray' } = $props<{ value?: string }>();
   let root: HTMLDivElement;
   let trigger: HTMLButtonElement;
   let picker = $state<ColorPickerElement | undefined>();
@@ -28,11 +29,13 @@
   );
 
   onMount(() => {
+    selection = value.startsWith('#') ? 'custom' : value;
+    customColor = value.startsWith('#') ? value : '#3b82f6';
     const form = root.closest('form');
     const reset = (): void => {
       queueMicrotask(() => {
-        selection = 'gray';
-        customColor = '#3b82f6';
+        selection = value.startsWith('#') ? 'custom' : value;
+        customColor = value.startsWith('#') ? value : '#3b82f6';
         open = false;
         if (pickerReady && picker) picker.color = customColor;
       });

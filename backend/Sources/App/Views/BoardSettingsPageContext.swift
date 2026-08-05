@@ -209,6 +209,7 @@ struct TapExecutionContext: Encodable {
 struct BoardSettingsViewContext: Encodable {
     let id: UUID
     let name: String
+    let type: String
     let typeName: String
     let groupBy: String
     let groupByName: String
@@ -224,6 +225,7 @@ struct BoardSettingsViewContext: Encodable {
     init(view: BoardView) throws {
         self.id = try view.requireID()
         self.name = view.name
+        self.type = view.type.rawValue
         self.typeName = view.type.rawValue.capitalized
         self.groupBy = view.configuration?.groupBy ?? "status"
         self.groupByName = self.groupBy == "priority" ? "Severity" : "Status"

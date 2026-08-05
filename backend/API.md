@@ -71,7 +71,7 @@ Board child resources are available at these paths:
 | Views | `GET, POST /boards/{boardID}/views`; `GET, PATCH, DELETE /boards/{boardID}/views/{viewID}` |
 | Templates | `GET, POST /boards/{boardID}/templates`; `GET, PATCH, DELETE /boards/{boardID}/templates/{templateID}` |
 | Fields | `POST /boards/{boardID}/properties` |
-| Workflow values | `POST /boards/{boardID}/task-options` |
+| Workflow values | `POST /boards/{boardID}/task-options`, `PATCH /boards/{boardID}/task-options/{optionID}` |
 | Tap actions | `POST /boards/{boardID}/tap-actions`; `PATCH, DELETE /boards/{boardID}/tap-actions/{tapActionID}` |
 
 Call `POST /boards/{boardID}/templates/{templateID}/instantiate` to create a

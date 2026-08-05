@@ -288,11 +288,14 @@ test('configures a board, manages API keys, and runs a public Tap action', async
   await viewRow.getByRole('button', { name: 'Configure' }).click();
   const viewDialog = page.getByRole('dialog', { name: 'Configure Browser table' });
   await expect(viewDialog.getByLabel('Group board cards by')).toBeFocused();
+  await viewDialog.getByLabel('Name').fill('Browser assignments');
+  await chooseMenu(viewDialog, 'Layout', 'Gallery');
   await chooseMenu(viewDialog, 'Group board cards by', 'Severity');
   await viewDialog.getByLabel('Sort field').fill('title');
   await chooseMenu(viewDialog, 'Sort direction', 'Descending');
   await viewDialog.getByRole('button', { name: 'Save view' }).click();
-  await expect(viewRow).toContainText('Grouped by Severity');
+  const editedViewRow = page.locator('#views .panel-row').filter({ hasText: 'Browser assignments' });
+  await expect(editedViewRow).toContainText('Gallery · Grouped by Severity');
 
   const fieldForm = page.locator('#fields form');
   await chooseMenu(fieldForm, 'Field type', 'Select');
@@ -317,6 +320,16 @@ test('configures a board, manages API keys, and runs a public Tap action', async
   await statusForm.getByText('Completed', { exact: true }).click();
   await statusForm.getByRole('button', { name: 'Add status' }).click();
   await expect(page.locator('#workflow')).toContainText('Browser complete');
+
+  const backlogRow = page.locator('#workflow .panel').first().locator('.panel-row').filter({ hasText: 'Backlog' });
+  await backlogRow.getByRole('button', { name: 'Edit' }).click();
+  const statusDialog = page.getByRole('dialog', { name: 'Edit status' });
+  await statusDialog.getByLabel('Name').fill('Queued');
+  await statusDialog.getByLabel('Color').click();
+  await statusDialog.getByRole('option', { name: 'Purple' }).click();
+  await statusDialog.getByText('Counts as completed', { exact: true }).click();
+  await statusDialog.getByRole('button', { name: 'Save status' }).click();
+  await expect(page.locator('#workflow')).toContainText('Queued');
 
   await page.getByRole('button', { name: 'New Tap action' }).click();
   const tapDialog = page.getByRole('dialog', { name: 'New Tap action' });
