@@ -151,6 +151,7 @@ struct OverviewPageContext: Encodable {
         tasks: [TaskCardContext],
         courses: [BoardNavigationContext],
         selectedCourseID: UUID?,
+        studySessions: [StudySession] = [],
         timeZoneIdentifier: String = "UTC",
         referenceDate: Date = Date()
     ) {
@@ -169,6 +170,11 @@ struct OverviewPageContext: Encodable {
             selectedCourseID == nil || task.boardID == selectedCourseID
         }
         let activeTaskContexts = taskContexts.filter { !studyTaskIsCompleted($0) }
+        let taskByID = Dictionary(uniqueKeysWithValues: taskContexts.map { ($0.id, $0) })
+        let activeTaskByID = Dictionary(uniqueKeysWithValues: activeTaskContexts.map { ($0.id, $0) })
+        let taskSessions = studySessions.filter { taskByID[$0.$task.id] != nil }
+        let activeTaskSessions = taskSessions.filter { activeTaskByID[$0.$task.id] != nil }
+        let sessionTaskIDs = Set(activeTaskSessions.map(\.$task.id))
 
         self.weekLabel = studyWeekLabel(start: weekStart, calendar: calendar)
         self.courseFilters = activeCourses.map {
@@ -187,23 +193,20 @@ struct OverviewPageContext: Encodable {
             let dueTasks = activeTaskContexts
                 .filter { $0.dueInput == dateKey }
                 .sorted(by: studyTaskOrder)
-            let focusTasks = activeTaskContexts
-                .filter { $0.startInput == dateKey && $0.dueInput != dateKey }
-                .sorted(by: studyTaskOrder)
-            // A task planned for its due date does not need a duplicate focus
-            // card, but its estimate must still count toward that day's load.
-            let workloadTasks = activeTaskContexts
-                .filter {
-                    $0.startInput == dateKey
-                        || ($0.dueInput == dateKey && $0.startInput.isEmpty)
+            let sessionsOnDate = activeTaskSessions
+                .filter { $0.scheduledDate == dateKey }
+                .compactMap { session in
+                    activeTaskByID[session.$task.id].map { (session: session, task: $0) }
                 }
+            let legacyFocusTasks = activeTaskContexts
+                .filter { $0.startInput == dateKey && !sessionTaskIDs.contains($0.id) }
                 .sorted(by: studyTaskOrder)
             return StudyDayContext(
                 date: date,
                 isToday: calendar.isDate(date, inSameDayAs: today),
                 dueTasks: dueTasks,
-                focusTasks: focusTasks,
-                workloadTasks: workloadTasks,
+                studySessions: sessionsOnDate,
+                legacyFocusTasks: legacyFocusTasks,
                 courseColors: courseColors,
                 calendar: calendar
             )
@@ -228,15 +231,30 @@ struct OverviewPageContext: Encodable {
         self.hasUnscheduledAssignments = unscheduledAssignmentCount > 0
         self.unestimatedAssignmentCount = days.reduce(0) { $0 + $1.unestimatedAssignmentCount }
         self.hasUnestimatedAssignments = unestimatedAssignmentCount > 0
+        let plannedMinutesByTask = Dictionary(grouping: activeTaskSessions, by: \.$task.id)
+        .mapValues { sessions in sessions.reduce(0) { $0 + $1.plannedMinutes } }
         self.planCandidates = activeTaskContexts
-            .filter { $0.startInput.isEmpty }
             .sorted(by: studyTaskOrder)
-            .map(StudyPlanCandidateContext.init)
+            .compactMap { task in
+                guard task.hasEstimate else { return nil }
+                let legacyMinutes = sessionTaskIDs.contains(task.id) || task.startInput.isEmpty
+                    ? 0
+                    : task.estimatedMinutes
+                let remainingMinutes = max(
+                    0,
+                    task.estimatedMinutes - (plannedMinutesByTask[task.id] ?? 0) - legacyMinutes
+                )
+                guard remainingMinutes > 0 else { return nil }
+                return StudyPlanCandidateContext(task: task, remainingMinutes: remainingMinutes)
+            }
         self.hasPlanCandidates = !planCandidates.isEmpty
         self.unplannedFocusCount = planCandidates.count
         self.hasUnplannedFocus = unplannedFocusCount > 0
         self.studyStreakDays = studyPlanningStreakDays(
-            tasks: taskContexts.filter { !$0.isArchived },
+            plannedDates: Set(
+                taskSessions.map(\.scheduledDate)
+                    + taskContexts.map(\.startInput).filter { !$0.isEmpty }
+            ),
             referenceDate: today,
             calendar: calendar
         )
@@ -269,6 +287,7 @@ struct StudyCourseContext: Encodable {
 struct StudyDayContext: Encodable {
     let weekdayLabel: String
     let dateLabel: String
+    let dateInput: String
     let isToday: Bool
     let assignments: [StudyAssignmentContext]
     let assignmentCount: Int
@@ -285,13 +304,14 @@ struct StudyDayContext: Encodable {
         date: Date,
         isToday: Bool,
         dueTasks: [TaskCardContext],
-        focusTasks: [TaskCardContext],
-        workloadTasks: [TaskCardContext],
+        studySessions: [(session: StudySession, task: TaskCardContext)],
+        legacyFocusTasks: [TaskCardContext],
         courseColors: [UUID: String],
         calendar: Calendar
     ) {
         self.weekdayLabel = planningDateLabel(date, format: "EEE", calendar: calendar)
         self.dateLabel = planningDateLabel(date, format: "MMM d", calendar: calendar)
+        self.dateInput = planningDateKey(date, calendar: calendar)
         self.isToday = isToday
         self.assignments = dueTasks.map {
             StudyAssignmentContext(
@@ -301,22 +321,25 @@ struct StudyDayContext: Encodable {
         }
         self.assignmentCount = assignments.count
         self.hasAssignments = !assignments.isEmpty
-        self.focusBlocks = focusTasks.map {
+        let sessionBlocks = studySessions.map { value in
+            StudyAssignmentContext(
+                task: value.task,
+                courseColorClass: courseColors[value.task.boardID] ?? "course-blue",
+                plannedMinutes: value.session.plannedMinutes,
+                studySessionID: value.session.id
+            )
+        }
+        let legacyBlocks = legacyFocusTasks.map {
             StudyAssignmentContext(
                 task: $0,
                 courseColorClass: courseColors[$0.boardID] ?? "course-blue"
             )
         }
+        self.focusBlocks = sessionBlocks + legacyBlocks
         self.focusBlockCount = focusBlocks.count
         self.hasFocusBlocks = !focusBlocks.isEmpty
-        let workloadAssignments = workloadTasks.map {
-            StudyAssignmentContext(
-                task: $0,
-                courseColorClass: courseColors[$0.boardID] ?? "course-blue"
-            )
-        }
-        self.workloadMinutes = workloadAssignments.reduce(0) { $0 + $1.estimatedMinutes }
-        self.unestimatedAssignmentCount = workloadAssignments.filter { !$0.hasEstimate }.count
+        self.workloadMinutes = focusBlocks.reduce(0) { $0 + $1.estimatedMinutes }
+        self.unestimatedAssignmentCount = dueTasks.filter { !$0.hasEstimate }.count
         switch workloadMinutes {
         case 0:
             self.workloadLabel = "Unplanned"
@@ -342,13 +365,17 @@ struct StudyPlanCandidateContext: Encodable {
     let courseName: String
     let dueDisplay: String
     let effortLabel: String
+    let remainingMinutes: Int
+    let remainingDisplay: String
 
-    init(task: TaskCardContext) {
+    init(task: TaskCardContext, remainingMinutes: Int) {
         self.id = task.id
         self.title = task.title
         self.courseName = task.boardName
         self.dueDisplay = task.dueDisplay
         self.effortLabel = task.estimatedDisplay
+        self.remainingMinutes = remainingMinutes
+        self.remainingDisplay = displayDuration(remainingMinutes)
     }
 }
 
@@ -374,8 +401,15 @@ struct StudyAssignmentContext: Encodable {
     let assigneeName: String
     let dueDisplay: String
     let description: String
+    let studySessionID: String
+    let hasStudySession: Bool
 
-    init(task: TaskCardContext, courseColorClass: String) {
+    init(
+        task: TaskCardContext,
+        courseColorClass: String,
+        plannedMinutes: Int? = nil,
+        studySessionID: UUID? = nil
+    ) {
         let assignmentType = studyAssignmentType(title: task.title, labels: task.labels)
         self.href = task.href
         self.title = task.title
@@ -384,9 +418,9 @@ struct StudyAssignmentContext: Encodable {
         self.dueTime = task.dueTimeDisplay
         self.typeName = assignmentType.name
         self.typeIcon = assignmentType.icon
-        self.estimatedMinutes = task.estimatedMinutes
-        self.effortLabel = task.estimatedDisplay
-        self.hasEstimate = task.hasEstimate
+        self.estimatedMinutes = plannedMinutes ?? task.estimatedMinutes
+        self.effortLabel = plannedMinutes.map(displayDuration) ?? task.estimatedDisplay
+        self.hasEstimate = plannedMinutes != nil || task.hasEstimate
         self.statusName = task.statusName
         self.statusValue = task.statusValue
         self.statusColorClass = task.statusColorClass
@@ -398,6 +432,8 @@ struct StudyAssignmentContext: Encodable {
         self.assigneeName = task.assigneeName
         self.dueDisplay = task.dueDisplay
         self.description = task.description
+        self.studySessionID = studySessionID?.uuidString ?? ""
+        self.hasStudySession = studySessionID != nil
     }
 }
 
@@ -449,17 +485,16 @@ private func studyTaskIsCompleted(_ task: TaskCardContext) -> Bool {
 /// user has not planned today's work yet. Empty and future dates do not extend
 /// the streak, and completed tasks remain valid evidence of past study plans.
 private func studyPlanningStreakDays(
-    tasks: [TaskCardContext],
+    plannedDates: Set<String>,
     referenceDate: Date,
     calendar: Calendar
 ) -> Int {
-    let plannedDates = Set(tasks.map(\.startInput).filter { !$0.isEmpty })
     let today = calendar.startOfDay(for: referenceDate)
     let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-    var cursor = plannedDates.contains(inputDate(today)) ? today : yesterday
+    var cursor = plannedDates.contains(planningDateKey(today, calendar: calendar)) ? today : yesterday
     var streak = 0
 
-    while plannedDates.contains(inputDate(cursor)) {
+    while plannedDates.contains(planningDateKey(cursor, calendar: calendar)) {
         streak += 1
         guard let previousDay = calendar.date(byAdding: .day, value: -1, to: cursor) else {
             break

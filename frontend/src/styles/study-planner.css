@@ -840,6 +840,13 @@
   text-transform: uppercase;
 }
 
+.study-focus-item {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
 .study-focus-chip {
   display: flex;
   min-height: 28px;
@@ -855,6 +862,30 @@
   font-size: 12px;
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+.study-focus-item:has(.study-focus-remove) .study-focus-chip {
+  padding-right: 30px;
+}
+
+.study-focus-remove {
+  position: absolute;
+  right: 5px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.study-focus-remove:hover {
+  color: var(--text);
+  background: var(--surface-hover);
 }
 
 .study-focus-chip:hover {

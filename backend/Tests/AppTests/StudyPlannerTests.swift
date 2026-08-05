@@ -48,11 +48,19 @@ struct StudyPlannerTests {
             estimatedMinutes: 180,
             startAt: monday
         )
+        let studySession = StudySession(
+            id: UUID(),
+            taskID: dueTask.id,
+            userID: UUID(),
+            scheduledDate: "2026-08-04",
+            plannedMinutes: 60
+        )
 
         let planner = OverviewPageContext(
             tasks: [dueTask, unscheduledTask, focusTask, plannedOnDeadline],
             courses: [navigation],
             selectedCourseID: nil,
+            studySessions: [studySession],
             referenceDate: monday
         )
 
@@ -63,11 +71,14 @@ struct StudyPlannerTests {
         #expect(planner.days[0].focusBlocks.first?.title == "Outline lab report")
         #expect(planner.days[0].assignments.first?.title == "Prepare seminar notes")
         #expect(planner.days[0].workloadMinutes == 225)
+        #expect(planner.days[1].focusBlocks.first?.title == "Finish calculus problem set")
+        #expect(planner.days[1].workloadMinutes == 60)
         #expect(planner.days[2].assignments.first?.title == "Finish calculus problem set")
         #expect(planner.days[2].assignments.first?.typeName == "Problem Set")
-        #expect(planner.days[2].workloadLabel == "Moderate")
-        #expect(planner.days[2].workloadMinutes == 180)
+        #expect(planner.days[2].workloadLabel == "Unplanned")
+        #expect(planner.days[2].workloadMinutes == 0)
         #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 3)
+        #expect(planner.planCandidates.first?.remainingMinutes == 120)
         #expect(planner.unscheduledAssignmentCount == 1)
         #expect(planner.studyStreakDays == 1)
     }
