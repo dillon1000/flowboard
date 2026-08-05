@@ -24,6 +24,11 @@ struct TaskResourceController: RouteCollection {
         followers.get(use: listFollowers)
         followers.post("me", use: follow)
         followers.delete("me", use: unfollow)
+
+        let reminders = task.grouped("reminders")
+        reminders.get(use: listReminders)
+        reminders.post(use: createReminder)
+        reminders.delete(":reminderID", use: deleteReminder)
     }
 
     func listComments(req: Request) async throws -> [TaskCommentResponse] {
@@ -227,6 +232,78 @@ struct TaskResourceController: RouteCollection {
         {
             try await follower.delete(on: req.db)
         }
+        return .noContent
+    }
+
+    func listReminders(req: Request) async throws -> [TaskReminderResponse] {
+        let (task, _) = try await requiredTask(req, permission: .view)
+        let userID = try req.auth.require(User.self).requireID()
+        let reminders = try await TaskReminder.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .filter(\.$user.$id == userID)
+            .filter(\.$queuedAt == nil)
+            .sort(\.$remindAt, .ascending)
+            .all()
+        return try reminders.map(TaskReminderResponse.init)
+    }
+
+    func createReminder(req: Request) async throws -> Response {
+        guard req.application.notificationConfiguration != nil else {
+            throw Abort(.serviceUnavailable, reason: "Email notifications are not configured.")
+        }
+        try CreateTaskReminderRequest.validate(content: req)
+        let input = try req.content.decode(CreateTaskReminderRequest.self)
+        let (task, _) = try await requiredTask(req, permission: .view)
+        let taskID = try task.requireID()
+        let userID = try req.auth.require(User.self).requireID()
+        guard TimeZone(identifier: input.timeZone) != nil else {
+            throw Abort(.unprocessableEntity, reason: "Choose a valid time zone.")
+        }
+        let now = Date()
+        guard input.remindAt > now.addingTimeInterval(30) else {
+            throw Abort(.unprocessableEntity, reason: "Choose a reminder time in the future.")
+        }
+        guard input.remindAt < now.addingTimeInterval(60 * 60 * 24 * 366 * 2) else {
+            throw Abort(.unprocessableEntity, reason: "Choose a reminder within the next two years.")
+        }
+        let pendingCount = try await TaskReminder.query(on: req.db)
+            .filter(\.$task.$id == taskID)
+            .filter(\.$user.$id == userID)
+            .filter(\.$queuedAt == nil)
+            .count()
+        guard pendingCount < 3 else {
+            throw Abort(.conflict, reason: "A task can have up to three pending reminders.")
+        }
+        let reminder = TaskReminder(
+            taskID: taskID,
+            userID: userID,
+            remindAt: input.remindAt,
+            timeZoneIdentifier: input.timeZone
+        )
+        do {
+            try await reminder.create(on: req.db)
+        } catch {
+            throw Abort(.conflict, reason: "A reminder already exists at that time.")
+        }
+        return try await TaskReminderResponse(reminder: reminder)
+            .encodeResponse(status: .created, for: req)
+    }
+
+    func deleteReminder(req: Request) async throws -> HTTPStatus {
+        let (task, _) = try await requiredTask(req, permission: .view)
+        let userID = try req.auth.require(User.self).requireID()
+        guard
+            let reminderID = req.parameters.get("reminderID", as: UUID.self),
+            let reminder = try await TaskReminder.query(on: req.db)
+                .filter(\.$id == reminderID)
+                .filter(\.$task.$id == task.requireID())
+                .filter(\.$user.$id == userID)
+                .filter(\.$queuedAt == nil)
+                .first()
+        else {
+            throw Abort(.notFound, reason: "The reminder does not exist.")
+        }
+        try await reminder.delete(on: req.db)
         return .noContent
     }
 

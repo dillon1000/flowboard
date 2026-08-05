@@ -337,6 +337,13 @@ struct AppPageController: RouteCollection {
         let followers = try await TaskFollower.query(on: req.db)
             .filter(\.$task.$id == task.requireID())
             .all()
+        let currentUserID = try req.auth.require(User.self).requireID()
+        let reminders = try await TaskReminder.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .filter(\.$user.$id == currentUserID)
+            .filter(\.$queuedAt == nil)
+            .sort(\.$remindAt, .ascending)
+            .all()
         let members = try await boardUsers(board: access.board, on: req.db)
         let creator: User? = if let creatorID = task.$creator.id {
             try await User.find(creatorID, on: req.db)
@@ -353,7 +360,9 @@ struct AppPageController: RouteCollection {
             attachments: attachments,
             members: members,
             followers: followers,
-            currentUserID: req.auth.require(User.self).requireID()
+            reminders: reminders,
+            notificationsEnabled: req.application.notificationConfiguration != nil,
+            currentUserID: currentUserID
         )
         return try respond(
             common: common,
