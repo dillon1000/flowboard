@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { TaskCardContext } from '$lib/types';
-  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ChatCircleIcon as MessageSquare, ClockIcon as Clock, PaperclipIcon as Paperclip } from 'phosphor-svelte';
+  import { CheckSquareIcon as CheckSquare, ChatCircleIcon as MessageSquare, PaperclipIcon as Paperclip } from 'phosphor-svelte';
+  import { deadlineFrom } from '$lib/ui/deadline';
+  import { plainSummary } from '$lib/ui/summary';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
 
   let {
@@ -22,12 +24,22 @@
     ondragover?: (event: DragEvent) => void;
     ondrop?: (event: DragEvent) => void;
   }>();
+
+  const deadline = $derived(deadlineFrom(task.dueInput));
+  const summary = $derived(task.hasDescription ? plainSummary(task.description) : '');
+
+  // Severity only earns space on a card when it is raised above the ordinary:
+  // the stage rail and the countdown are what a lane is scanned for.
+  const isUrgent = $derived(
+    /priority-high|priority-urgent|workflow-orange|workflow-red/.test(task.priorityColorClass)
+  );
 </script>
 
 <a
   class:drop-before={dropPosition === 'before'}
   class:drop-after={dropPosition === 'after'}
-  class="task-card"
+  class={`lane-card stage-tint ${task.statusColorClass}`}
+  style={task.statusColorStyle}
   href={task.href}
   draggable={draggable}
   ondragstart={ondragstart}
@@ -38,17 +50,29 @@
   data-task-id={task.id}
   use:taskPreview={previewFromTask(task)}
 >
-  <h3>{task.title}</h3>
-  {#if task.hasDescription}<p>{task.description}</p>{/if}
-  <div class="task-meta">
-    <span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span>
-    {#each task.labels as label}<span class="badge subtle">{label}</span>{/each}
-    {#if task.hasDueDate}<span class="badge"><CalendarDays size={12} />{task.dueDisplay}</span>{/if}
-    {#if task.hasEstimate}<span class="badge"><Clock size={12} />{task.estimatedDisplay}</span>{/if}
-    <span class="task-badges">
-      {#if task.commentCount}<span class="task-badge" title={`${task.commentCount} comments`}><MessageSquare size={12} /><span class="tabular">{task.commentCount}</span></span>{/if}
-      {#if task.checklistCount}<span class="task-badge" title="Checklist"><CheckSquare size={12} /><span class="tabular">{task.completedChecklistCount}/{task.checklistCount}</span></span>{/if}
-      {#if task.attachmentCount}<span class="task-badge" title={`${task.attachmentCount} attachments`}><Paperclip size={12} /><span class="tabular">{task.attachmentCount}</span></span>{/if}
+  {#if isUrgent}
+    <span class={`lane-flag stage-tint ${task.priorityColorClass}`} style={task.priorityColorStyle}>
+      {task.priorityName}
     </span>
-  </div>
+  {/if}
+  <h3>{task.title}</h3>
+  {#if summary}<p>{summary}</p>{/if}
+  {#if task.hasLabels}
+    <span class="lane-labels">
+      {#each task.labels.slice(0, 3) as label}<span>{label}</span>{/each}
+      {#if task.labels.length > 3}<span class="lane-labels-more">+{task.labels.length - 3}</span>{/if}
+    </span>
+  {/if}
+  <span class="measures">
+    <span class="measure-due" data-tone={deadline.tone} title={deadline.long}>{deadline.short}</span>
+    <span class:missing={!task.hasEstimate} class="measure-effort">
+      {task.hasEstimate ? task.estimatedDisplay : 'No estimate'}
+    </span>
+    {#if task.hasGrade}<span class="measure-grade" title={`Scored ${task.gradeDisplay}`}>{task.gradeDisplay}</span>{/if}
+    <span class="measure-counts">
+      {#if task.commentCount}<span title={`${task.commentCount} comments`}><MessageSquare size={12} />{task.commentCount}</span>{/if}
+      {#if task.checklistCount}<span title="Checklist"><CheckSquare size={12} />{task.completedChecklistCount}/{task.checklistCount}</span>{/if}
+      {#if task.attachmentCount}<span title={`${task.attachmentCount} files`}><Paperclip size={12} />{task.attachmentCount}</span>{/if}
+    </span>
+  </span>
 </a>

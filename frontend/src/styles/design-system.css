@@ -116,7 +116,7 @@
 
   /* ---- Semantic aliases ----
      surface        canvas and cards that sit on the canvas
-     surface-sunken wells: kanban columns, table headers, footers, sidebar
+     surface-sunken wells: panels, table headers, footers, sidebar
      surface-raised cards that sit inside a well, one step above it */
   --surface: var(--ds-background-100);
   --surface-sunken: var(--ds-background-200);
@@ -379,7 +379,7 @@ button {
 .tabular,
 .stat strong,
 .nav-link small,
-.column-header .count,
+.stage-lane-count,
 .calendar-day > .calendar-date,
 kbd {
   font-family: 'Geist Mono Variable', ui-monospace, monospace;

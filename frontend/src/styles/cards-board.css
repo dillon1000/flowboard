@@ -189,13 +189,3 @@
   width: 13px;
   height: 13px;
 }
-
-.column-empty {
-  padding: 14px 12px;
-  margin: 0;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-medium);
-  color: var(--text-tertiary);
-  font-size: 13px;
-  text-align: center;
-}

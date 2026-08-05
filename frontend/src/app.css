@@ -5,7 +5,6 @@
 @import './styles/page-panels.css';
 @import './styles/cards-board.css';
 @import './styles/board-views.css';
-@import './styles/calendar-gallery.css';
 @import './styles/forms-overlays.css';
 @import './styles/task-detail.css';
 @import './styles/task-attachments.css';
@@ -16,3 +15,4 @@
 @import './styles/study-planner.css';
 @import './styles/semester.css';
 @import './styles/course.css';
+@import './styles/course-views.css';

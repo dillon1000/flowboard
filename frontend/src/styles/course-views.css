@@ -1,0 +1,804 @@
+/* ==========================================================================
+   Course views
+
+   The four views are one sheet re-ruled four ways. Stages, rows, weeks and
+   briefs all use the same three parts: a stage rail in the assignment's colour,
+   a title, and a line of measures — when it is due, how long it takes, what it
+   scored. Nothing is fenced inside a grey well and nothing repeats a fact the
+   line beside it already carries, so switching views re-sorts the same objects
+   instead of redrawing them.
+
+   Every heading in every view is set in mono micro-caps: lane names, weekday
+   names, and column headers are the same kind of label, so they read the same.
+   ========================================================================== */
+
+/* ==========================================================================
+   Stage tint — one mapping, every consumer
+
+   Stage and severity colours are named once here and read as --stage by rails,
+   dots and marks. Columns can be grouped by status or by severity, so the map
+   covers both, plus the per-board custom colour.
+   ========================================================================== */
+
+.stage-tint {
+  --stage: var(--ds-gray-600);
+}
+
+.stage-tint.status-in_progress,
+.stage-tint.progress,
+.stage-tint.workflow-blue {
+  --stage: var(--ds-blue-700);
+}
+
+.stage-tint.status-review,
+.stage-tint.review,
+.stage-tint.workflow-purple {
+  --stage: var(--ds-purple-700);
+}
+
+.stage-tint.status-done,
+.stage-tint.done,
+.stage-tint.workflow-green {
+  --stage: var(--ds-green-700);
+}
+
+.stage-tint.priority-medium,
+.stage-tint.medium,
+.stage-tint.workflow-amber {
+  --stage: var(--ds-amber-700);
+}
+
+.stage-tint.priority-high,
+.stage-tint.high,
+.stage-tint.workflow-orange {
+  --stage: var(--ds-amber-800);
+}
+
+.stage-tint.priority-urgent,
+.stage-tint.urgent,
+.stage-tint.workflow-red {
+  --stage: var(--ds-red-800);
+}
+
+.stage-tint.workflow-custom {
+  --stage: var(--workflow-color);
+}
+
+.column-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--stage, var(--ds-gray-600));
+}
+
+.stage-lane-header .column-dot {
+  width: 6px;
+  height: 6px;
+}
+
+/* ==========================================================================
+   Measures — the line every view ends on
+   ========================================================================== */
+
+.measures {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A deadline is read as distance. Overdue is the only red on the page. */
+.measure-due {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.measure-due[data-tone='overdue'] {
+  color: var(--ds-red-900);
+}
+
+.measure-due[data-tone='today'] {
+  color: var(--ds-amber-900);
+}
+
+.measure-due[data-tone='soon'] {
+  color: var(--text-secondary);
+}
+
+.measure-due[data-tone='none'] {
+  color: var(--ds-gray-600);
+}
+
+.measure-effort,
+.measure-grade {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.measure-effort::before,
+.measure-grade::before {
+  margin-right: 8px;
+  color: var(--ds-gray-500);
+  content: '·';
+}
+
+.measure-effort.missing {
+  color: var(--ds-gray-600);
+}
+
+.measure-grade {
+  color: var(--text-secondary);
+}
+
+.measure-counts {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+}
+
+.measure-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.measure-counts svg {
+  flex: 0 0 auto;
+  color: var(--ds-gray-600);
+}
+
+/* ==========================================================================
+   Board — stage lanes
+
+   Lanes are ruled, not boxed: a hairline between each pair and a hairline under
+   each heading. The cards are the only raised surface on the sheet.
+   ========================================================================== */
+
+.stage-board {
+  display: grid;
+  height: 100%;
+  grid-auto-columns: minmax(272px, 1fr);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
+}
+
+.stage-lane {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  flex-direction: column;
+  padding: 0 12px;
+}
+
+.stage-lane + .stage-lane {
+  border-left: 1px solid var(--border);
+}
+
+/* The outer lanes give their padding back so the first card, the course title
+   and the tabs above it all start on the same gutter. */
+.stage-lane:first-child {
+  padding-left: 0;
+}
+
+.stage-lane:last-child {
+  padding-right: 0;
+}
+
+.stage-lane-header {
+  display: flex;
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stage-lane-header strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stage-lane-count {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-lane-body {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  align-content: start;
+  gap: 6px;
+  padding: 10px 0 20px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.stage-lane-body[data-drop-target='true'] {
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+}
+
+.stage-lane-empty {
+  padding: 12px 2px;
+  margin: 0;
+  color: var(--ds-gray-600);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Lane card
+   ========================================================================== */
+
+.lane-card {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 11px 12px 11px 14px;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-border);
+  cursor: pointer;
+  text-decoration: none;
+  transition: box-shadow var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+/* The rail is the one place an assignment's stage is shown in colour. */
+.lane-card::before,
+.brief::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  border-radius: var(--radius-medium) 0 0 var(--radius-medium);
+  background: var(--stage);
+  content: '';
+}
+
+.lane-card:hover {
+  box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
+}
+
+.lane-card[draggable='true'] {
+  cursor: grab;
+}
+
+.lane-card[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.lane-card[data-moving='true'] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.lane-card.drop-before::after,
+.lane-card.drop-after::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--ds-blue-700);
+  content: '';
+}
+
+.lane-card.drop-before::after {
+  top: -4px;
+}
+
+.lane-card.drop-after::after {
+  bottom: -4px;
+}
+
+.lane-card h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.lane-card p {
+  display: -webkit-box;
+  margin: -1px 0 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Severity is only worth a card's attention once it is raised: an ordinary or
+   low severity is left to the ledger, where the column exists to compare it. */
+.lane-flag {
+  color: var(--stage);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.lane-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lane-labels span {
+  padding: 1px 6px;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  box-shadow: var(--shadow-border);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.lane-labels .lane-labels-more {
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   Table — the ledger
+
+   No card, no zebra: full-width ruled rows with the measures in mono on the
+   right, so a course reads down its numbers the way a grade sheet does.
+   ========================================================================== */
+
+.ledger {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* The header stays while the canvas scrolls, and the canvas is the only scroll
+   container so nothing traps the sticky position. Its shadow paints over the
+   canvas's top padding, so rows never appear above it. */
+.ledger th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  height: 30px;
+  padding: 0 14px 8px;
+  color: var(--text-tertiary);
+  background: var(--surface);
+  box-shadow: 0 -24px 0 var(--surface), inset 0 -1px 0 var(--border);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ledger td {
+  height: 48px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.ledger tbody tr {
+  transition: background-color var(--duration) var(--ease);
+}
+
+.ledger tbody tr:hover {
+  background: var(--surface-sunken);
+}
+
+.ledger-assignment {
+  position: relative;
+  width: 44%;
+  padding-left: 18px;
+}
+
+.ledger-assignment::before {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--stage);
+  content: '';
+}
+
+.ledger-assignment a {
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.ledger-assignment a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ledger-assignment small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ledger-stage {
+  white-space: nowrap;
+}
+
+.ledger-severity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.ledger-severity::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--stage);
+  content: '';
+}
+
+.ledger .numeric {
+  color: var(--text-secondary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger th.numeric {
+  font-size: 10px;
+}
+
+.ledger .missing {
+  color: var(--ds-gray-600);
+}
+
+.ledger-due small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+/* ==========================================================================
+   Calendar — the month sheet
+   ========================================================================== */
+
+.month {
+  display: grid;
+  gap: 14px;
+}
+
+.month-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.month-nav h2 {
+  min-width: 156px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  text-align: center;
+}
+
+.month-sheet {
+  overflow-x: auto;
+}
+
+.month-weekdays,
+.month-grid {
+  display: grid;
+  min-width: 700px;
+  grid-template-columns: repeat(7, minmax(100px, 1fr));
+}
+
+.month-weekdays div {
+  padding: 0 8px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.month-day {
+  display: flex;
+  min-width: 0;
+  min-height: 128px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 7px 10px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.month-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.month-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.month-day-date {
+  padding: 1px 5px;
+  color: var(--text-secondary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Today is a struck token rather than a circle, so it belongs to the same
+   squared-off sheet as the rules around it. */
+.month-day.today .month-day-date {
+  border-radius: var(--radius-small);
+  color: var(--ds-background-100);
+  background: var(--ds-gray-1000);
+  font-weight: 500;
+}
+
+/* Each day carries the work that lands on it, in the same measure the planner
+   and the term map use. */
+.month-day-load {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-day.muted .month-day-date {
+  color: var(--ds-gray-600);
+}
+
+.month-day.muted .month-task {
+  opacity: 0.55;
+}
+
+.month-task {
+  position: relative;
+  display: block;
+  padding: 3px 6px 3px 11px;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.45;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color var(--duration) var(--ease);
+}
+
+.month-task::before {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 3px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--stage);
+  content: '';
+}
+
+.month-task:hover {
+  background: var(--surface-hover);
+}
+
+/* ==========================================================================
+   Gallery — briefs
+   ========================================================================== */
+
+.briefs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 10px;
+}
+
+.brief {
+  position: relative;
+  display: grid;
+  min-height: 172px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 15px 16px 15px 18px;
+  border-radius: var(--radius-large);
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-border);
+  text-decoration: none;
+  transition: box-shadow var(--duration) var(--ease);
+}
+
+.brief::before {
+  border-radius: var(--radius-large) 0 0 var(--radius-large);
+}
+
+.brief:hover {
+  box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
+}
+
+.brief-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.brief-stage::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--stage);
+  content: '';
+}
+
+.brief h3 {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.brief p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.brief p.missing {
+  color: var(--ds-gray-600);
+}
+
+/* ==========================================================================
+   Empty view
+   ========================================================================== */
+
+.course-empty {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 72px 24px;
+  border-block: 1px solid var(--border);
+  text-align: center;
+}
+
+.course-empty > span {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.course-empty h2 {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.course-empty p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* ==========================================================================
+   Responsive course views
+   ========================================================================== */
+
+@media (width <= 820px) {
+  /* Below the sidebar breakpoint the document scrolls again, so the lanes grow
+     with their content instead of scrolling inside a fixed frame. */
+  .stage-board {
+    height: auto;
+  }
+
+  .stage-lane {
+    min-height: 360px;
+    max-height: none;
+  }
+
+  .stage-lane-body {
+    overflow: visible;
+  }
+
+  .ledger th {
+    position: static;
+    box-shadow: inset 0 -1px 0 var(--border);
+  }
+}
+
+@media (width <= 600px) {
+  .stage-board {
+    grid-auto-columns: 84vw;
+  }
+
+  .month-day {
+    min-height: 108px;
+  }
+}

@@ -174,14 +174,14 @@ test('moves board cards and completes every core task-detail action', async ({ p
   await page.goto(`/app/boards/${board.id}`);
   await waitForHydration(page);
   await expect(page).toHaveURL(/\/views\//);
-  const backlog = page.locator('.kanban-column').filter({
-    has: page.locator('.column-header strong').filter({ hasText: /^Backlog$/ })
+  const backlog = page.locator('.stage-lane').filter({
+    has: page.locator('.stage-lane-header strong').filter({ hasText: /^Backlog$/ })
   });
   const firstCard = backlog.locator(`[data-task-id="${firstTask.id}"]`);
   const secondCard = backlog.locator(`[data-task-id="${secondTask.id}"]`);
   await secondCard.dragTo(firstCard, { targetPosition: { x: 40, y: 1 } });
   await expect(page.getByRole('status')).toContainText('Task moved');
-  await expect(backlog.locator('.task-card').first()).toContainText('Second browser task');
+  await expect(backlog.locator('.lane-card').first()).toContainText('Second browser task');
   await expect.poll(async () => {
     const updated = await json<BoardResponse>(await page.request.get(`/api/v1/boards/${board.id}`));
     return updated.tasks.filter((task) => task.status === 'backlog').map((task) => task.title).slice(0, 3);

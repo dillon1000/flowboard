@@ -45,8 +45,8 @@
 }
 
 @media (width <= 820px) {
-  /* Below the sidebar breakpoint the frame is dropped: the document scrolls
-     again, so the board and its columns grow with their content. */
+  /* Below the sidebar breakpoint the frame is dropped and the document
+     scrolls again, so every page grows with its content. */
   .app-shell {
     display: block;
     height: auto;
@@ -66,20 +66,6 @@
   .page,
   .page.framed {
     display: block;
-    overflow: visible;
-  }
-
-  .kanban {
-    height: auto;
-    grid-auto-columns: minmax(272px, 1fr);
-  }
-
-  .kanban-column {
-    min-height: 400px;
-    max-height: none;
-  }
-
-  .column-tasks {
     overflow: visible;
   }
 
@@ -162,15 +148,6 @@
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .calendar-shell {
-    overflow-x: auto;
-  }
-
-  .calendar-weekdays,
-  .calendar-grid {
-    min-width: 720px;
-  }
 }
 
 @media (width <= 600px) {
@@ -206,10 +183,6 @@
 
   .task-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .kanban {
-    grid-auto-columns: 84vw;
   }
 
   .auth-form-pane {
@@ -256,9 +229,7 @@
     animation-iteration-count: 1 !important;
   }
 
-  .board-card:hover,
-  .task-card:hover,
-  .gallery-card:hover {
+  .board-card:hover {
     transform: none;
   }
 }

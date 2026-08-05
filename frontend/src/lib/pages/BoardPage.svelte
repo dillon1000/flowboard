@@ -1,11 +1,13 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { BoardPageContext, TaskCardContext, TaskColumnContext } from '$lib/types';
+  import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { ArrowRightIcon as ArrowRight, CalendarDotsIcon as CalendarDays, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, ImagesSquareIcon as GalleryHorizontalEnd, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2 } from 'phosphor-svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
+  import { deadlineFrom, durationLabel } from '$lib/ui/deadline';
+  import { plainSummary } from '$lib/ui/summary';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
 
@@ -53,6 +55,13 @@
 
   function scoreLabel(points: number): string {
     return Number.isInteger(points) ? String(points) : points.toFixed(1);
+  }
+
+  // The month reads as workload, not just dates: each day carries the estimated
+  // time that lands on it, which is the same measure the planner and the term
+  // map already draw.
+  function dayMinutes(day: CalendarDayContext): number {
+    return day.tasks.reduce((total: number, task: TaskCardContext) => total + task.estimatedMinutes, 0);
   }
 
   function viewIcon(type: string): typeof Columns3 {
@@ -169,7 +178,7 @@
         <div class="course-ladder-rows">
           {#each columns as column (column.value)}
             <div class="course-ladder-row">
-              <span class={`column-dot ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span>
+              <span class={`column-dot stage-tint ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span>
               <span class="course-ladder-label">{column.name}</span>
               <span class="course-ladder-track" aria-hidden="true">
                 <span
@@ -209,11 +218,21 @@
       {#if requestError}<p class="error-message course-error" role="alert">{requestError}</p>{/if}
       <div class:flush={board.activeView.isBoard} class="course-canvas" aria-busy={movingTaskID ? 'true' : 'false'}>
         {#if board.activeView.isBoard}
-          <div class="kanban">
+          <div class="stage-board">
             {#each columns as column (column.value)}
-              <section class="kanban-column">
-                <header class="column-header"><span class={`column-dot ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span><strong>{column.name}</strong><span class="count">{column.tasks.length}</span></header>
-                <div class="column-tasks" role="list" data-drop-target={dropTarget?.status === column.value && dropTarget.taskID === null ? 'true' : undefined} ondragover={(event) => dragOverColumn(event, column.value, column.tasks.length)} ondrop={(event) => dropTask(event, column.value, column.tasks.length)}>
+              <section class="stage-lane" aria-label={`${column.name}, ${column.tasks.length} ${column.tasks.length === 1 ? 'assignment' : 'assignments'}`}>
+                <header class="stage-lane-header">
+                  <span class={`column-dot stage-tint ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span>
+                  <strong>{column.name}</strong>
+                  <span class="stage-lane-count">{column.tasks.length}</span>
+                </header>
+                <div
+                  class="stage-lane-body"
+                  role="list"
+                  data-drop-target={dropTarget?.status === column.value && dropTarget.taskID === null ? 'true' : undefined}
+                  ondragover={(event) => dragOverColumn(event, column.value, column.tasks.length)}
+                  ondrop={(event) => dropTask(event, column.value, column.tasks.length)}
+                >
                   {#each column.tasks as task, index (task.id)}
                     <TaskCard
                       {task}
@@ -226,25 +245,111 @@
                       ondrop={(event) => dropTask(event, column.value, dropTarget?.taskID === task.id ? dropTarget.index : index)}
                     />
                   {/each}
-                  {#if !column.tasks.length}<p class="column-empty">No assignments in this stage.</p>{/if}
+                  {#if !column.tasks.length}
+                    <p class="stage-lane-empty">{draggedTask ? 'Drop here' : 'Nothing here'}</p>
+                  {/if}
                 </div>
               </section>
             {/each}
           </div>
         {:else if board.activeView.isTable}
           {#if board.hasTasks}
-            <div class="table-wrap"><table class="data-table"><thead><tr><th>Assignment</th><th>Status</th><th>Severity</th><th>Estimate</th><th>Start</th><th>Due</th></tr></thead><tbody>
-              {#each board.tasks as task (task.id)}<tr><td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td><td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td><td class:muted={!task.hasEstimate}>{task.estimatedDisplay}</td><td class="muted">{task.startDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}{#if task.hasDueDate} · {task.dueTimeDisplay}{/if}</td></tr>{/each}
-            </tbody></table></div>
-          {:else}{@render EmptyView('table')}{/if}
+            <table class="ledger">
+              <thead>
+                <tr>
+                  <th>Assignment</th>
+                  <th>Stage</th>
+                  <th>Severity</th>
+                  <th class="numeric">Effort</th>
+                  <th class="numeric">Due</th>
+                  <th class="numeric">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each board.tasks as task (task.id)}
+                  {@const deadline = deadlineFrom(task.dueInput)}
+                  <tr class={`stage-tint ${task.statusColorClass}`} style={task.statusColorStyle}>
+                    <td class="ledger-assignment">
+                      <a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a>
+                      {#if task.hasLabels}<small>{task.labelsJoined}</small>{/if}
+                    </td>
+                    <td><span class="ledger-stage">{task.statusName}</span></td>
+                    <td>
+                      <span class={`ledger-severity stage-tint ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span>
+                    </td>
+                    <td class:missing={!task.hasEstimate} class="numeric">{task.hasEstimate ? task.estimatedDisplay : '—'}</td>
+                    <td class="numeric ledger-due">
+                      <span class="measure-due" data-tone={deadline.tone}>{deadline.short}</span>
+                      {#if task.hasDueDate}<small>{task.dueDisplay} · {task.dueTimeDisplay}</small>{/if}
+                    </td>
+                    <td class:missing={!task.hasGrade} class="numeric">{task.hasGrade ? task.gradeDisplay : '—'}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {:else}{@render EmptyView()}{/if}
         {:else if board.activeView.isCalendar}
-          <div class="calendar-shell">
-            <div class="calendar-toolbar"><div class="calendar-navigation"><a class="icon-button" href={board.previousMonthHref} aria-label="Previous month"><ChevronLeft size={16} /></a><h2>{board.calendarMonthLabel}</h2><a class="icon-button" href={board.nextMonthHref} aria-label="Next month"><ChevronRight size={16} /></a></div><a class="button small" href={board.todayMonthHref}>Today</a></div>
-            <div class="calendar-weekdays"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
-            <div class="calendar-grid">{#each board.calendarDays as day}<div class:muted={day.isMuted} class:today={day.isToday} class="calendar-day"><span class="calendar-date">{day.day}</span>{#each day.tasks as task}<a class={`calendar-task ${task.statusColorClass}`} style={task.statusColorStyle} href={task.href} use:taskPreview={previewFromTask(task)}><span>{task.title}</span></a>{/each}</div>{/each}</div>
-          </div>
+          <section class="month" aria-label={`${board.calendarMonthLabel} deadlines`}>
+            <header class="month-toolbar">
+              <div class="month-nav">
+                <a class="icon-button" href={board.previousMonthHref} aria-label="Previous month"><ChevronLeft size={16} /></a>
+                <h2>{board.calendarMonthLabel}</h2>
+                <a class="icon-button" href={board.nextMonthHref} aria-label="Next month"><ChevronRight size={16} /></a>
+              </div>
+              <a class="button small" href={board.todayMonthHref}>Today</a>
+            </header>
+            <div class="month-sheet">
+              <div class="month-weekdays">
+                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+              </div>
+              <div class="month-grid">
+                {#each board.calendarDays as day}
+                  {@const minutes = dayMinutes(day)}
+                  <div class:muted={day.isMuted} class:today={day.isToday} class="month-day">
+                    <span class="month-day-head">
+                      <span class="month-day-date">{day.day}</span>
+                      {#if minutes > 0}<span class="month-day-load" title={`${durationLabel(minutes)} of estimated work due`}>{durationLabel(minutes)}</span>{/if}
+                    </span>
+                    {#each day.tasks as task}
+                      <a
+                        class={`month-task stage-tint ${task.statusColorClass}`}
+                        style={task.statusColorStyle}
+                        href={task.href}
+                        use:taskPreview={previewFromTask(task)}
+                      >{task.title}</a>
+                    {/each}
+                  </div>
+                {/each}
+              </div>
+            </div>
+          </section>
         {:else if board.activeView.isGallery}
-          {#if board.hasTasks}<div class="gallery">{#each board.tasks as task (task.id)}<a class="gallery-card" href={task.href} use:taskPreview={previewFromTask(task)}><h3>{task.title}</h3><p>{task.description || 'No description.'}</p><div class="task-meta"><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></div></a>{/each}</div>{:else}{@render EmptyView('gallery')}{/if}
+          {#if board.hasTasks}
+            <div class="briefs">
+              {#each board.tasks as task (task.id)}
+                {@const deadline = deadlineFrom(task.dueInput)}
+                <a
+                  class={`brief stage-tint ${task.statusColorClass}`}
+                  style={task.statusColorStyle}
+                  href={task.href}
+                  use:taskPreview={previewFromTask(task)}
+                >
+                  <span class="brief-stage">{task.statusName}</span>
+                  <h3>{task.title}</h3>
+                  <p class:missing={!task.hasDescription}>
+                    {task.hasDescription ? plainSummary(task.description) : 'No description yet.'}
+                  </p>
+                  <span class="measures">
+                    <span class="measure-due" data-tone={deadline.tone} title={deadline.long}>{deadline.short}</span>
+                    <span class:missing={!task.hasEstimate} class="measure-effort">
+                      {task.hasEstimate ? task.estimatedDisplay : 'No estimate'}
+                    </span>
+                    {#if task.hasGrade}<span class="measure-grade">{task.gradeDisplay}</span>{/if}
+                  </span>
+                </a>
+              {/each}
+            </div>
+          {:else}{@render EmptyView()}{/if}
         {/if}
       </div>
 
@@ -271,6 +376,10 @@
 
 <NewTaskDialog bind:open={createTaskOpen} {board} />
 
-{#snippet EmptyView(icon: 'table' | 'gallery')}
-  <div class="empty-state"><div><span class="empty-state-icon" aria-hidden="true">{#if icon === 'table'}<Table2 size={22} />{:else}<GalleryHorizontalEnd size={22} />{/if}</span><h2>No assignments in this view</h2><p>Add an assignment, or adjust this view’s filters in Course settings.</p></div></div>
+{#snippet EmptyView()}
+  <div class="course-empty">
+    <span>Nothing to show</span>
+    <h2>No assignments in this view</h2>
+    <p>Add an assignment, or widen this view’s filters in Course settings.</p>
+  </div>
 {/snippet}
