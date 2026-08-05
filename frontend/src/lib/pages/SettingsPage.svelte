@@ -10,15 +10,17 @@
   let pending = $state(false);
   let requestError = $state('');
   let saved = $state(false);
+  let timeZoneInput: HTMLInputElement;
 
   async function saveProfile(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     const name = String(new FormData(event.currentTarget as HTMLFormElement).get('name') ?? '');
+    const timeZone = String(new FormData(event.currentTarget as HTMLFormElement).get('timeZone') ?? 'UTC');
     pending = true;
     requestError = '';
     saved = false;
     try {
-      await api('/api/v1/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) });
+      await api('/api/v1/auth/me', { method: 'PATCH', body: JSON.stringify({ name, timeZone }) });
       saved = true;
       await invalidateAll();
     } catch (cause) {
@@ -47,6 +49,7 @@
           {#if saved}<p class="success-message" role="status">Profile saved.</p>{/if}
           <div class="field"><label for="profile-name">Name</label><input class="input" id="profile-name" name="name" value={common.userName} minlength="2" maxlength="80" required /></div>
           <div class="field"><label for="profile-email">Email</label><input class="input" id="profile-email" value={common.userEmail} disabled /><span class="field-help">Email changes are not available.</span></div>
+          <div class="field"><label for="profile-time-zone">Time zone</label><input class="input" id="profile-time-zone" name="timeZone" value={common.userTimeZone} bind:this={timeZoneInput} required /><span class="field-help">Use an IANA zone such as America/Chicago. <button class="inline-button" type="button" onclick={() => timeZoneInput.value = Intl.DateTimeFormat().resolvedOptions().timeZone}>Use this browser</button></span></div>
           <div class="form-actions"><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save profile'}</button></div>
         </form>
       </section>

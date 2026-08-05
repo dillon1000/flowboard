@@ -35,7 +35,8 @@ struct AppPageController: RouteCollection {
             overview: OverviewPageContext(
                 tasks: try await makeTaskContexts(tasks, on: req.db),
                 courses: common.boards,
-                selectedCourseID: selectedCourseID
+                selectedCourseID: selectedCourseID,
+                timeZoneIdentifier: common.userTimeZone
             ),
         )
     }
@@ -53,7 +54,8 @@ struct AppPageController: RouteCollection {
             pageKind: .semester,
             semester: SemesterPageContext(
                 tasks: try await makeTaskContexts(tasks, on: req.db),
-                courses: common.boards
+                courses: common.boards,
+                timeZoneIdentifier: common.userTimeZone
             )
         )
     }

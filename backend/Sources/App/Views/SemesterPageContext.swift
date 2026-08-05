@@ -13,9 +13,10 @@ struct SemesterPageContext: Encodable {
     init(
         tasks: [TaskCardContext],
         courses: [BoardNavigationContext],
+        timeZoneIdentifier: String = "UTC",
         referenceDate: Date = Date()
     ) {
-        let calendar = semesterCalendar()
+        let calendar = planningCalendar(timeZoneIdentifier: timeZoneIdentifier)
         let today = calendar.startOfDay(for: referenceDate)
         let weekdayOffset = (calendar.component(.weekday, from: today) + 5) % 7
         let firstWeek = calendar.date(byAdding: .day, value: -weekdayOffset, to: today) ?? today
@@ -25,7 +26,7 @@ struct SemesterPageContext: Encodable {
         )
         let activeTasks = tasks.filter { !semesterTaskIsCompleted($0) }
         let scheduledTasks = activeTasks.compactMap { task -> (TaskCardContext, Date)? in
-            guard let dueDate = semesterDate(task.dueInput) else { return nil }
+            guard let dueDate = planningDate(task.dueInput, calendar: calendar) else { return nil }
             return (task, dueDate)
         }
         var renderedWeeks: [SemesterWeekContext] = []
@@ -43,14 +44,15 @@ struct SemesterPageContext: Encodable {
             renderedWeeks.append(
                 SemesterWeekContext(
                     start: start,
-                    assignments: assignments.sorted { $0.dueInput < $1.dueInput }
+                    assignments: assignments.sorted { $0.dueInput < $1.dueInput },
+                    calendar: calendar
                 )
             )
         }
         self.weeks = renderedWeeks
         let finalWeek = calendar.date(byAdding: .day, value: 6, to: weekStarts.last ?? firstWeek) ?? firstWeek
-        let firstLabel = semesterDateLabel(firstWeek, format: "MMM d")
-        let finalLabel = semesterDateLabel(finalWeek, format: "MMM d, yyyy")
+        let firstLabel = planningDateLabel(firstWeek, format: "MMM d", calendar: calendar)
+        let finalLabel = planningDateLabel(finalWeek, format: "MMM d, yyyy", calendar: calendar)
         self.rangeLabel = firstLabel + " – " + finalLabel
         self.scheduledAssignmentCount = renderedWeeks.reduce(0) { $0 + $1.assignmentCount }
         self.highLoadWeekCount = renderedWeeks.filter(\.isHighLoad).count
@@ -67,8 +69,8 @@ struct SemesterWeekContext: Encodable {
     let workloadClass: String
     let isHighLoad: Bool
 
-    init(start: Date, assignments: [SemesterAssignmentContext]) {
-        self.label = semesterWeekLabel(start: start, calendar: semesterCalendar())
+    init(start: Date, assignments: [SemesterAssignmentContext], calendar: Calendar) {
+        self.label = semesterWeekLabel(start: start, calendar: calendar)
         self.assignments = assignments
         self.assignmentCount = assignments.count
         let estimatedMinutes = assignments.reduce(0) { $0 + $1.estimatedMinutes }
@@ -117,40 +119,18 @@ struct SemesterAssignmentContext: Encodable {
     }
 }
 
-private func semesterCalendar() -> Calendar {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.locale = Locale(identifier: "en_US_POSIX")
-    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-    calendar.firstWeekday = 2
-    calendar.minimumDaysInFirstWeek = 4
-    return calendar
-}
-
-private func semesterDate(_ value: String) -> Date? {
-    guard !value.isEmpty else { return nil }
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.date(from: value)
-}
-
-private func semesterDateLabel(_ date: Date, format: String) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    formatter.dateFormat = format
-    return formatter.string(from: date)
-}
-
 private func semesterWeekLabel(start: Date, calendar: Calendar) -> String {
     let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
     let startMonth = calendar.component(.month, from: start)
     let endMonth = calendar.component(.month, from: end)
     if startMonth == endMonth {
-        return semesterDateLabel(start, format: "MMMM d") + "–" + semesterDateLabel(end, format: "d")
+        return planningDateLabel(start, format: "MMMM d", calendar: calendar)
+            + "–"
+            + planningDateLabel(end, format: "d", calendar: calendar)
     }
-    return semesterDateLabel(start, format: "MMM d") + "–" + semesterDateLabel(end, format: "MMM d")
+    return planningDateLabel(start, format: "MMM d", calendar: calendar)
+        + "–"
+        + planningDateLabel(end, format: "MMM d", calendar: calendar)
 }
 
 private func semesterTaskIsCompleted(_ task: TaskCardContext) -> Bool {

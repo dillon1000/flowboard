@@ -42,6 +42,7 @@ extension AppPageController {
         return CommonPageContext(
             userName: user.name,
             userEmail: user.email,
+            userTimeZone: user.timeZoneIdentifier,
             userAvatar: AvatarContext(user: user),
             boards: boardContexts
         )

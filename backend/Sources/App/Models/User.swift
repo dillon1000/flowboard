@@ -19,6 +19,9 @@ final class User: Model, @unchecked Sendable {
     @OptionalField(key: "profile_picture_url")
     var profilePictureURL: String?
 
+    @Field(key: "time_zone")
+    var timeZoneIdentifier: String
+
     @Children(for: \.$owner)
     var boards: [Board]
 
@@ -35,13 +38,15 @@ final class User: Model, @unchecked Sendable {
         name: String,
         email: String,
         passwordHash: String,
-        profilePictureURL: String? = nil
+        profilePictureURL: String? = nil,
+        timeZoneIdentifier: String = "UTC"
     ) {
         self.id = id
         self.name = name
         self.email = email
         self.passwordHash = passwordHash
         self.profilePictureURL = profilePictureURL
+        self.timeZoneIdentifier = timeZoneIdentifier
     }
 }
 
@@ -61,6 +66,7 @@ struct UserResponse: Content {
     let name: String
     let email: String
     let profilePictureURL: String?
+    let timeZone: String
     let createdAt: Date?
 
     init(user: User) throws {
@@ -68,6 +74,7 @@ struct UserResponse: Content {
         self.name = user.name
         self.email = user.email
         self.profilePictureURL = user.profilePictureURL
+        self.timeZone = user.timeZoneIdentifier
         self.createdAt = user.createdAt
     }
 }
@@ -76,6 +83,7 @@ struct RegisterRequest: Content, Validatable {
     let name: String
     let email: String
     let password: String
+    let timeZone: String?
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))
@@ -87,6 +95,7 @@ struct RegisterRequest: Content, Validatable {
 struct LoginRequest: Content, Validatable {
     let email: String
     let password: String
+    let timeZone: String?
 
     static func validations(_ validations: inout Validations) {
         validations.add("email", as: String.self, is: .email)
@@ -96,8 +105,20 @@ struct LoginRequest: Content, Validatable {
 
 struct UpdateProfileRequest: Content, Validatable {
     let name: String
+    let timeZone: String?
 
     static func validations(_ validations: inout Validations) {
         validations.add("name", as: String.self, is: .count(2...80))
     }
+}
+
+/// Accepts named IANA zones plus UTC. The strict list avoids storing fixed-offset
+/// aliases that do not follow local daylight-saving transitions.
+func validatedTimeZoneIdentifier(_ suppliedValue: String?) throws -> String? {
+    guard let suppliedValue else { return nil }
+    let value = suppliedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard value == "UTC" || TimeZone.knownTimeZoneIdentifiers.contains(value) else {
+        throw Abort(.unprocessableEntity, reason: "Choose a valid IANA time zone.")
+    }
+    return value
 }

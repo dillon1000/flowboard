@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { page } from '$app/state';
+  import { onMount } from 'svelte';
   import type { AuthActionData } from '$lib/server/auth';
   import type { AuthConfiguration } from '$lib/types';
   import { ColumnsIcon as Columns3, CopyIcon as Copy, SignInIcon as LogIn, UsersIcon as Users } from 'phosphor-svelte';
@@ -13,6 +14,11 @@
     form?: AuthActionData | null;
   }>();
   let pending = $state(false);
+  let timeZone = $state('UTC');
+
+  onMount(() => {
+    timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  });
 
   const isRegister = $derived(mode === 'register');
   const requestError = $derived(pending ? '' : form?.message ?? page.url.searchParams.get('oauth_error') ?? '');
@@ -49,6 +55,7 @@
           pending = false;
         };
       }}>
+        <input type="hidden" name="timeZone" value={timeZone} />
         {#if isRegister}
           <div class="field">
             <label for="name">Name</label>

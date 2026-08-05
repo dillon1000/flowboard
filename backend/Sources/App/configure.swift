@@ -87,6 +87,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateTaskReminders())
     app.migrations.add(AddStudyTaskPlanningFields())
     app.migrations.add(AddTaskGradeFields())
+    app.migrations.add(AddUserTimeZone())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

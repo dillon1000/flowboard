@@ -18,6 +18,7 @@ export interface BoardNavigationContext {
 export interface CommonPageContext {
   userName: string;
   userEmail: string;
+  userTimeZone: string;
   userAvatar: AvatarContext;
   boards: BoardNavigationContext[];
 }

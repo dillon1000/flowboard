@@ -15,7 +15,8 @@ export async function authenticate(event: RequestEvent, mode: 'login' | 'registe
   const name = String(data.get('name') ?? '');
   const email = String(data.get('email') ?? '');
   const password = String(data.get('password') ?? '');
-  const body: Record<string, string> = { email, password };
+  const timeZone = String(data.get('timeZone') ?? 'UTC');
+  const body: Record<string, string> = { email, password, timeZone };
   if (mode === 'register') body.name = name;
 
   const response = await backendFetch(event, `/api/v1/auth/${mode}`, {

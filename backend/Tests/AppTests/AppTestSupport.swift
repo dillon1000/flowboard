@@ -13,7 +13,8 @@ func register(
     let input = RegisterRequest(
         name: "Test User",
         email: "\(UUID().uuidString.lowercased())@example.com",
-        password: "correct-horse-battery"
+        password: "correct-horse-battery",
+        timeZone: nil
     )
     let response = try await app.testing().sendRequest(
         .POST,
