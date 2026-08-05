@@ -167,6 +167,7 @@ export interface OverviewPageContext {
   hasPlanCandidates: boolean;
   unplannedFocusCount: number;
   hasUnplannedFocus: boolean;
+  studyStreakDays: number;
 }
 
 export interface SemesterAssignmentContext {
