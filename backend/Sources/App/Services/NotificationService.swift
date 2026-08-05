@@ -8,6 +8,7 @@ enum NotificationType: String, Codable, Sendable {
     case boardMemberAdded = "board_member_added"
     case taskCommentAdded = "task_comment_added"
     case taskAssigned = "task_assigned"
+    case taskReminder = "task_reminder"
 }
 
 struct NotificationEvent: Codable, Sendable {
@@ -120,6 +121,46 @@ struct NotificationEvent: Codable, Sendable {
                 "taskID": taskID.uuidString,
                 "assigneeID": assigneeID.uuidString,
             ]
+        )
+    }
+
+    static func taskReminder(
+        reminder: TaskReminder,
+        task: Task,
+        board: Board,
+        recipient: User,
+        appURL: String
+    ) throws -> Self {
+        let reminderID = try reminder.requireID()
+        let taskID = try task.requireID()
+        let timeZone = TimeZone(identifier: reminder.timeZoneIdentifier) ?? .current
+        let reminderFormatter = DateFormatter()
+        reminderFormatter.locale = Locale(identifier: "en_US_POSIX")
+        reminderFormatter.timeZone = timeZone
+        reminderFormatter.dateFormat = "EEE, MMM d 'at' h:mm a"
+
+        var data = [
+            "recipientName": recipient.name,
+            "taskTitle": task.title,
+            "boardName": board.name,
+            "reminderTime": reminderFormatter.string(from: reminder.remindAt),
+            "taskURL": appURL + task.browserPath,
+            "taskID": taskID.uuidString,
+        ]
+        if let dueAt = task.dueAt {
+            let dueFormatter = DateFormatter()
+            dueFormatter.locale = Locale(identifier: "en_US_POSIX")
+            dueFormatter.timeZone = timeZone
+            dueFormatter.dateFormat = "EEE, MMM d"
+            let time = task.dueTime.map { " at \($0)" } ?? ""
+            data["taskDue"] = dueFormatter.string(from: dueAt) + time
+        }
+
+        return Self(
+            deduplicationKey: "task-reminder:\(reminderID.uuidString)",
+            type: .taskReminder,
+            recipient: recipient.email,
+            data: data
         )
     }
 }
@@ -326,6 +367,55 @@ enum NotificationService {
     }
 }
 
+enum TaskReminderService {
+    /// Moves due reminders into the durable outbox. A reminder is marked as queued
+    /// only after its event exists, so a failed insert remains available for retry.
+    static func enqueueDueReminders(
+        configuration: NotificationConfiguration,
+        database: any Database,
+        logger: Logger
+    ) async {
+        let reminders: [TaskReminder]
+        do {
+            reminders = try await TaskReminder.query(on: database)
+                .filter(\.$queuedAt == nil)
+                .filter(\.$remindAt <= Date())
+                .with(\.$task) { task in
+                    task.with(\.$board)
+                }
+                .with(\.$user)
+                .sort(\.$remindAt, .ascending)
+                .range(0..<20)
+                .all()
+        } catch {
+            logger.error("Task reminder query failed: \(error)")
+            return
+        }
+
+        for reminder in reminders {
+            do {
+                let event = try NotificationEvent.taskReminder(
+                    reminder: reminder,
+                    task: reminder.task,
+                    board: reminder.task.board,
+                    recipient: reminder.user,
+                    appURL: configuration.publicAppURL
+                )
+                let alreadyQueued = try await NotificationOutbox.query(on: database)
+                    .filter(\.$deduplicationKey == event.deduplicationKey)
+                    .first() != nil
+                if !alreadyQueued {
+                    try await NotificationOutbox(event: event).create(on: database)
+                }
+                reminder.queuedAt = Date()
+                try await reminder.update(on: database)
+            } catch {
+                logger.error("Task reminder enqueue failed: \(error)")
+            }
+        }
+    }
+}
+
 actor NotificationDispatchLoop {
     private var task: _Concurrency.Task<Void, Never>?
 
@@ -333,6 +423,11 @@ actor NotificationDispatchLoop {
         guard task == nil else { return }
         task = _Concurrency.Task {
             while !_Concurrency.Task.isCancelled {
+                await TaskReminderService.enqueueDueReminders(
+                    configuration: configuration,
+                    database: application.db,
+                    logger: application.logger
+                )
                 await NotificationService.dispatchPending(
                     configuration: configuration,
                     database: application.db,

@@ -262,6 +262,8 @@ struct TaskDetailPageContext: Encodable {
     let members: [MemberOptionContext]
     let properties: [TaskPropertyContext]
     let hasProperties: Bool
+    let reminders: [TaskReminderResponse]
+    let notificationsEnabled: Bool
 
     init(
         task: Task,
@@ -273,6 +275,8 @@ struct TaskDetailPageContext: Encodable {
         attachments: [TaskAttachment],
         members: [User],
         followers: [TaskFollower],
+        reminders: [TaskReminder],
+        notificationsEnabled: Bool,
         currentUserID: UUID
     ) throws {
         self.task = try TaskCardContext(
@@ -311,6 +315,8 @@ struct TaskDetailPageContext: Encodable {
             )
         }
         self.hasProperties = !(board.propertyDefinitions ?? []).isEmpty
+        self.reminders = try reminders.map(TaskReminderResponse.init)
+        self.notificationsEnabled = notificationsEnabled
     }
 }
 
