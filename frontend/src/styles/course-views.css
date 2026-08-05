@@ -1,8 +1,8 @@
 /* ==========================================================================
    Course views
 
-   The four views are one sheet re-ruled four ways. Stages, rows, weeks and
-   briefs all use the same three parts: a stage rail in the assignment's colour,
+   The five views are one sheet re-ruled five ways. Stages, rows, weeks, spans
+   and briefs all use the same three parts: a stage rail in the assignment's colour,
    a title, and a line of measures — when it is due, how long it takes, what it
    scored. Nothing is fenced inside a grey well and nothing repeats a fact the
    line beside it already carries, so switching views re-sorts the same objects
@@ -653,6 +653,312 @@
 }
 
 /* ==========================================================================
+   Gantt — the ruled planning sheet
+
+   The first column stays fixed while the schedule moves under week rules. A
+   one-pixel blue seam marks today across the full sheet, so the course's past
+   and remaining work separate without another panel or legend.
+   ========================================================================== */
+
+.gantt {
+  --gantt-label-width: 244px;
+  --gantt-day-width: 28px;
+  --gantt-week-width: 196px;
+  display: grid;
+  gap: 14px;
+}
+
+.gantt-summary {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.gantt-summary > div {
+  display: grid;
+  gap: 4px;
+}
+
+.gantt-summary span {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gantt-summary h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.gantt-summary p {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-block: 1px solid var(--border);
+  outline: 0;
+  scrollbar-gutter: stable;
+}
+
+.gantt-scroll:focus-visible {
+  border-radius: var(--radius-small);
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.gantt-sheet {
+  width: max(100%, calc(var(--gantt-label-width) + var(--gantt-timeline-width)));
+  min-width: 0;
+}
+
+.gantt-months,
+.gantt-weeks,
+.gantt-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--gantt-label-width) repeat(var(--gantt-days), var(--gantt-day-width));
+}
+
+.gantt-months {
+  min-height: 32px;
+  align-items: end;
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+
+.gantt-weeks {
+  min-height: 30px;
+  align-items: start;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-tertiary);
+  background: var(--surface);
+}
+
+.gantt-axis-label {
+  position: sticky;
+  z-index: 4;
+  left: 0;
+  grid-column: 1;
+  height: 100%;
+  padding: 9px 14px 0 0;
+  border-right: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gantt-weeks .gantt-axis-label {
+  padding-top: 2px;
+}
+
+.gantt-month,
+.gantt-week {
+  z-index: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-month {
+  padding: 0 8px 7px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gantt-week {
+  padding: 2px 8px 0;
+  font-size: 10px;
+}
+
+.gantt-rows {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* Daily rules sit behind the bar while each seventh rule carries more weight.
+   Both repeat from the schedule edge, so every row shares exact coordinates. */
+.gantt-row::before {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--gantt-label-width);
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to right, var(--border-strong) 1px, transparent 1px);
+  background-size: var(--gantt-day-width) 100%, var(--gantt-week-width) 100%;
+  content: '';
+  pointer-events: none;
+}
+
+.gantt-row {
+  min-height: 54px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.gantt-row:hover {
+  background: var(--surface-sunken);
+}
+
+.gantt-row-label {
+  position: sticky;
+  z-index: 4;
+  left: 0;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  grid-column: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 7px 0;
+  border-right: 1px solid var(--border-strong);
+  color: var(--text);
+  background: var(--surface);
+  text-decoration: none;
+}
+
+.gantt-row:hover .gantt-row-label {
+  background: var(--surface-sunken);
+}
+
+.gantt-row-label:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.gantt-row-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.gantt-row-copy strong,
+.gantt-row-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-row-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.gantt-row-copy small {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-bar {
+  z-index: 2;
+  display: flex;
+  height: 22px;
+  min-width: 6px;
+  align-items: center;
+  padding: 0 8px;
+  margin-inline: 3px;
+  overflow: hidden;
+  border-radius: var(--radius-small);
+  color: color-mix(in srgb, var(--stage) 75%, var(--text));
+  background: color-mix(in srgb, var(--stage) 18%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stage) 42%, transparent);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+}
+
+.gantt-row:hover .gantt-bar:not(.milestone) {
+  background: color-mix(in srgb, var(--stage) 24%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--stage) 58%, transparent);
+}
+
+.gantt-bar.milestone {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  justify-self: center;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gantt-bar.milestone::before {
+  width: 10px;
+  height: 10px;
+  margin: auto;
+  border-radius: 2px;
+  background: var(--stage);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage) 16%, transparent);
+  content: '';
+  transform: rotate(45deg);
+}
+
+.gantt-today-line {
+  z-index: 3;
+  width: 1px;
+  height: 100%;
+  justify-self: center;
+  background: var(--ds-blue-700);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ds-blue-700) 8%, transparent);
+  pointer-events: none;
+}
+
+.gantt-unscheduled > h3 {
+  position: sticky;
+  z-index: 5;
+  left: 0;
+  width: var(--gantt-label-width);
+  padding: 16px 0 7px;
+  margin: 0;
+  color: var(--text-tertiary);
+  background: var(--surface);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gantt-placeholder {
+  z-index: 1;
+  grid-column: 2 / -1;
+  padding-left: 12px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+/* ==========================================================================
    Gallery — briefs
    ========================================================================== */
 
@@ -802,5 +1108,15 @@
 
   .month-day {
     min-height: 108px;
+  }
+
+  .gantt {
+    --gantt-label-width: 196px;
+  }
+
+  .gantt-summary {
+    align-items: start;
+    flex-direction: column;
+    gap: 5px;
   }
 }

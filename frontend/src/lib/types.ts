@@ -226,6 +226,7 @@ export interface BoardViewTabContext {
   isBoard: boolean;
   isTable: boolean;
   isCalendar: boolean;
+  isGantt: boolean;
   isGallery: boolean;
   icon: string;
 }

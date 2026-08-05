@@ -92,7 +92,7 @@
             <div><dt><code>GET, POST /boards</code></dt><dd>List accessible boards or create a board.</dd></div>
             <div><dt><code>GET, PATCH, DELETE /boards/&#123;boardID&#125;</code></dt><dd>Read, update, or delete one board.</dd></div>
             <div><dt><code>/boards/&#123;boardID&#125;/members</code></dt><dd>List, add, change, or remove board members.</dd></div>
-            <div><dt><code>/boards/&#123;boardID&#125;/views</code></dt><dd>Manage saved Board, Table, Calendar, and Gallery views.</dd></div>
+            <div><dt><code>/boards/&#123;boardID&#125;/views</code></dt><dd>Manage saved Board, Table, Calendar, Gantt, and Gallery views.</dd></div>
             <div><dt><code>/boards/&#123;boardID&#125;/templates</code></dt><dd>Manage task templates and create tasks from them.</dd></div>
             <div><dt><code>GET, POST /tasks</code></dt><dd>List filtered tasks or create a task.</dd></div>
             <div><dt><code>GET /tasks/search?q=query</code></dt><dd>Search task titles, descriptions, and public IDs.</dd></div>

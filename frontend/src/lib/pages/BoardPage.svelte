@@ -3,17 +3,22 @@
   import { api, messageFor } from '$lib/api';
   import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext, TaskOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArrowRightIcon as ArrowRight, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
+  import { ArrowRightIcon as ArrowRight, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, ChartBarHorizontalIcon as GanttChart, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
   import { deadlineFrom, durationLabel } from '$lib/ui/deadline';
+  import { buildGanttScale, ganttPlacement, type GanttPlacement } from '$lib/ui/gantt';
   import { plainSummary } from '$lib/ui/summary';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
 
   type DueFilter = 'any' | 'overdue' | 'week' | 'undated';
   type SortField = 'board' | 'due' | 'title' | 'severity' | 'effort' | 'grade';
+  interface ScheduledGanttRow {
+    task: TaskCardContext;
+    placement: GanttPlacement;
+  }
 
   let { board } = $props<{ board: BoardPageContext }>();
   let createTaskOpen = $state(false);
@@ -49,6 +54,12 @@
     { value: 'effort', name: 'Effort' },
     { value: 'grade', name: 'Score' }
   ];
+  const ganttRangeFormat = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
 
   $effect(() => {
     columns = cloneColumns(board.columns);
@@ -108,6 +119,17 @@
   const visibleDays = $derived(
     board.calendarDays.map((day: CalendarDayContext) => ({ ...day, tasks: day.tasks.filter(matches) }))
   );
+  const ganttScale = $derived(buildGanttScale(board.tasks));
+  const ganttRows = $derived.by((): { scheduled: ScheduledGanttRow[]; unscheduled: TaskCardContext[] } => {
+    const scheduled: ScheduledGanttRow[] = [];
+    const unscheduled: TaskCardContext[] = [];
+    for (const task of visibleTasks) {
+      const placement = ganttPlacement(task, ganttScale);
+      if (placement) scheduled.push({ task, placement });
+      else unscheduled.push(task);
+    }
+    return { scheduled, unscheduled };
+  });
 
   function matches(task: TaskCardContext): boolean {
     if (stageFilter.length && !stageFilter.includes(task.statusValue)) return false;
@@ -179,8 +201,20 @@
   function viewIcon(type: string): typeof Columns3 {
     if (type === 'table') return Table2;
     if (type === 'calendar') return CalendarDays;
+    if (type === 'gantt') return GanttChart;
     if (type === 'gallery') return GalleryHorizontalEnd;
     return Columns3;
+  }
+
+  function ganttDateLabel(task: TaskCardContext): string {
+    if (task.startInput && task.dueInput) return `${task.startDisplay} – ${task.dueDisplay}`;
+    if (task.startInput) return `Starts ${task.startDisplay}`;
+    if (task.dueInput) return `Due ${task.dueDisplay}`;
+    return 'No planning dates';
+  }
+
+  function ganttRangeDate(input: string): string {
+    return ganttRangeFormat.format(Date.parse(`${input}T00:00:00Z`));
   }
 
   function startDrag(taskID: string, status: string, event: DragEvent): void {
@@ -588,6 +622,99 @@
               </div>
             </div>
           </section>
+        {:else if board.activeView.isGantt}
+          {#if visibleTasks.length}
+            <section class="gantt" aria-labelledby="gantt-title">
+              <header class="gantt-summary">
+                <div>
+                  <span>Course timeline</span>
+                  <h2 id="gantt-title">{ganttRangeDate(ganttScale.startInput)} – {ganttRangeDate(ganttScale.endInput)}</h2>
+                </div>
+                <p>
+                  {ganttRows.scheduled.length} scheduled
+                  {#if ganttRows.unscheduled.length} · {ganttRows.unscheduled.length} need dates{/if}
+                </p>
+              </header>
+
+              <!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard users need to scroll the timeline) -->
+              <div class="gantt-scroll" role="region" tabindex="0" aria-label="Course timeline. Scroll horizontally to see more dates.">
+                <div
+                  class="gantt-sheet"
+                  style={`--gantt-days: ${ganttScale.dayCount}; --gantt-timeline-width: ${ganttScale.dayCount * 28}px`}
+                >
+                  <div class="gantt-months" aria-hidden="true">
+                    <span class="gantt-axis-label">Assignment</span>
+                    {#each ganttScale.months as month}
+                      <span
+                        class="gantt-month"
+                        style={`grid-column: ${month.offsetDays + 2} / span ${month.spanDays}`}
+                      >{month.label}</span>
+                    {/each}
+                    {#if ganttScale.todayOffset !== null}
+                      <span class="gantt-today-line" style={`grid-column: ${ganttScale.todayOffset + 2}`} title="Today"></span>
+                    {/if}
+                  </div>
+                  <div class="gantt-weeks" aria-hidden="true">
+                    <span class="gantt-axis-label">Schedule</span>
+                    {#each ganttScale.weeks as week}
+                      <span
+                        class="gantt-week"
+                        style={`grid-column: ${week.offsetDays + 2} / span ${week.spanDays}`}
+                      >{week.label}</span>
+                    {/each}
+                    {#if ganttScale.todayOffset !== null}
+                      <span class="gantt-today-line" style={`grid-column: ${ganttScale.todayOffset + 2}`} title="Today"></span>
+                    {/if}
+                  </div>
+
+                  <ol class="gantt-rows" aria-label="Scheduled assignments">
+                    {#each ganttRows.scheduled as row (row.task.id)}
+                      <li class="gantt-row">
+                        <a class="gantt-row-label" href={row.task.href} use:taskPreview={previewFromTask(row.task)}>
+                          <span class={`column-dot stage-tint ${row.task.statusColorClass}`} style={row.task.statusColorStyle} aria-hidden="true"></span>
+                          <span class="gantt-row-copy">
+                            <strong>{row.task.title}</strong>
+                            <small>{ganttDateLabel(row.task)}</small>
+                          </span>
+                        </a>
+                        <span
+                          class:milestone={row.placement.isMilestone}
+                          class={`gantt-bar stage-tint ${row.task.statusColorClass}`}
+                          style={`${row.task.statusColorStyle}; grid-column: ${row.placement.offsetDays + 2} / span ${row.placement.spanDays}`}
+                          aria-hidden="true"
+                        >
+                          {#if !row.placement.isMilestone && row.placement.spanDays >= 4}<span>{row.task.statusName}</span>{/if}
+                        </span>
+                        {#if ganttScale.todayOffset !== null}
+                          <span class="gantt-today-line" style={`grid-column: ${ganttScale.todayOffset + 2}`} aria-hidden="true"></span>
+                        {/if}
+                      </li>
+                    {/each}
+                  </ol>
+
+                  {#if ganttRows.unscheduled.length}
+                    <section class="gantt-unscheduled" aria-labelledby="gantt-unscheduled-title">
+                      <h3 id="gantt-unscheduled-title">Needs dates</h3>
+                      <ol class="gantt-rows">
+                        {#each ganttRows.unscheduled as task (task.id)}
+                          <li class="gantt-row unscheduled">
+                            <a class="gantt-row-label" href={task.href} use:taskPreview={previewFromTask(task)}>
+                              <span class={`column-dot stage-tint ${task.statusColorClass}`} style={task.statusColorStyle} aria-hidden="true"></span>
+                              <span class="gantt-row-copy"><strong>{task.title}</strong><small>No planning dates</small></span>
+                            </a>
+                            <span class="gantt-placeholder">Add a start or due date to place this assignment</span>
+                            {#if ganttScale.todayOffset !== null}
+                              <span class="gantt-today-line" style={`grid-column: ${ganttScale.todayOffset + 2}`} aria-hidden="true"></span>
+                            {/if}
+                          </li>
+                        {/each}
+                      </ol>
+                    </section>
+                  {/if}
+                </div>
+              </div>
+            </section>
+          {:else}{@render EmptyView()}{/if}
         {:else if board.activeView.isGallery}
           {#if visibleTasks.length}
             <div class="briefs">
