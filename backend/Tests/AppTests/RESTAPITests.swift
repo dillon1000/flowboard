@@ -1,5 +1,6 @@
 @testable import App
 import Fluent
+import Foundation
 import NIOCore
 import Testing
 import Vapor
@@ -11,6 +12,7 @@ struct RESTAPITests {
     func boardLifecycle() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
+            let dueDate = Date(timeIntervalSince1970: 1_728_000_000)
             let created = try await app.testing().sendRequest(
                 .POST,
                 "api/v1/boards",
@@ -68,7 +70,9 @@ struct RESTAPITests {
                             status: .backlog,
                             priority: .high,
                             labels: ["API", "api"],
-                            dueAt: nil
+                            dueAt: dueDate,
+                            dueTime: "14:30",
+                            estimatedMinutes: 90
                         )
                     )
                 }
@@ -77,6 +81,8 @@ struct RESTAPITests {
             let task = try created.content.decode(TaskResponse.self)
             #expect(task.labels == ["API"])
             #expect(task.publicID.count == 6)
+            #expect(task.dueTime == "14:30")
+            #expect(task.estimatedMinutes == 90)
 
             let detail = try await app.testing().sendRequest(
                 .GET,

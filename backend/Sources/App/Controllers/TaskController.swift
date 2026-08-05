@@ -121,6 +121,8 @@ struct TaskController: RouteCollection {
             labels: sanitize(labels: input.labels ?? []),
             startAt: input.startAt,
             dueAt: input.dueAt,
+            dueTime: try validDueTime(input.dueTime, dueAt: input.dueAt),
+            estimatedMinutes: try validEstimatedMinutes(input.estimatedMinutes),
             creatorID: userID
         )
         task.properties = sanitize(
@@ -201,6 +203,25 @@ struct TaskController: RouteCollection {
         }
         apply(input.startAt, to: &task.startAt)
         apply(input.dueAt, to: &task.dueAt)
+        if case .null = input.dueAt {
+            task.dueTime = nil
+        }
+        switch input.dueTime {
+        case let .value(dueTime):
+            task.dueTime = try validDueTime(dueTime, dueAt: task.dueAt)
+        case .null:
+            task.dueTime = nil
+        case .omitted:
+            break
+        }
+        switch input.estimatedMinutes {
+        case let .value(estimatedMinutes):
+            task.estimatedMinutes = try validEstimatedMinutes(estimatedMinutes)
+        case .null:
+            task.estimatedMinutes = nil
+        case .omitted:
+            break
+        }
         switch input.properties {
         case let .value(properties):
             task.properties = sanitize(
@@ -365,6 +386,38 @@ struct TaskController: RouteCollection {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
             .prefix(6))
+    }
+
+    /// Validates a local clock value from the browser. The date stays separate so
+    /// date-only assignments remain all-day work rather than a fabricated deadline.
+    private func validDueTime(_ value: String?, dueAt: Date?) throws -> String? {
+        guard let value else { return nil }
+        guard dueAt != nil else {
+            throw Abort(.unprocessableEntity, reason: "Add a due date before setting a due time.")
+        }
+        let parts = value.split(separator: ":")
+        guard
+            parts.count == 2,
+            let hour = Int(parts[0]),
+            let minute = Int(parts[1]),
+            (0...23).contains(hour),
+            (0...59).contains(minute),
+            parts[0].count == 2,
+            parts[1].count == 2
+        else {
+            throw Abort(.unprocessableEntity, reason: "Use a due time in 24-hour HH:MM format.")
+        }
+        return value
+    }
+
+    /// Keeps estimates useful for daily planning while allowing any normal study
+    /// block from a short review session through a full-day project.
+    private func validEstimatedMinutes(_ value: Int?) throws -> Int? {
+        guard let value else { return nil }
+        guard (5...1_440).contains(value) else {
+            throw Abort(.unprocessableEntity, reason: "Use an estimate from 5 minutes to 24 hours.")
+        }
+        return value
     }
 
     private func boardDefinitions(
