@@ -1,23 +1,54 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext } from '$lib/types';
+  import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext, TaskOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArrowRightIcon as ArrowRight, CalendarDotsIcon as CalendarDays, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, ImagesSquareIcon as GalleryHorizontalEnd, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2 } from 'phosphor-svelte';
+  import { ArrowRightIcon as ArrowRight, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
+  import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
   import { deadlineFrom, durationLabel } from '$lib/ui/deadline';
   import { plainSummary } from '$lib/ui/summary';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
 
+  type DueFilter = 'any' | 'overdue' | 'week' | 'undated';
+  type SortField = 'board' | 'due' | 'title' | 'severity' | 'effort' | 'grade';
+
   let { board } = $props<{ board: BoardPageContext }>();
   let createTaskOpen = $state(false);
   let requestError = $state('');
   let columns = $state<TaskColumnContext[]>([]);
-  let draggedTask = $state<{ id: string; status: string; index: number } | null>(null);
-  let dropTarget = $state<{ taskID: string | null; position: 'before' | 'after'; status: string; index: number } | null>(null);
+  let draggedTask = $state<{ id: string; status: string } | null>(null);
+  let dropTarget = $state<{ taskID: string | null; position: 'before' | 'after'; status: string } | null>(null);
   let movingTaskID = $state<string | null>(null);
+
+  // Temporary controls. The filters and sorts set in Course settings are saved
+  // for everyone who opens the course; these are not saved at all. They narrow
+  // what this tab is showing right now and are gone on reload, so a student can
+  // ask "what is overdue" without editing the view for the whole class.
+  let search = $state('');
+  let stageFilter = $state<string[]>([]);
+  let severityFilter = $state<string[]>([]);
+  let dueFilter = $state<DueFilter>('any');
+  let sortField = $state<SortField>('board');
+  let sortAscending = $state(true);
+
+  const dueFilters: { value: DueFilter; name: string }[] = [
+    { value: 'any', name: 'Any time' },
+    { value: 'overdue', name: 'Overdue' },
+    { value: 'week', name: 'Due in 7 days' },
+    { value: 'undated', name: 'No due date' }
+  ];
+
+  const sortFields: { value: SortField; name: string }[] = [
+    { value: 'board', name: 'Board order' },
+    { value: 'due', name: 'Due date' },
+    { value: 'title', name: 'Title' },
+    { value: 'severity', name: 'Severity' },
+    { value: 'effort', name: 'Effort' },
+    { value: 'grade', name: 'Score' }
+  ];
 
   $effect(() => {
     columns = cloneColumns(board.columns);
@@ -49,6 +80,87 @@
     return parts.length ? parts.join(' · ') : 'No filters or sorting';
   });
 
+  // Severity and stage have no natural numeric order, so they are sorted by the
+  // order the course itself lists them in: the workflow is the scale.
+  const severityOrder = $derived(
+    new Map<string, number>(board.severityOptions.map((option: TaskOptionContext, index: number) => [option.value, index]))
+  );
+  const sortName = $derived(sortFields.find((option) => option.value === sortField)?.name ?? 'Board order');
+  const dueName = $derived(dueFilters.find((option) => option.value === dueFilter)?.name ?? 'Any time');
+
+  const isFiltered = $derived(
+    search.trim().length > 0 || stageFilter.length > 0 || severityFilter.length > 0 || dueFilter !== 'any'
+  );
+  const isSorted = $derived(sortField !== 'board');
+  const isNarrowed = $derived(isFiltered || isSorted);
+  const matchedCount = $derived(board.tasks.filter(matches).length);
+
+  // Manual ordering and a temporary sort answer the same question two ways, so
+  // only one of them is live: dragging returns as soon as the sort is cleared.
+  const canDrag = $derived(board.canDrag && !isSorted);
+
+  const visibleColumns = $derived(
+    columns
+      .filter((column) => !stageFilter.length || stageFilter.includes(column.value))
+      .map((column) => ({ ...column, tasks: arrange(column.tasks) }))
+  );
+  const visibleTasks = $derived(arrange(board.tasks));
+  const visibleDays = $derived(
+    board.calendarDays.map((day: CalendarDayContext) => ({ ...day, tasks: day.tasks.filter(matches) }))
+  );
+
+  function matches(task: TaskCardContext): boolean {
+    if (stageFilter.length && !stageFilter.includes(task.statusValue)) return false;
+    if (severityFilter.length && !severityFilter.includes(task.priorityValue)) return false;
+
+    const days = deadlineFrom(task.dueInput).days;
+    if (dueFilter === 'overdue' && !(days < 0)) return false;
+    if (dueFilter === 'week' && !(days >= 0 && days < 7)) return false;
+    if (dueFilter === 'undated' && task.hasDueDate) return false;
+
+    const needle = search.trim().toLowerCase();
+    if (needle && !`${task.title} ${task.labelsJoined}`.toLowerCase().includes(needle)) return false;
+    return true;
+  }
+
+  function arrange(tasks: TaskCardContext[]): TaskCardContext[] {
+    const kept = tasks.filter(matches);
+    return isSorted ? [...kept].sort(compare) : kept;
+  }
+
+  /** The measure being sorted on, or null when the assignment does not carry it. */
+  function measure(task: TaskCardContext): number | null {
+    if (sortField === 'due') return task.hasDueDate ? deadlineFrom(task.dueInput).days : null;
+    if (sortField === 'severity') return severityOrder.get(task.priorityValue) ?? null;
+    if (sortField === 'effort') return task.hasEstimate ? task.estimatedMinutes : null;
+    if (sortField === 'grade') return task.hasGrade && task.gradePossible > 0 ? task.gradeEarned / task.gradePossible : null;
+    return null;
+  }
+
+  // Assignments missing the measure sink to the bottom in both directions:
+  // reversing a sort should not promote the rows that have nothing to say.
+  function compare(left: TaskCardContext, right: TaskCardContext): number {
+    const direction = sortAscending ? 1 : -1;
+    if (sortField === 'title') return direction * left.title.localeCompare(right.title);
+    const leftValue = measure(left);
+    const rightValue = measure(right);
+    if (leftValue === null || rightValue === null) return leftValue === rightValue ? 0 : leftValue === null ? 1 : -1;
+    return direction * (leftValue - rightValue);
+  }
+
+  function toggleValue(values: string[], value: string): string[] {
+    return values.includes(value) ? values.filter((kept) => kept !== value) : [...values, value];
+  }
+
+  function clearControls(): void {
+    search = '';
+    stageFilter = [];
+    severityFilter = [];
+    dueFilter = 'any';
+    sortField = 'board';
+    sortAscending = true;
+  }
+
   function cloneColumns(source: TaskColumnContext[]): TaskColumnContext[] {
     return source.map((column) => ({ ...column, tasks: column.tasks.map((task) => ({ ...task })) }));
   }
@@ -71,28 +183,28 @@
     return Columns3;
   }
 
-  function startDrag(taskID: string, status: string, index: number, event: DragEvent): void {
-    if (!board.canDrag || movingTaskID) return;
-    draggedTask = { id: taskID, status, index };
+  function startDrag(taskID: string, status: string, event: DragEvent): void {
+    if (!canDrag || movingTaskID) return;
+    draggedTask = { id: taskID, status };
     event.dataTransfer?.setData('text/plain', taskID);
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
   }
 
-  function dragOverTask(event: DragEvent, status: string, index: number, taskID: string): void {
+  function dragOverTask(event: DragEvent, status: string, taskID: string): void {
     if (!draggedTask) return;
     event.preventDefault();
     event.stopPropagation();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const position = event.clientY < bounds.top + bounds.height / 2 ? 'before' : 'after';
-    dropTarget = { taskID, position, status, index: index + (position === 'after' ? 1 : 0) };
+    dropTarget = { taskID, position, status };
   }
 
-  function dragOverColumn(event: DragEvent, status: string, taskCount: number): void {
+  function dragOverColumn(event: DragEvent, status: string): void {
     if (!draggedTask) return;
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-    dropTarget = { taskID: null, position: 'after', status, index: taskCount };
+    dropTarget = { taskID: null, position: 'after', status };
   }
 
   function finishDrag(): void {
@@ -100,22 +212,31 @@
     dropTarget = null;
   }
 
-  async function dropTask(event: DragEvent, status: string, rawTargetIndex: number): Promise<void> {
+  async function dropTask(event: DragEvent, status: string): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
-    if (!draggedTask || !board.canDrag || movingTaskID) return;
+    if (!draggedTask || !canDrag || movingTaskID) return;
     const source = draggedTask;
-    const targetIndex = source.status === status && source.index < rawTargetIndex
-      ? rawTargetIndex - 1
-      : rawTargetIndex;
+    const target = dropTarget;
     finishDrag();
-    if (source.status === status && source.index === targetIndex) return;
 
     const snapshot = cloneColumns(columns);
     const sourceColumn = columns.find((column) => column.value === source.status);
     const destinationColumn = columns.find((column) => column.value === status);
     const sourceTaskIndex = sourceColumn?.tasks.findIndex((task) => task.id === source.id) ?? -1;
     if (!sourceColumn || !destinationColumn || sourceTaskIndex < 0) return;
+
+    // A filtered lane shows a subset, so the drop is read back off the full
+    // column: the card it landed against, not the row it landed on.
+    const anchorIndex = target?.taskID ? destinationColumn.tasks.findIndex((task) => task.id === target.taskID) : -1;
+    const rawTargetIndex = anchorIndex < 0
+      ? destinationColumn.tasks.length
+      : anchorIndex + (target?.position === 'after' ? 1 : 0);
+    const targetIndex = source.status === status && sourceTaskIndex < rawTargetIndex
+      ? rawTargetIndex - 1
+      : rawTargetIndex;
+    if (source.status === status && sourceTaskIndex === targetIndex) return;
+
     const sourceWasCompleted = sourceColumn.isCompleted;
     const [task] = sourceColumn.tasks.splice(sourceTaskIndex, 1);
     const movedTask = {
@@ -215,11 +336,156 @@
         {/each}
       </nav>
 
+      <!-- Temporary controls sit under the tabs, between the view you chose and
+           the assignments it holds, so it reads as "this view, narrowed". -->
+      <div class="course-tools" role="group" aria-label="Temporary filters and sorting">
+        <div class="course-search">
+          <Search size={14} />
+          <input
+            class="course-search-input"
+            type="search"
+            placeholder="Filter by title or label"
+            aria-label="Filter assignments by title or label"
+            bind:value={search}
+          />
+          {#if search}
+            <button class="course-search-clear" type="button" aria-label="Clear text filter" onclick={() => (search = '')}>
+              <X size={12} />
+            </button>
+          {/if}
+        </div>
+
+        <PopoverMenu panelLabel="Filter by stage" panelRole="listbox">
+          {#snippet trigger(control)}
+            <button class:on={stageFilter.length > 0} class="tool-trigger" type="button" aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
+              <Funnel size={14} />Stage
+              {#if stageFilter.length}<span class="tool-badge">{stageFilter.length}</span>{/if}
+              <CaretDown size={12} />
+            </button>
+          {/snippet}
+          {#snippet children()}
+            {#each columns as column (column.value)}
+              <button
+                class="menu-option"
+                type="button"
+                role="option"
+                aria-selected={stageFilter.includes(column.value)}
+                onclick={() => (stageFilter = toggleValue(stageFilter, column.value))}
+              >
+                <span class={`column-dot stage-tint ${column.dotClass}`} style={column.dotStyle} aria-hidden="true"></span>
+                {column.name}<span class="tool-option-count">{column.tasks.length}</span>
+              </button>
+            {/each}
+            {#if stageFilter.length}
+              <div class="menu-separator"></div>
+              <button class="menu-option" type="button" role="option" aria-selected="false" onclick={() => (stageFilter = [])}>Every stage</button>
+            {/if}
+          {/snippet}
+        </PopoverMenu>
+
+        <PopoverMenu panelLabel="Filter by severity" panelRole="listbox">
+          {#snippet trigger(control)}
+            <button class:on={severityFilter.length > 0} class="tool-trigger" type="button" aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
+              Severity
+              {#if severityFilter.length}<span class="tool-badge">{severityFilter.length}</span>{/if}
+              <CaretDown size={12} />
+            </button>
+          {/snippet}
+          {#snippet children()}
+            {#each board.severityOptions as option (option.value)}
+              <button
+                class="menu-option"
+                type="button"
+                role="option"
+                aria-selected={severityFilter.includes(option.value)}
+                onclick={() => (severityFilter = toggleValue(severityFilter, option.value))}
+              >
+                <span class={`badge status ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
+              </button>
+            {/each}
+            {#if severityFilter.length}
+              <div class="menu-separator"></div>
+              <button class="menu-option" type="button" role="option" aria-selected="false" onclick={() => (severityFilter = [])}>Every severity</button>
+            {/if}
+          {/snippet}
+        </PopoverMenu>
+
+        <PopoverMenu panelLabel="Filter by deadline" panelRole="listbox">
+          {#snippet trigger(control)}
+            <button class:on={dueFilter !== 'any'} class="tool-trigger" type="button" aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
+              <CalendarDays size={14} />{dueFilter === 'any' ? 'Due' : dueName}
+              <CaretDown size={12} />
+            </button>
+          {/snippet}
+          {#snippet children(close)}
+            {#each dueFilters as option (option.value)}
+              <button
+                class="menu-option"
+                type="button"
+                role="option"
+                aria-selected={dueFilter === option.value}
+                onclick={() => { dueFilter = option.value; close(); }}
+              >{option.name}</button>
+            {/each}
+          {/snippet}
+        </PopoverMenu>
+
+        <PopoverMenu panelLabel="Sort assignments" panelRole="listbox">
+          {#snippet trigger(control)}
+            <button class:on={isSorted} class="tool-trigger" type="button" aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
+              <ArrowsDownUp size={14} />{isSorted ? sortName : 'Sort'}
+              {#if isSorted}<span class="tool-direction" aria-hidden="true">{sortAscending ? '↑' : '↓'}</span>{/if}
+              <CaretDown size={12} />
+            </button>
+          {/snippet}
+          {#snippet children(close)}
+            {#each sortFields as option (option.value)}
+              <button
+                class="menu-option"
+                type="button"
+                role="option"
+                aria-selected={sortField === option.value}
+                onclick={() => { sortField = option.value; close(); }}
+              >{option.name}</button>
+            {/each}
+            <div class="menu-separator"></div>
+            <button
+              class="menu-option"
+              type="button"
+              role="option"
+              aria-selected={sortAscending}
+              disabled={!isSorted}
+              onclick={() => (sortAscending = true)}
+            >Ascending</button>
+            <button
+              class="menu-option"
+              type="button"
+              role="option"
+              aria-selected={!sortAscending}
+              disabled={!isSorted}
+              onclick={() => (sortAscending = false)}
+            >Descending</button>
+          {/snippet}
+        </PopoverMenu>
+
+        <div class="course-tools-status">
+          {#if isNarrowed}
+            <span class="tool-result" aria-live="polite">{matchedCount} of {board.tasks.length} shown</span>
+            {#if board.activeView.isBoard && isSorted}
+              <span class="tool-note">Clear the sort to drag cards</span>
+            {/if}
+            <button class="tool-clear" type="button" onclick={clearControls}><X size={12} />Reset</button>
+          {:else}
+            <span class="tool-result">Temporary — not saved to the course</span>
+          {/if}
+        </div>
+      </div>
+
       {#if requestError}<p class="error-message course-error" role="alert">{requestError}</p>{/if}
       <div class:flush={board.activeView.isBoard} class="course-canvas" aria-busy={movingTaskID ? 'true' : 'false'}>
         {#if board.activeView.isBoard}
           <div class="stage-board">
-            {#each columns as column (column.value)}
+            {#each visibleColumns as column (column.value)}
               <section class="stage-lane" aria-label={`${column.name}, ${column.tasks.length} ${column.tasks.length === 1 ? 'assignment' : 'assignments'}`}>
                 <header class={`stage-lane-header stage-tint ${column.dotClass}`} style={column.dotStyle}>
                   <strong>{column.name}</strong>
@@ -229,30 +495,30 @@
                   class="stage-lane-body"
                   role="list"
                   data-drop-target={dropTarget?.status === column.value && dropTarget.taskID === null ? 'true' : undefined}
-                  ondragover={(event) => dragOverColumn(event, column.value, column.tasks.length)}
-                  ondrop={(event) => dropTask(event, column.value, column.tasks.length)}
+                  ondragover={(event) => dragOverColumn(event, column.value)}
+                  ondrop={(event) => dropTask(event, column.value)}
                 >
-                  {#each column.tasks as task, index (task.id)}
+                  {#each column.tasks as task (task.id)}
                     <TaskCard
                       {task}
-                      draggable={board.canDrag && !movingTaskID}
+                      draggable={canDrag && !movingTaskID}
                       moving={movingTaskID === task.id}
                       dropPosition={dropTarget?.taskID === task.id ? dropTarget.position : null}
-                      ondragstart={(event) => startDrag(task.id, column.value, index, event)}
+                      ondragstart={(event) => startDrag(task.id, column.value, event)}
                       ondragend={finishDrag}
-                      ondragover={(event) => dragOverTask(event, column.value, index, task.id)}
-                      ondrop={(event) => dropTask(event, column.value, dropTarget?.taskID === task.id ? dropTarget.index : index)}
+                      ondragover={(event) => dragOverTask(event, column.value, task.id)}
+                      ondrop={(event) => dropTask(event, column.value)}
                     />
                   {/each}
                   {#if !column.tasks.length}
-                    <p class="stage-lane-empty">{draggedTask ? 'Drop here' : 'Nothing here'}</p>
+                    <p class="stage-lane-empty">{draggedTask ? 'Drop here' : isFiltered ? 'Nothing matches' : 'Nothing here'}</p>
                   {/if}
                 </div>
               </section>
             {/each}
           </div>
         {:else if board.activeView.isTable}
-          {#if board.hasTasks}
+          {#if visibleTasks.length}
             <table class="ledger">
               <thead>
                 <tr>
@@ -265,7 +531,7 @@
                 </tr>
               </thead>
               <tbody>
-                {#each board.tasks as task (task.id)}
+                {#each visibleTasks as task (task.id)}
                   {@const deadline = deadlineFrom(task.dueInput)}
                   <tr class={`stage-tint ${task.statusColorClass}`} style={task.statusColorStyle}>
                     <td class="ledger-assignment">
@@ -302,7 +568,7 @@
                 <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
               </div>
               <div class="month-grid">
-                {#each board.calendarDays as day}
+                {#each visibleDays as day}
                   {@const minutes = dayMinutes(day)}
                   <div class:muted={day.isMuted} class:today={day.isToday} class="month-day">
                     <span class="month-day-head">
@@ -323,9 +589,9 @@
             </div>
           </section>
         {:else if board.activeView.isGallery}
-          {#if board.hasTasks}
+          {#if visibleTasks.length}
             <div class="briefs">
-              {#each board.tasks as task (task.id)}
+              {#each visibleTasks as task (task.id)}
                 {@const deadline = deadlineFrom(task.dueInput)}
                 <a
                   class={`brief stage-tint ${task.statusColorClass}`}
@@ -377,8 +643,15 @@
 
 {#snippet EmptyView()}
   <div class="course-empty">
-    <span>Nothing to show</span>
-    <h2>No assignments in this view</h2>
-    <p>Add an assignment, or widen this view’s filters in Course settings.</p>
+    {#if isFiltered}
+      <span>Nothing matches</span>
+      <h2>No assignments match these filters</h2>
+      <p>Widen the filters above to see the rest of the course.</p>
+      <button class="button small" type="button" onclick={clearControls}><X size={13} />Reset filters</button>
+    {:else}
+      <span>Nothing to show</span>
+      <h2>No assignments in this view</h2>
+      <p>Add an assignment, or widen this view’s filters in Course settings.</p>
+    {/if}
   </div>
 {/snippet}

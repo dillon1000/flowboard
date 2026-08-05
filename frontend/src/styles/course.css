@@ -356,6 +356,192 @@
 }
 
 /* ==========================================================================
+   Temporary controls
+
+   Saved filters live in Course settings and change the course for everyone.
+   These do not: they narrow the open tab and vanish on reload. So they are
+   drawn lighter than the tabs above them — no fills until a control is on,
+   and a standing note at the end of the row saying nothing here is kept.
+   ========================================================================== */
+
+.course-tools {
+  display: flex;
+  min-height: 46px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 28px 8px 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.course-search {
+  position: relative;
+  display: flex;
+  width: 236px;
+  min-width: 168px;
+  align-items: center;
+  margin-right: 4px;
+}
+
+.course-search > svg {
+  position: absolute;
+  left: 9px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.course-search-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 26px 0 28px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  font-size: 13px;
+  transition: box-shadow var(--duration) var(--ease);
+}
+
+.course-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.course-search-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.course-search-input:hover {
+  box-shadow: 0 0 0 1px var(--ds-gray-alpha-500);
+}
+
+.course-search-input:focus {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent);
+}
+
+.course-search-clear {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  place-items: center;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+.course-search-clear:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.tool-trigger,
+.tool-clear {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.tool-trigger:hover,
+.tool-clear:hover,
+.tool-trigger[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.tool-trigger svg {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  transition: color var(--duration) var(--ease);
+}
+
+.tool-trigger:hover svg,
+.tool-trigger.on svg {
+  color: inherit;
+}
+
+/* A control that is doing something carries a surface, so the row reads at a
+   glance as "two of these are on" without anyone parsing the labels. */
+.tool-trigger.on {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.tool-badge {
+  display: grid;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  color: #fff;
+  background: var(--ds-blue-700);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-direction {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.tool-option-count {
+  margin-left: 4px;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-tools-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.tool-result {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-note {
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.course-empty .button {
+  margin-top: 12px;
+}
+
+/* ==========================================================================
    View canvas
    ========================================================================== */
 
@@ -448,10 +634,15 @@ a.course-gap:hover {
 
   .course-header,
   .course-views,
+  .course-tools,
   .course-canvas,
   .course-canvas.flush,
   .course-footer {
     padding-inline: 24px;
+  }
+
+  .tool-note {
+    display: none;
   }
 
   .course-error {
@@ -558,10 +749,23 @@ a.course-gap:hover {
   }
 
   .course-views,
+  .course-tools,
   .course-canvas,
   .course-canvas.flush,
   .course-footer {
     padding-inline: 16px;
+  }
+
+  /* The search takes the first line to itself and the controls sit under it,
+     rather than four triggers fighting for a phone's width. */
+  .course-search {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .course-tools-status {
+    width: 100%;
+    margin-left: 0;
   }
 
   .course-error {

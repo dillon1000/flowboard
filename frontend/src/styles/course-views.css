@@ -284,18 +284,6 @@
   transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
 }
 
-/* Briefs remain compact rows, so their stage colour stays as a small rail. */
-.brief::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 2px;
-  border-radius: var(--radius-medium) 0 0 var(--radius-medium);
-  background: var(--stage);
-  content: '';
-}
-
 .lane-card:hover {
   background: radial-gradient(
       circle at 0 0,
@@ -675,32 +663,38 @@
 }
 
 .brief {
-  position: relative;
+  --brief-glow: var(--stage, var(--ds-gray-600));
   display: grid;
   min-height: 172px;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 8px;
-  padding: 15px 16px 15px 18px;
+  padding: 15px 16px;
   border-radius: var(--radius-large);
   color: var(--text);
-  background: var(--surface-raised);
+  background: radial-gradient(
+      circle at 0 0,
+      color-mix(in srgb, var(--brief-glow) 18%, transparent),
+      transparent 76px
+    ),
+    var(--surface-raised);
   box-shadow: var(--shadow-border);
   text-decoration: none;
-  transition: box-shadow var(--duration) var(--ease);
-}
-
-.brief::before {
-  border-radius: var(--radius-large) 0 0 var(--radius-large);
+  transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
 }
 
 .brief:hover {
+  background: radial-gradient(
+      circle at 0 0,
+      color-mix(in srgb, var(--brief-glow) 22%, transparent),
+      transparent 82px
+    ),
+    var(--surface-hover);
   box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
 }
 
 .brief-stage {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
   overflow: hidden;
   color: var(--text-tertiary);
   font-family: 'Geist Mono Variable', ui-monospace, monospace;
@@ -709,15 +703,6 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.brief-stage::before {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 auto;
-  border-radius: var(--radius-full);
-  background: var(--stage);
-  content: '';
 }
 
 .brief h3 {
