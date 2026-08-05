@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { OverviewPageContext, StudyCourseContext, StudyDayContext, StudyPlanCandidateContext, TaskResponse } from '$lib/types';
-  import { ArrowCircleUpRightIcon as OpenAssignment, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, StrategyIcon as Strategy, XIcon as X } from 'phosphor-svelte';
+  import { ArrowCircleUpRightIcon as OpenAssignment, CactusIcon as Cactus, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, CloverIcon as Clover, FileTextIcon as FileText, FlowerIcon as Flower, FlowerLotusIcon as FlowerLotus, InfoIcon as Info, MinusIcon as Minus, PlantIcon as Plant, PlusIcon as Plus, PottedPlantIcon as PottedPlant, StackIcon as Layers, StrategyIcon as Strategy, TreeEvergreenIcon as TreeEvergreen, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
@@ -14,6 +14,15 @@
   import { onMount } from 'svelte';
 
   const workloadPreferenceKey = 'flowboard-workload-preferences';
+  const streakStages = [
+    { minimumDays: 0, icon: Plant, message: 'Plan one day to begin.' },
+    { minimumDays: 1, icon: PottedPlant, message: 'A new habit is growing.' },
+    { minimumDays: 2, icon: Cactus, message: 'Keep the rhythm tomorrow.' },
+    { minimumDays: 3, icon: Clover, message: 'Roots are taking hold.' },
+    { minimumDays: 5, icon: Flower, message: 'A steady study habit.' },
+    { minimumDays: 7, icon: FlowerLotus, message: 'One full week.' },
+    { minimumDays: 14, icon: TreeEvergreen, message: 'Two weeks and growing.' }
+  ] as const;
 
   let { overview } = $props<{ overview: OverviewPageContext }>();
   let createBoardOpen = $state(false);
@@ -46,6 +55,15 @@
     }
     return { name: 'Light week 😮‍💨', description: 'Room to work ahead.' };
   });
+  const streakStage = $derived.by(() => {
+    let stage: (typeof streakStages)[number] = streakStages[0];
+    for (const candidate of streakStages) {
+      if (overview.studyStreakDays >= candidate.minimumDays) stage = candidate;
+    }
+    return stage;
+  });
+  const nextStreakStage = $derived(streakStages.find((stage) => stage.minimumDays > overview.studyStreakDays));
+  const StreakIcon = $derived(streakStage.icon);
 
   onMount(() => {
     const saved = localStorage.getItem(workloadPreferenceKey);
@@ -70,7 +88,7 @@
 
   function toggleDay(dateLabel: string): void {
     const update = () => {
-      expandedDays[dateLabel] = !expandedDays[dateLabel];
+      expandedDays[dateLabel] = expandedDays[dateLabel] === false;
     };
     const transitionDocument = document as Document & {
       startViewTransition?: (callback: () => void) => unknown;
@@ -85,11 +103,22 @@
     transitionDocument.startViewTransition(update);
   }
 
-  function workloadForDay(day: StudyDayContext): { label: string; className: string } {
-    if (day.unestimatedAssignmentCount > 0) return { label: 'Needs estimates', className: 'unplanned' };
-    if (day.workloadMinutes >= heavyMinutes) return { label: 'Heavy', className: 'heavy' };
-    if (day.workloadMinutes >= balancedMinutes) return { label: 'Balanced', className: 'balanced' };
-    return { label: day.workloadMinutes > 0 ? 'Light' : 'Open', className: day.workloadMinutes > 0 ? 'light' : 'open' };
+  function workloadForDay(day: StudyDayContext): { label: string; emoji: string; className: string } {
+    if (day.unestimatedAssignmentCount > 0) return { label: 'Needs estimates', emoji: '🤔', className: 'unplanned' };
+    if (day.workloadMinutes >= heavyMinutes) return { label: 'Heavy', emoji: '😓', className: 'heavy' };
+    if (day.workloadMinutes >= balancedMinutes) return { label: 'Balanced', emoji: '🤓', className: 'balanced' };
+    return day.workloadMinutes > 0
+      ? { label: 'Light', emoji: '😮‍💨', className: 'light' }
+      : { label: 'Open', emoji: '😮‍💨', className: 'open' };
+  }
+
+  function workloadMinutesLabel(minutes: number): string {
+    if (minutes === 0) return 'No time planned';
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    if (hours === 0) return `${remainder} minutes planned`;
+    if (remainder === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} planned`;
+    return `${hours} hours ${remainder} minutes planned`;
   }
 
   function workloadBarClass(day: StudyDayContext): string {
@@ -184,7 +213,7 @@
         </a>
         {#each overview.courseFilters as course (course.id)}
           <a class:active={course.isSelected} class="study-course-link" href={course.href} aria-current={course.isSelected ? 'page' : undefined}>
-            <span class={`study-course-dot ${course.colorClass}`} aria-hidden="true"></span><span>{course.name}</span><small class:muted={!course.hasGrade}>{course.gradeDisplay}</small>
+            <span class={`study-course-accent ${course.colorClass}`} aria-hidden="true"></span><span>{course.name}</span><small class:muted={!course.hasGrade}>{course.gradeDisplay}</small>
           </a>
         {/each}
       </nav>
@@ -201,18 +230,29 @@
           </div>
         </div>
 
-        <section class="study-workload" aria-labelledby="study-workload-title">
-          <div class="study-workload-chart">
-            <h2 id="study-workload-title">Workload <button class="study-workload-info" type="button" aria-label="Explain and customize workload" aria-expanded={workloadSettingsOpen} aria-controls="workload-settings" onclick={() => (workloadSettingsOpen = !workloadSettingsOpen)}><Info size={13} /></button></h2>
-            <div class="study-workload-bars">
-              {#each overview.days as day, index}
-                <span class="study-workload-column"><span class={`study-workload-bar ${workloadBarClass(day)}`} role="img" aria-label={`${overview.workloadDays[index]?.dayLabel ?? day.weekdayLabel}: ${day.workloadMinutes} estimated minutes`}></span><span>{overview.workloadDays[index]?.dayLabel ?? day.weekdayLabel.slice(0, 1)}</span></span>
-              {/each}
+        <div class="study-week-insights">
+          <section class="study-streak" aria-labelledby="study-streak-title">
+            <h2 id="study-streak-title">Study streak</h2>
+            <div class="study-streak-main">
+              <span class="study-streak-icon" aria-hidden="true"><StreakIcon size={30} weight="duotone" /></span>
+              <span class="study-streak-copy"><strong>{overview.studyStreakDays} {overview.studyStreakDays === 1 ? 'day' : 'days'}</strong><small>{streakStage.message}</small></span>
             </div>
-          </div>
-          <div class="study-workload-summary"><strong>{workloadSummary.name}</strong><span>{workloadSummary.description}</span></div>
-          {#if workloadSettingsOpen}<form class="study-workload-settings" id="workload-settings" onsubmit={saveWorkloadPreferences}><div class="study-workload-settings-header"><span><strong>Daily limits</strong><small>Based on estimated minutes due.</small></span><button class="icon-button" type="button" aria-label="Close workload settings" onclick={() => (workloadSettingsOpen = false)}><X size={14} /></button></div><label><span>Balanced</span><span class="study-workload-input"><input class="input" name="balancedMinutes" type="number" min="30" max="1380" step="15" value={balancedMinutes} required /><small>min</small></span></label><label><span>Heavy</span><span class="study-workload-input"><input class="input" name="heavyMinutes" type="number" min="45" max="1440" step="15" value={heavyMinutes} required /><small>min</small></span></label><div class="study-workload-settings-footer"><span>Heavy must be higher.</span><button class="button primary small" type="submit">Save</button></div></form>{/if}
-        </section>
+            <span class="study-streak-next">{nextStreakStage ? `Next stage at ${nextStreakStage.minimumDays} days` : 'Evergreen habit'}</span>
+          </section>
+
+          <section class="study-workload" aria-labelledby="study-workload-title">
+            <div class="study-workload-chart">
+              <h2 id="study-workload-title">Workload <button class="study-workload-info" type="button" aria-label="Explain and customize workload" aria-expanded={workloadSettingsOpen} aria-controls="workload-settings" onclick={() => (workloadSettingsOpen = !workloadSettingsOpen)}><Info size={13} /></button></h2>
+              <div class="study-workload-bars">
+                {#each overview.days as day, index}
+                  <span class="study-workload-column"><span class={`study-workload-bar ${workloadBarClass(day)}`} role="img" aria-label={`${overview.workloadDays[index]?.dayLabel ?? day.weekdayLabel}: ${day.workloadMinutes} estimated minutes`}></span><span>{overview.workloadDays[index]?.dayLabel ?? day.weekdayLabel.slice(0, 1)}</span></span>
+                {/each}
+              </div>
+            </div>
+            <div class="study-workload-summary"><strong>{workloadSummary.name}</strong><span>{workloadSummary.description}</span></div>
+            {#if workloadSettingsOpen}<form class="study-workload-settings" id="workload-settings" onsubmit={saveWorkloadPreferences}><div class="study-workload-settings-header"><span><strong>Daily limits</strong><small>Based on planned estimates.</small></span><button class="icon-button" type="button" aria-label="Close workload settings" onclick={() => (workloadSettingsOpen = false)}><X size={14} /></button></div><label><span>Balanced</span><span class="study-workload-input"><input class="input" name="balancedMinutes" type="number" min="30" max="1380" step="15" value={balancedMinutes} required /><small>min</small></span></label><label><span>Heavy</span><span class="study-workload-input"><input class="input" name="heavyMinutes" type="number" min="45" max="1440" step="15" value={heavyMinutes} required /><small>min</small></span></label><div class="study-workload-settings-footer"><span>Heavy must be higher.</span><button class="button primary small" type="submit">Save</button></div></form>{/if}
+          </section>
+        </div>
       </header>
 
       <div class="study-days" aria-label={`Assignments due ${overview.weekLabel}`}>
@@ -241,9 +281,9 @@
                 <div class="study-assignment-scroller" use:scrollFades>
                   <div class="study-assignment-track">
                     {#each day.assignments as assignment}
-                      <a class="study-assignment" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}>
+                      <a class={`study-assignment ${assignment.courseColorClass}`} href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}>
                         <span class="study-assignment-header">
-                          <span class="study-assignment-course"><span class={`study-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>{assignment.courseName}</span>
+                          <span class="study-assignment-course">{assignment.courseName}</span>
                           <span class="study-assignment-due"><CalendarDays size={13} />{assignment.dueTime}</span>
                         </span>
                         <strong title={assignment.title}>{assignment.title}</strong>
@@ -263,14 +303,25 @@
                 <div class="study-focus-blocks" aria-label={`Planned work for ${day.weekdayLabel}`}>
                   <span class="study-focus-heading">Plan to work</span>
                   {#each day.focusBlocks as assignment}
-                    <a class="study-focus-assignment" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}><span><span class={`study-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>{assignment.courseName}</span><strong>{assignment.title}</strong><small><Clock3 size={13} />{assignment.effortLabel}</small></a>
+                    <a class={`study-focus-assignment ${assignment.courseColorClass}`} href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}><span>{assignment.courseName}</span><strong>{assignment.title}</strong><small><Clock3 size={13} />{assignment.effortLabel}</small></a>
                   {/each}
                 </div>
               {/if}
               </div>
             {/if}
             </div>
-            <button class:collapsed={expandedDays[day.dateLabel] === false} class={`study-day-load ${workloadForDay(day).className}`} type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{workloadForDay(day).label}</span><span class="study-day-toggle-icons" aria-hidden="true"><Minus class="collapse-icon" size={13} /><Plus class="expand-icon" size={13} /></span></button>
+            <button
+              class:collapsed={expandedDays[day.dateLabel] === false}
+              class={`study-day-load ${workloadForDay(day).className}`}
+              type="button"
+              aria-expanded={expandedDays[day.dateLabel] !== false}
+              aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}. ${workloadForDay(day).label}. ${workloadMinutesLabel(day.workloadMinutes)}.`}
+              title={`${workloadForDay(day).label} · ${workloadMinutesLabel(day.workloadMinutes)}`}
+              onclick={() => toggleDay(day.dateLabel)}
+            >
+              <span class="study-day-load-label"><span class="study-day-load-emoji" aria-hidden="true">{workloadForDay(day).emoji}</span>{workloadForDay(day).label}</span>
+              <span class="study-day-toggle-icons" aria-hidden="true"><Minus class="collapse-icon" size={13} /><Plus class="expand-icon" size={13} /></span>
+            </button>
           </section>
         {/each}
       </div>
