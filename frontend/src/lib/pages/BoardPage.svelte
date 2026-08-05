@@ -117,8 +117,8 @@
       </div>
     </header>
 
-    <div class="course-summary" aria-label="Course planning summary">
-      <span><strong>{board.assignmentCount}</strong> assignments</span>
+    <div class="course-summary" aria-label="Current view planning summary">
+      <span><strong>{board.assignmentCount}</strong> assignments in this view</span>
       <span><strong>{board.completedAssignmentCount}</strong> completed</span>
       <span class:needs-attention={board.undatedAssignmentCount > 0}><strong>{board.undatedAssignmentCount}</strong> need dates</span>
       <span class:needs-attention={board.unestimatedAssignmentCount > 0}><strong>{board.unestimatedAssignmentCount}</strong> need estimates</span>
