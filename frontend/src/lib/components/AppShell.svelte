@@ -77,6 +77,9 @@
         <a class:active={context.isOverview} class="nav-link" href="/app" aria-current={context.isOverview ? 'page' : undefined} title="This week">
           <CalendarDays size={16} /><span>This week</span>
         </a>
+        <a class:active={context.isSemester} class="nav-link" href="/app/semester" aria-current={context.isSemester ? 'page' : undefined} title="Semester">
+          <CalendarDays size={16} /><span>Semester</span>
+        </a>
         <a class:active={context.isActiveTasks} class="nav-link" href="/app/tasks" aria-current={context.isActiveTasks ? 'page' : undefined} title="All assignments">
           <CheckSquare size={16} /><span>All assignments</span>
         </a>
