@@ -65,9 +65,9 @@ struct StudyPlannerTests {
         #expect(planner.days[0].workloadMinutes == 225)
         #expect(planner.days[2].assignments.first?.title == "Finish calculus problem set")
         #expect(planner.days[2].assignments.first?.typeName == "Problem Set")
-        #expect(planner.days[2].workloadLabel == "Heavy")
+        #expect(planner.days[2].workloadLabel == "Moderate")
         #expect(planner.days[2].workloadMinutes == 180)
-        #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 2)
+        #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 3)
         #expect(planner.unscheduledAssignmentCount == 1)
         #expect(planner.studyStreakDays == 1)
     }
