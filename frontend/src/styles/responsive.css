@@ -69,20 +69,6 @@
     overflow: visible;
   }
 
-  .board-bar {
-    position: sticky;
-    top: var(--topbar-height);
-    z-index: 10;
-    padding: 20px 16px 0;
-    background: var(--surface);
-  }
-
-  .board-canvas,
-  .board-canvas.flush {
-    padding: 16px;
-    overflow: visible;
-  }
-
   .kanban {
     height: auto;
     grid-auto-columns: minmax(272px, 1fr);
