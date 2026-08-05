@@ -78,6 +78,34 @@
   color: var(--text-tertiary);
 }
 
+.notes-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.notes-editor .textarea {
+  min-height: 150px;
+  font-family: 'Geist Mono Variable', monospace;
+  line-height: 1.55;
+}
+
+.notes-editor-footer,
+.notes-editor-footer > div {
+  display: flex;
+  align-items: center;
+}
+
+.notes-editor-footer {
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.notes-editor-footer > div {
+  gap: 8px;
+}
+
 .task-main {
   min-width: 0;
 }
@@ -165,11 +193,87 @@
 
 .property-row dd,
 .property-row > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.property-row dd > span:not(.badge) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.property-edit-button {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease), opacity var(--duration) var(--ease);
+}
+
+.property-row:hover .property-edit-button,
+.property-row:focus-within .property-edit-button {
+  opacity: 1;
+}
+
+.property-edit-button:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.property-row.editing {
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: start;
+  padding-block: 8px;
+  background: var(--surface-sunken);
+}
+
+.property-row.editing dd {
+  overflow: visible;
+  white-space: normal;
+}
+
+.property-inline-form {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.property-inline-form .input,
+.property-inline-form .select-trigger {
+  height: 32px;
+}
+
+.property-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.property-score-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.property-score-inputs .input {
+  min-width: 0;
+  padding-inline: 7px;
 }
 
 .property-row dd.muted {
@@ -292,18 +396,46 @@ progress.progress::-moz-progress-bar {
   height: 36px;
 }
 
+.checklist-complete-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  border-radius: var(--radius-medium);
+  color: var(--ds-green-900);
+  background: var(--ds-green-200);
+  font-size: 12px;
+}
+
+.checklist-complete-hint > svg {
+  flex: 0 0 auto;
+}
+
+.checklist-complete-hint > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.checklist-complete-hint strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
 /* ---- Comments ---- */
 
 .comment-thread {
   display: grid;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .comment {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
   align-items: start;
-  padding: 16px;
+  padding: 9px 12px;
 }
 
 .comment + .comment {
@@ -314,7 +446,7 @@ progress.progress::-moz-progress-bar {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-size: 12px;
 }
 
@@ -331,13 +463,13 @@ progress.progress::-moz-progress-bar {
 .comment-body {
   color: var(--text-secondary);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.45;
   white-space: pre-wrap;
 }
 
 /* Delete stays out of the way until the comment is hovered or focused. */
 .comment-actions {
-  margin-top: 6px;
+  margin-top: 2px;
   opacity: 0;
   transition: opacity var(--duration) var(--ease);
 }
@@ -349,23 +481,24 @@ progress.progress::-moz-progress-bar {
 
 .comment-composer {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 9px;
   align-items: start;
-  padding: 16px;
+  padding: 9px 12px;
   border-top: 1px solid var(--border);
   background: var(--surface-sunken);
   border-radius: 0 0 var(--radius-large) var(--radius-large);
 }
 
 .comment-composer .textarea {
-  min-height: 76px;
+  min-height: 42px;
+  max-height: 110px;
 }
 
 .comment-composer .form-actions {
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .comment-draft-meta {
