@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TaskCardContext } from '$lib/types';
-  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ChatCircleIcon as MessageSquare, PaperclipIcon as Paperclip } from 'phosphor-svelte';
+  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ChatCircleIcon as MessageSquare, ClockIcon as Clock, PaperclipIcon as Paperclip } from 'phosphor-svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
 
   let {
@@ -44,6 +44,7 @@
     <span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span>
     {#each task.labels as label}<span class="badge subtle">{label}</span>{/each}
     {#if task.hasDueDate}<span class="badge"><CalendarDays size={12} />{task.dueDisplay}</span>{/if}
+    {#if task.hasEstimate}<span class="badge"><Clock size={12} />{task.estimatedDisplay}</span>{/if}
     <span class="task-badges">
       {#if task.commentCount}<span class="task-badge" title={`${task.commentCount} comments`}><MessageSquare size={12} /><span class="tabular">{task.commentCount}</span></span>{/if}
       {#if task.checklistCount}<span class="task-badge" title="Checklist"><CheckSquare size={12} /><span class="tabular">{task.completedChecklistCount}/{task.checklistCount}</span></span>{/if}

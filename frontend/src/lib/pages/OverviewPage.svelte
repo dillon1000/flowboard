@@ -19,6 +19,11 @@
     overview.courseFilters.map((course: StudyCourseContext) => ({ value: course.id, label: course.name }))
   );
 
+  function estimateMinutes(value: FormDataEntryValue | null): number | null {
+    const minutes = Number(value);
+    return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
+  }
+
   async function createAssignment(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
@@ -34,7 +39,9 @@
           title: String(data.get('title') ?? ''),
           description: String(data.get('description') ?? '') || null,
           labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6),
-          dueAt: dueDate ? `${dueDate}T00:00:00Z` : null
+          dueAt: dueDate ? `${dueDate}T00:00:00Z` : null,
+          dueTime: dueDate ? String(data.get('dueTime') ?? '') || null : null,
+          estimatedMinutes: estimateMinutes(data.get('estimatedMinutes'))
         })
       });
       form.reset();
@@ -116,10 +123,12 @@
       </div>
 
       <footer class="study-week-footer">
-        {#if overview.hasUnscheduledAssignments}
+        {#if overview.hasUnestimatedAssignments}
+          <a href="/app/tasks"><Clock3 size={15} />{overview.unestimatedAssignmentCount} assignments need time estimates</a>
+        {:else if overview.hasUnscheduledAssignments}
           <a href="/app/tasks"><CalendarDays size={15} />{overview.unscheduledAssignmentCount} assignments still need a due date</a>
         {:else}
-          <span><CalendarDays size={15} />Date-only deadlines appear as 11:59 PM</span>
+          <span><CalendarDays size={15} />Assignments without a time are due all day</span>
         {/if}
       </footer>
     </section>
@@ -138,6 +147,8 @@
           <div class="field wide"><label for="assignment-title">Title</label><input class="input" id="assignment-title" name="title" maxlength="120" required data-dialog-focus /></div>
           <div class="field"><label for="assignment-course">Course</label><SelectMenu id="assignment-course" name="boardID" value={overview.defaultCourseID} options={courseOptions} ariaLabel="Course" /></div>
           <div class="field"><label for="assignment-due">Due date</label><DatePicker id="assignment-due" name="dueAt" label="Due date" /></div>
+          <div class="field"><label for="assignment-time">Due time</label><input class="input" id="assignment-time" name="dueTime" type="time" /></div>
+          <div class="field"><label for="assignment-estimate">Time estimate</label><input class="input" id="assignment-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
           <div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="5000"></textarea></div>
           <div class="field wide"><label for="assignment-labels">Type</label><input class="input" id="assignment-labels" name="labels" maxlength="500" placeholder="Lab report, Reading, Discussion" /></div>
         </div>
