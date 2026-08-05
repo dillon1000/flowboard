@@ -2,7 +2,7 @@ import Fluent
 import Foundation
 
 enum WorkspaceService {
-    /// Creates a board and its four standard views in the caller's transaction.
+    /// Creates a board and its five standard views in the caller's transaction.
     /// A view failure rolls back the board so navigation never opens an empty shell.
     static func createBoard(
         name: String,
@@ -24,6 +24,7 @@ enum WorkspaceService {
             ("Board", .board),
             ("Table", .table),
             ("Calendar", .calendar),
+            ("Gantt", .gantt),
             ("Gallery", .gallery),
         ]
         for (index, view) in views.enumerated() {

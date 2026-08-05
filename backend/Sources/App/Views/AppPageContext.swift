@@ -644,6 +644,7 @@ struct BoardViewTabContext: Encodable {
     let isBoard: Bool
     let isTable: Bool
     let isCalendar: Bool
+    let isGantt: Bool
     let isGallery: Bool
     let icon: String
 
@@ -657,11 +658,13 @@ struct BoardViewTabContext: Encodable {
         self.isBoard = view.type == .board
         self.isTable = view.type == .table
         self.isCalendar = view.type == .calendar
+        self.isGantt = view.type == .gantt
         self.isGallery = view.type == .gallery
         self.icon = switch view.type {
         case .board: "columns-3"
         case .table: "table-2"
         case .calendar: "calendar-days"
+        case .gantt: "chart-bar-horizontal"
         case .gallery: "gallery-horizontal-end"
         }
     }

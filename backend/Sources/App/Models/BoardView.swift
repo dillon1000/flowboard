@@ -5,6 +5,7 @@ enum BoardViewType: String, Codable, CaseIterable, Content, Sendable {
     case board
     case table
     case calendar
+    case gantt
     case gallery
 }
 
