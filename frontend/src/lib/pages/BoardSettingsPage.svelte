@@ -58,6 +58,7 @@
     { value: 'board', label: 'Board' },
     { value: 'table', label: 'Table' },
     { value: 'calendar', label: 'Calendar' },
+    { value: 'gantt', label: 'Gantt' },
     { value: 'gallery', label: 'Gallery' }
   ];
   const fieldTypeOptions: SelectMenuOption[] = [

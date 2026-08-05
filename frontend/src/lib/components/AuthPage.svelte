@@ -78,7 +78,7 @@
       <aside class="auth-aside">
         <blockquote>Everything your team needs to ship the work.</blockquote>
         <ul class="auth-points">
-          <li><Columns3 size={18} />Board, table, calendar, and gallery views</li>
+          <li><Columns3 size={18} />Board, table, calendar, Gantt, and gallery views</li>
           <li><Users size={18} />Shared courses with per-role access</li>
           <li><Copy size={18} />Templates, custom fields, and JSON export</li>
         </ul>

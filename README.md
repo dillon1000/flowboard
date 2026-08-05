@@ -99,7 +99,7 @@ dependencies, and generated output.
   Fluent sessions
 - OAuth 2.0 authorization-code login with PKCE, verified-email linking, and
   stored provider identities
-- Board, Table, Calendar, and Gallery views with saved grouping, filtering, and
+- Board, Table, Calendar, Gantt, and Gallery views with saved grouping, filtering, and
   sorting rules
 - Tasks with workflow values, labels, an assignee, dates, custom fields,
   comments, followers, checklists, and protected attachments
