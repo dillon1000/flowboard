@@ -2,7 +2,7 @@
   import type { AppPageContext, BoardNavigationContext } from '$lib/types';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
-  import { ArchiveIcon as Archive, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings } from 'phosphor-svelte';
+  import { ArchiveIcon as Archive, CalendarBlankIcon as SemesterCalendar, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings } from 'phosphor-svelte';
   import Avatar from './Avatar.svelte';
   import BuildSignature from './BuildSignature.svelte';
   import CreateBoardDialog from './CreateBoardDialog.svelte';
@@ -78,7 +78,7 @@
           <CalendarDays size={16} /><span>This week</span>
         </a>
         <a class:active={context.isSemester} class="nav-link" href="/app/semester" aria-current={context.isSemester ? 'page' : undefined} title="Semester">
-          <CalendarDays size={16} /><span>Semester</span>
+          <SemesterCalendar size={16} /><span>Semester</span>
         </a>
         <a class:active={context.isActiveTasks} class="nav-link" href="/app/tasks" aria-current={context.isActiveTasks ? 'page' : undefined} title="All assignments">
           <CheckSquare size={16} /><span>All assignments</span>
