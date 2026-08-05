@@ -15,15 +15,20 @@ struct AddGanttBoardViews: AsyncMigration {
         let boards = try await Board.query(on: database).all()
         for board in boards {
             let boardID = try board.requireID()
-            let existing = try await BoardView.query(on: database)
+            let views = try await BoardView.query(on: database)
                 .filter(\.$board.$id == boardID)
-                .filter(\.$type == .gantt)
-                .first()
-            guard existing == nil else { continue }
+                .sort(\.$position, .ascending)
+                .all()
+            guard !views.contains(where: { $0.type == .gantt }) else { continue }
 
-            let position = try await BoardView.query(on: database)
-                .filter(\.$board.$id == boardID)
-                .count()
+            // Existing boards place Gallery fourth. Insert Gantt before it so
+            // migrated and newly created boards keep the same tab order.
+            let position = views.first(where: { $0.type == .gallery })?.position
+                ?? ((views.map(\.position).max() ?? -1) + 1)
+            for view in views where view.position >= position {
+                view.position += 1
+                try await view.update(on: database)
+            }
             try await BoardView(
                 boardID: boardID,
                 name: "Gantt",
