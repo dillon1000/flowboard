@@ -84,6 +84,17 @@
   grid-template-columns: 264px minmax(0, 1fr);
 }
 
+/* Desktop renders the planner at 80% scale to increase its information density.
+   The larger canvas offsets that scale, so the planner still fills the workspace. */
+@media (width > 820px) {
+  .study-planner {
+    width: 125%;
+    height: 125%;
+    transform: scale(0.8);
+    transform-origin: top left;
+  }
+}
+
 /* ==========================================================================
    Week panel
    ========================================================================== */
