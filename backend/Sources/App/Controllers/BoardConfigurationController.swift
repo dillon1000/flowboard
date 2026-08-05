@@ -8,6 +8,7 @@ struct BoardConfigurationController: RouteCollection {
         let boards = routes.grouped("boards", ":boardID")
         boards.post("properties", use: createProperty)
         boards.post("task-options", use: createTaskOption)
+        boards.patch("task-options", ":optionID", use: updateTaskOption)
     }
 
     func createProperty(req: Request) async throws -> BoardResponse {
@@ -68,7 +69,7 @@ struct BoardConfigurationController: RouteCollection {
 
     func createTaskOption(req: Request) async throws -> BoardResponse {
         let access = try await requiredBoard(req)
-        let input = try req.content.decode(CreateTaskOptionRequest.self)
+        let input = try req.content.decode(TaskOptionRequest.self)
         let name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (1...40).contains(name.count) else {
             throw Abort(.unprocessableEntity, reason: "Use a workflow name between 1 and 40 characters.")
@@ -107,6 +108,43 @@ struct BoardConfigurationController: RouteCollection {
         return try BoardResponse(board: access.board)
     }
 
+    /// Updates the presentation and completion behavior of one workflow value.
+    /// The option ID remains stable because tasks store it as their status or severity.
+    func updateTaskOption(req: Request) async throws -> BoardResponse {
+        let access = try await requiredBoard(req)
+        let input = try req.content.decode(TaskOptionRequest.self)
+        let optionID = try req.parameters.require("optionID")
+        let name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...40).contains(name.count) else {
+            throw Abort(.unprocessableEntity, reason: "Use a workflow name between 1 and 40 characters.")
+        }
+
+        let isStatus = input.kind == .status
+        var options = isStatus ? access.board.taskStatuses : access.board.taskSeverities
+        guard let index = options.firstIndex(where: { $0.id == optionID }) else {
+            throw Abort(.notFound, reason: "The workflow value does not exist on this board.")
+        }
+        guard !options.enumerated().contains(where: { optionIndex, option in
+            optionIndex != index && option.name.caseInsensitiveCompare(name) == .orderedSame
+        }) else {
+            throw Abort(.conflict, reason: "That workflow name already exists on this board.")
+        }
+
+        options[index] = BoardTaskOption(
+            id: optionID,
+            name: name,
+            color: input.color,
+            isCompleted: isStatus && input.isCompleted
+        )
+        if isStatus {
+            access.board.statusDefinitions = options
+        } else {
+            access.board.severityDefinitions = options
+        }
+        try await access.board.update(on: req.db)
+        return try BoardResponse(board: access.board)
+    }
+
     private func requiredBoard(_ req: Request) async throws -> BoardAccess {
         guard let boardID = req.parameters.get("boardID", as: UUID.self) else {
             throw Abort(.notFound, reason: "The board does not exist.")
@@ -133,7 +171,7 @@ private struct CreatePropertyRequest: Content {
     let options: [String]
 }
 
-private struct CreateTaskOptionRequest: Content {
+private struct TaskOptionRequest: Content {
     enum Kind: String, Codable {
         case status
         case severity
