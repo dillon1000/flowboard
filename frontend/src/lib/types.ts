@@ -58,6 +58,12 @@ export interface TaskCardContext {
   dueInput: string;
   dueDisplay: string;
   hasDueDate: boolean;
+  dueTimeInput: string;
+  dueTimeDisplay: string;
+  hasDueTime: boolean;
+  estimatedMinutes: number;
+  estimatedDisplay: string;
+  hasEstimate: boolean;
   assigneeID: string;
   assigneeName: string;
   hasAssignee: boolean;
@@ -89,8 +95,9 @@ export interface StudyAssignmentContext {
   dueTime: string;
   typeName: string;
   typeIcon: string;
-  effortHours: number;
+  estimatedMinutes: number;
   effortLabel: string;
+  hasEstimate: boolean;
   statusName: string;
   statusValue: string;
   statusColorClass: string;
@@ -111,7 +118,8 @@ export interface StudyDayContext {
   assignments: StudyAssignmentContext[];
   assignmentCount: number;
   hasAssignments: boolean;
-  workloadHours: number;
+  workloadMinutes: number;
+  unestimatedAssignmentCount: number;
   workloadLabel: string;
   workloadClass: string;
 }
@@ -136,6 +144,8 @@ export interface OverviewPageContext {
   balanceDescription: string;
   unscheduledAssignmentCount: number;
   hasUnscheduledAssignments: boolean;
+  unestimatedAssignmentCount: number;
+  hasUnestimatedAssignments: boolean;
 }
 
 export interface TaskColumnContext {

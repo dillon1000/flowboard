@@ -132,6 +132,8 @@ struct OverviewPageContext: Encodable {
     let balanceDescription: String
     let unscheduledAssignmentCount: Int
     let hasUnscheduledAssignments: Bool
+    let unestimatedAssignmentCount: Int
+    let hasUnestimatedAssignments: Bool
 
     init(
         tasks: [TaskCardContext],
@@ -196,6 +198,8 @@ struct OverviewPageContext: Encodable {
         }
         self.unscheduledAssignmentCount = taskContexts.filter { !$0.hasDueDate }.count
         self.hasUnscheduledAssignments = unscheduledAssignmentCount > 0
+        self.unestimatedAssignmentCount = days.reduce(0) { $0 + $1.unestimatedAssignmentCount }
+        self.hasUnestimatedAssignments = unestimatedAssignmentCount > 0
     }
 }
 

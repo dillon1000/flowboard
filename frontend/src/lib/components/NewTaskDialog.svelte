@@ -23,6 +23,11 @@
     return date ? `${date}T00:00:00Z` : null;
   }
 
+  function estimateMinutes(value: FormDataEntryValue | null): number | null {
+    const minutes = Number(value);
+    return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
+  }
+
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
@@ -40,7 +45,9 @@
           priority: String(data.get('priority') ?? board.newTaskPriority),
           labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6),
           startAt: apiDate(data.get('startAt')),
-          dueAt: apiDate(data.get('dueAt'))
+          dueAt: apiDate(data.get('dueAt')),
+          dueTime: data.get('dueAt') ? String(data.get('dueTime') ?? '') || null : null,
+          estimatedMinutes: estimateMinutes(data.get('estimatedMinutes'))
         })
       });
       form.reset();
@@ -71,6 +78,8 @@
           <div class="field"><label for="new-task-priority">Severity</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Severity" /></div>
           <div class="field"><label for="new-task-start">Start date</label><DatePicker id="new-task-start" name="startAt" label="Start date" /></div>
           <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
+          <div class="field"><label for="new-task-time">Due time</label><input class="input" id="new-task-time" name="dueTime" type="time" /></div>
+          <div class="field"><label for="new-task-estimate">Time estimate</label><input class="input" id="new-task-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
           <div class="field wide"><label for="new-task-labels">Labels</label><input class="input" id="new-task-labels" name="labels" value={board.newTaskLabels} maxlength="500" placeholder="Design, Launch" /></div>
         </div>
       </div>
