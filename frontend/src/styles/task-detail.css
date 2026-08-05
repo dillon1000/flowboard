@@ -1,70 +1,343 @@
 /* ==========================================================================
    Task detail
+
+   The page answers three questions in order: when is it due, how far in am I,
+   what do I do next. The pace meter carries the first two; the sections below
+   carry the third. Metadata is demoted to a rail that only shows what is set.
    ========================================================================== */
 
-.split-layout {
+.task-detail-page .split-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 48px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 56px;
   align-items: start;
 }
 
-/* The detail header spans the full measure and rules off from the body. */
-.detail-header {
-  padding-bottom: 24px;
-  margin-bottom: 32px;
-  border-bottom: 1px solid var(--border);
+.task-main {
+  min-width: 0;
+  display: grid;
+  gap: 44px;
 }
 
-.detail-header .page-title h1 {
-  font-size: 24px;
+/* ---- Headline ---- */
+
+.task-headline {
+  margin-bottom: 24px;
 }
 
-.promote-menu .menu-panel {
-  min-width: 210px;
-}
-
-.promote-menu .menu-option {
-  min-height: 38px;
-}
-
-/* A fact strip under the title puts status, owner and dates above the fold. */
-.task-facts {
+.task-headline-row {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 6px;
+}
+
+.task-headline h1 {
+  margin: 0;
+  max-width: 22ch;
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.task-headline-actions {
+  display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  margin-top: 14px;
+  padding-top: 3px;
 }
 
-.fact {
+/* The status badge is the control, not a label beside one. */
+.task-status-trigger {
   display: inline-flex;
+  height: 32px;
   align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
+  gap: 4px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--duration) var(--ease);
+}
+
+.task-status-trigger:hover,
+.task-status-trigger[aria-expanded='true'] {
+  background: var(--surface-hover);
+}
+
+.task-status-trigger svg {
+  color: var(--text-tertiary);
+}
+
+.task-more svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- Pace meter ----
+   Two lengths share one track: the run-up already spent (behind) and the steps
+   already finished (in front). A shorter coloured bar means you are behind. */
+
+.pace {
+  padding: 18px 20px 16px;
+  margin-bottom: 44px;
+  border-radius: var(--radius-large);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-border);
+  --pace-color: var(--ds-green-700);
+}
+
+.pace[data-state='behind'] {
+  --pace-color: var(--ds-amber-800);
+}
+
+.pace[data-state='late'] {
+  --pace-color: var(--ds-red-800);
+}
+
+.pace-ends {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.pace-start {
+  color: var(--text-tertiary);
   font-size: 12px;
 }
 
-.fact svg {
-  width: 13px;
-  height: 13px;
+.pace-due {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 6px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  background: transparent;
+  font-size: 13px;
+  text-align: right;
+}
+
+button.pace-due {
+  cursor: pointer;
+  transition: background-color var(--duration) var(--ease);
+}
+
+button.pace-due:hover {
+  background: var(--surface-hover);
+}
+
+.pace-due-label {
   color: var(--text-tertiary);
+  font-size: 12px;
 }
 
-.fact.muted {
+.pace-due strong {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.pace-due svg {
+  align-self: center;
   color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity var(--duration) var(--ease);
 }
 
-.fact-divider {
-  width: 1px;
-  height: 14px;
-  background: var(--border-strong);
+button.pace-due:hover svg,
+button.pace-due:focus-visible svg {
+  opacity: 1;
 }
 
-.avatar.small {
-  width: 20px;
-  height: 20px;
-  font-size: 8px;
+.pace-track {
+  position: relative;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--surface-active);
+  overflow: hidden;
+}
+
+/* The bars grow from nothing on hydration: the reader's clock is not known
+   during the server render, so the reveal doubles as the page-load moment. */
+.pace-elapsed,
+.pace-done {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-radius: var(--radius-full);
+  transition: width 520ms var(--ease-out);
+}
+
+.pace-elapsed {
+  background: var(--ds-gray-500);
+  opacity: 0.55;
+}
+
+.pace-done {
+  background: var(--pace-color);
+}
+
+.pace-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  opacity: 0;
+  transition: left 520ms var(--ease-out), opacity 320ms 320ms var(--ease);
+}
+
+.pace-track.ready .pace-today {
+  opacity: 0.72;
+}
+
+.pace-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+
+.pace-verdict {
+  color: var(--pace-color);
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.pace[data-state='steady'] .pace-verdict,
+.pace[data-state='complete'] .pace-verdict {
+  color: var(--text-secondary);
+}
+
+.pace-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.pace-estimate {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+.pace-estimate:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.pace-countdown {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.pace[data-state='late'] .pace-countdown {
+  color: var(--ds-red-900);
+}
+
+.pace-undated {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pace-undated p {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.pace-undated strong {
+  color: var(--text);
+  font-weight: 550;
+}
+
+.pace-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.pace-editor .field {
+  min-width: 160px;
+  flex: 0 1 200px;
+}
+
+.pace-editor .property-inline-actions {
+  flex: 1 0 auto;
+  padding-bottom: 2px;
+}
+
+/* ---- Sections ----
+   A section is a label, a hairline, and its content. No boxes: the page is one
+   document, and the boxes were most of what made it feel crowded. */
+
+.task-section-head {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.task-section-head h2 {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.task-section-head > :last-child:not(h2) {
+  margin-left: auto;
+}
+
+.section-count {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.section-empty {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1.6;
+  text-wrap: pretty;
 }
 
 .task-description {
@@ -72,10 +345,6 @@
   font-size: 14px;
   line-height: 1.7;
   white-space: pre-wrap;
-}
-
-.task-description.empty {
-  color: var(--text-tertiary);
 }
 
 .notes-editor {
@@ -106,222 +375,14 @@
   gap: 8px;
 }
 
-.task-main {
-  min-width: 0;
-}
-
-/* The plan card makes the two fields that drive the weekly planner visible
-   before a student enters notes or breaks the assignment into steps. */
-.assignment-plan-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  padding: 16px;
-  margin: 0;
-}
-
-.assignment-plan {
-  overflow: clip;
-}
-
-.assignment-plan-grid div {
-  min-width: 0;
-}
-
-.assignment-plan-grid dt {
-  margin-bottom: 5px;
-  color: var(--text-tertiary);
-  font-size: 12px;
-}
-
-.assignment-plan-grid dd {
-  margin: 0;
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.assignment-plan-grid dd.muted {
-  color: var(--text-tertiary);
-  font-weight: 400;
-}
-
-.assignment-plan-note {
-  padding: 10px 16px;
-  margin: 0;
-  border-top: 1px solid var(--border);
-  color: var(--text-secondary);
-  background: var(--surface-sunken);
-  font-size: 12px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  text-wrap: pretty;
-}
-
-.task-sidebar {
-  position: sticky;
-  top: 24px;
-  display: grid;
-  gap: 20px;
-  align-content: start;
-}
-
-.task-sidebar > .card + .card {
-  margin-top: 0;
-}
-
-/* Properties read as a definition list: label left, value right, no boxes. */
-.property-list {
-  display: grid;
-  padding: 6px;
-  margin: 0;
-}
-
-.property-row {
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 12px;
-  min-height: 34px;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: var(--radius-small);
-  font-size: 13px;
-}
-
-.property-row dt,
-.property-row > span:first-child {
-  color: var(--text-tertiary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.property-row dd,
-.property-row > span:last-child {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  margin: 0;
-  overflow: visible;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.property-row .badge {
-  max-width: calc(100% - 2px);
-  margin: 1px;
-}
-
-.property-row dd > span:not(.badge) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.property-edit-button {
-  display: inline-grid;
-  width: 26px;
-  height: 26px;
-  flex: 0 0 auto;
-  place-items: center;
-  padding: 0;
-  margin-left: auto;
-  border: 0;
-  border-radius: var(--radius-small);
-  color: var(--text-tertiary);
-  background: transparent;
-  cursor: pointer;
-  opacity: 0;
-  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease), opacity var(--duration) var(--ease);
-}
-
-.property-row:hover .property-edit-button,
-.property-row:focus-within .property-edit-button {
-  opacity: 1;
-}
-
-.property-edit-button:hover {
-  color: var(--text);
-  background: var(--surface-hover);
-}
-
-.property-row.editing {
-  grid-template-columns: 64px minmax(0, 1fr);
-  align-items: start;
-  padding-block: 8px;
-  background: var(--surface-sunken);
-}
-
-.property-row.editing dd {
-  overflow: visible;
-  white-space: normal;
-}
-
-.property-inline-form {
-  display: grid;
-  width: 100%;
-  gap: 8px;
-}
-
-.property-inline-form .input,
-.property-inline-form .select-trigger {
-  height: 32px;
-}
-
-.property-inline-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.property-score-inputs {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: 5px;
-}
-
-.property-score-inputs .input {
-  min-width: 0;
-  padding-inline: 7px;
-}
-
-.property-row dd.muted {
-  color: var(--text-tertiary);
-}
-
-.property-options {
-  display: grid;
-  gap: 6px;
-}
-
-.property-option,
-.property-boolean {
-  position: relative;
-  display: inline-flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 9px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.property-option:hover .checkbox-control,
-.property-boolean:hover .checkbox-control {
-  box-shadow: 0 0 0 1px var(--text-tertiary), inset 0 1px 1px rgb(0 0 0 / 4%);
-}
-
-/* ---- Checklist ---- */
+/* ---- Steps ---- */
 
 .checklist-progress {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 progress.progress {
@@ -352,6 +413,7 @@ progress.progress::-moz-progress-bar {
 .checklist {
   display: grid;
   gap: 1px;
+  margin: -4px -10px 0;
 }
 
 .checklist-item {
@@ -397,6 +459,7 @@ progress.progress::-moz-progress-bar {
   display: flex;
   align-items: stretch;
   gap: 8px;
+  margin-top: 12px;
 }
 
 .checklist-add .input {
@@ -412,7 +475,7 @@ progress.progress::-moz-progress-bar {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  margin-top: 10px;
+  margin-top: 12px;
   border-radius: var(--radius-medium);
   color: var(--ds-green-900);
   background: var(--ds-green-200);
@@ -433,56 +496,23 @@ progress.progress::-moz-progress-bar {
   margin-bottom: 2px;
 }
 
+/* ---- Files ---- */
+
+.attachment-upload-form {
+  margin-top: 14px;
+}
+
 /* ---- Comments ---- */
-
-.comments-layout {
-  background: var(--surface-sunken);
-}
-
-.comments-header {
-  display: flex;
-  min-height: 64px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.comments-header > div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.comments-header h2,
-.comments-header p {
-  margin: 0;
-}
-
-.comments-header h2 {
-  font-size: 14px;
-}
-
-.comments-header p {
-  color: var(--text-tertiary);
-  font-size: 11px;
-  text-wrap: pretty;
-}
 
 .comment-thread {
   display: grid;
-  max-height: 240px;
-  padding: 8px 12px 0;
-  overflow-y: auto;
 }
 
 .comment-empty {
   display: flex;
-  min-height: 76px;
   align-items: center;
   gap: 11px;
-  padding: 12px;
+  padding: 2px 0 10px;
 }
 
 .comment-empty > span {
@@ -510,6 +540,7 @@ progress.progress::-moz-progress-bar {
 .comment-empty small {
   color: var(--text-tertiary);
   font-size: 11px;
+  text-wrap: pretty;
 }
 
 .comment {
@@ -517,7 +548,7 @@ progress.progress::-moz-progress-bar {
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
-  padding: 12px 4px;
+  padding: 12px 0;
 }
 
 .comment .avatar {
@@ -567,8 +598,7 @@ progress.progress::-moz-progress-bar {
 }
 
 .comment-composer {
-  padding: 12px;
-  border-top: 1px solid var(--border);
+  margin-top: 14px;
 }
 
 .comment-input-shell {
@@ -629,12 +659,192 @@ progress.progress::-moz-progress-bar {
   min-height: 40px;
 }
 
-@media (width <= 640px) {
-  .comments-header p,
-  .comment-draft-meta kbd {
-    display: none;
-  }
+/* ---- Details rail ----
+   Only fields with a value get a row. Everything else waits as an "add"
+   button, so a bare assignment shows four lines instead of twelve. */
+
+.task-sidebar {
+  position: sticky;
+  top: 24px;
+  align-content: start;
 }
+
+.detail-list {
+  display: grid;
+  margin: 0;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 32px;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.detail-row dt {
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-row dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.detail-row dd > span:not(.badge) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-row .badge {
+  max-width: calc(100% - 2px);
+}
+
+.detail-labels {
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.detail-edit {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease), opacity var(--duration) var(--ease);
+}
+
+.detail-row:hover .detail-edit,
+.detail-row:focus-within .detail-edit {
+  opacity: 1;
+}
+
+.detail-edit:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.detail-row.editing {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  padding: 10px;
+  margin-inline: -10px;
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+}
+
+.detail-row.editing dd {
+  white-space: normal;
+}
+
+.property-inline-form {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.property-inline-form .input,
+.property-inline-form .select-trigger {
+  height: 32px;
+}
+
+.property-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.property-score-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.property-score-inputs .input {
+  min-width: 0;
+  padding-inline: 7px;
+}
+
+.property-options {
+  display: grid;
+  gap: 6px;
+}
+
+.property-option,
+.property-boolean {
+  position: relative;
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.property-option:hover .checkbox-control,
+.property-boolean:hover .checkbox-control {
+  box-shadow: 0 0 0 1px var(--text-tertiary), inset 0 1px 1px rgb(0 0 0 / 4%);
+}
+
+.detail-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 14px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.detail-add-button {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 9px 0 7px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+.detail-add-button:hover {
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+.detail-add-button svg {
+  flex: 0 0 auto;
+}
+
+.detail-footnote {
+  margin: 18px 0 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+/* ---- Edit dialog ---- */
 
 .grade-fields {
   min-width: 0;
@@ -793,11 +1003,48 @@ progress.progress::-moz-progress-bar {
   margin: 0;
 }
 
-@media (width <= 520px) {
-  .grade-input-grid {
+/* Breakpoints for this page live here, in order, so the wider rule can never
+   win over the narrower one through import order. */
+@media (width <= 1100px) {
+  .task-detail-page .split-layout {
+    grid-template-columns: minmax(0, 1fr) 232px;
+    gap: 36px;
+  }
+}
+
+@media (width <= 900px) {
+  .task-detail-page .split-layout {
     grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
   }
 
+  .task-headline h1 {
+    max-width: none;
+  }
+}
+
+@media (width <= 640px) {
+  .task-headline-row {
+    display: grid;
+    gap: 14px;
+  }
+
+  .task-headline h1 {
+    font-size: 24px;
+  }
+
+  .comment-draft-meta kbd {
+    display: none;
+  }
+
+  .pace-caption {
+    display: grid;
+    gap: 6px;
+  }
+}
+
+@media (width <= 520px) {
+  .grade-input-grid,
   .reminder-fields {
     grid-template-columns: minmax(0, 1fr);
   }

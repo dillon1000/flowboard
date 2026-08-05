@@ -199,8 +199,9 @@ test('moves board cards and completes every core task-detail action', async ({ p
   expect(taskSidebar).not.toBeNull();
   expect(taskSidebar!.x).toBeGreaterThan(taskMain!.x + taskMain!.width);
 
-  const editButton = page.getByRole('button', { name: 'Edit task' });
-  await editButton.click();
+  const moreActions = page.getByRole('button', { name: 'More task actions' });
+  await moreActions.click();
+  await page.getByRole('menuitem', { name: 'Edit task' }).click();
   await expect(page.locator('#edit-title')).toBeFocused();
   await expect(page.locator('#edit-description')).toHaveAttribute('maxlength', '5000');
   await page.getByLabel('Due date').click();
@@ -209,20 +210,21 @@ test('moves board cards and completes every core task-detail action', async ({ p
   await calendar.locator('.flatpickr-day:not(.flatpickr-disabled):not(.prevMonthDay):not(.nextMonthDay)').first().click();
   await expect(page.locator('#edit-due')).toHaveValue(/^\d{4}-\d{2}-\d{2}$/);
   await page.keyboard.press('Escape');
-  await expect(editButton).toBeFocused();
-  await editButton.click();
+  await expect(moreActions).toBeFocused();
+  await moreActions.click();
+  await page.getByRole('menuitem', { name: 'Edit task' }).click();
   await page.locator('#edit-description').fill('**Browser checked** with native Svelte state.');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.locator('.task-description strong')).toHaveText('Browser checked');
 
-  const promote = page.getByRole('button', { name: 'Promote' });
-  await promote.click();
-  const promoteMenu = page.getByRole('listbox', { name: 'Change task status' });
-  await expect(promoteMenu).toBeVisible();
-  await promoteMenu.getByRole('option', { name: 'Review', exact: true }).click();
+  const statusTrigger = page.locator('.task-status-trigger');
+  await statusTrigger.click();
+  const statusMenu = page.getByRole('listbox', { name: 'Change task status' });
+  await expect(statusMenu).toBeVisible();
+  await statusMenu.getByRole('option', { name: 'Review', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Task status updated');
-  await expect(promote).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.locator('.task-facts .badge.status')).toHaveText('Review');
+  await expect(statusTrigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(statusTrigger.locator('.badge.status')).toHaveText('Review');
 
   await page.getByLabel('New checklist item').fill('Verify native checklist');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
@@ -252,8 +254,10 @@ test('moves board cards and completes every core task-detail action', async ({ p
   await uploadForm.getByRole('button', { name: 'Upload' }).click();
   await expect(page.getByText('browser-proof.txt')).toBeVisible();
 
-  await page.getByRole('button', { name: /^Follow/ }).click();
-  await expect(page.getByRole('button', { name: /^Unfollow/ })).toBeVisible();
+  await moreActions.click();
+  await page.getByRole('menuitem', { name: /^Follow/ }).click();
+  await moreActions.click();
+  await expect(page.getByRole('menuitem', { name: /^Unfollow/ })).toBeVisible();
   expect(errors).toEqual([]);
 });
 

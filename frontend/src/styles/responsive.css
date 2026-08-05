@@ -9,15 +9,7 @@
   }
 }
 
-@media (width <= 1100px) {
-  .split-layout {
-    gap: 28px;
-    grid-template-columns: minmax(0, 1fr) 272px;
-  }
-}
-
 @media (width <= 900px) {
-  .split-layout,
   .settings-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 28px;
@@ -222,7 +214,6 @@
   .stats,
   .board-list,
   .form-grid,
-  .assignment-plan-grid,
   .api-endpoints > div {
     grid-template-columns: minmax(0, 1fr);
   }
