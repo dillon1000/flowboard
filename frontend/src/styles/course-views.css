@@ -260,20 +260,25 @@
 
 .lane-card {
   position: relative;
+  --lane-card-glow: var(--stage, var(--ds-gray-600));
   display: grid;
   gap: 7px;
   padding: 11px 12px 11px 14px;
   border-radius: var(--radius-medium);
   color: var(--text);
-  background: var(--surface-raised);
+  background: radial-gradient(
+      circle at 0 0,
+      color-mix(in srgb, var(--lane-card-glow) 18%, transparent),
+      transparent 76px
+    ),
+    var(--surface-raised);
   box-shadow: var(--shadow-border);
   cursor: pointer;
   text-decoration: none;
-  transition: box-shadow var(--duration) var(--ease), background-color var(--duration) var(--ease);
+  transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
 }
 
-/* The rail is the one place an assignment's stage is shown in colour. */
-.lane-card::before,
+/* Briefs remain compact rows, so their stage colour stays as a small rail. */
 .brief::before {
   position: absolute;
   top: 0;
@@ -286,6 +291,12 @@
 }
 
 .lane-card:hover {
+  background: radial-gradient(
+      circle at 0 0,
+      color-mix(in srgb, var(--lane-card-glow) 22%, transparent),
+      transparent 82px
+    ),
+    var(--surface-hover);
   box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
 }
 
