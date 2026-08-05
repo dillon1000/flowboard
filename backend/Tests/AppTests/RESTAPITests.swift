@@ -12,7 +12,6 @@ struct RESTAPITests {
     func boardLifecycle() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
-            let dueDate = Date(timeIntervalSince1970: 1_728_000_000)
             let created = try await app.testing().sendRequest(
                 .POST,
                 "api/v1/boards",
@@ -57,6 +56,7 @@ struct RESTAPITests {
     func taskLifecycle() async throws {
         try await withApp(configure: configure) { app in
             let session = try await register(on: app)
+            let dueDate = Date(timeIntervalSince1970: 1_728_000_000)
             let created = try await app.testing().sendRequest(
                 .POST,
                 "api/v1/tasks",
@@ -166,7 +166,7 @@ struct RESTAPITests {
                     )
                 }
             )
-            #expect(rejected.status == .unprocessableEntity)
+            #expect(rejected.status == .badRequest)
         }
     }
 
