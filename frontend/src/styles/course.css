@@ -367,13 +367,13 @@
   overscroll-behavior-y: contain;
 }
 
-/* The kanban spends every pixel it is given on columns. The reading views do
-   not: they keep a measure and stay anchored to the header's gutter. */
+/* The board spends every pixel it is given on lanes. The reading views do not:
+   they keep a measure and stay anchored to the header's gutter. */
 .course-canvas:not(.flush) > * {
   max-width: 1280px;
 }
 
-/* The kanban manages its own scrolling in both axes. */
+/* The board manages its own scrolling in both axes. */
 .course-canvas.flush {
   padding: 14px 28px 16px 40px;
   overflow: hidden;

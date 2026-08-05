@@ -124,242 +124,6 @@
 }
 
 /* ==========================================================================
-   Kanban
-   ========================================================================== */
-
-.kanban {
-  display: grid;
-  height: 100%;
-  grid-auto-columns: minmax(288px, 1fr);
-  grid-auto-flow: column;
-  gap: 12px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-gutter: stable;
-}
-
-/* overflow:hidden is what keeps the header's full-bleed rule from squaring off
-   the column's rounded corners. */
-.kanban-column {
-  display: flex;
-  min-height: 0;
-  max-height: 100%;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: var(--radius-large);
-  background: var(--surface-sunken);
-  box-shadow: var(--shadow-border);
-}
-
-.column-header {
-  display: flex;
-  min-height: 44px;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-sunken);
-}
-
-.column-dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 auto;
-  border-radius: var(--radius-full);
-  background: var(--ds-gray-600);
-  box-shadow: 0 0 0 3px color-mix(in srgb, currentcolor 0%, transparent);
-}
-
-.column-dot.progress,
-.column-dot.workflow-blue {
-  background: var(--ds-blue-700);
-}
-
-.column-dot.review,
-.column-dot.workflow-purple {
-  background: var(--ds-purple-700);
-}
-
-.column-dot.done,
-.column-dot.workflow-green {
-  background: var(--ds-green-700);
-}
-
-.column-dot.low,
-.column-dot.workflow-gray {
-  background: var(--ds-gray-600);
-}
-
-.column-dot.medium,
-.column-dot.workflow-amber {
-  background: var(--ds-amber-700);
-}
-
-.column-dot.high,
-.column-dot.workflow-orange {
-  background: var(--ds-amber-800);
-}
-
-.column-dot.urgent,
-.column-dot.workflow-red {
-  background: var(--ds-red-800);
-}
-
-.column-dot.workflow-custom {
-  background: var(--workflow-color);
-}
-
-.column-header strong {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
-.column-header .count {
-  display: inline-flex;
-  min-width: 20px;
-  height: 20px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 6px;
-  margin-left: auto;
-  border-radius: var(--radius-full);
-  color: var(--text-tertiary);
-  background: var(--surface-active);
-  font-size: 11px;
-}
-
-/* Each column scrolls independently so long columns never stretch the board. */
-.column-tasks {
-  display: grid;
-  flex: 1;
-  min-height: 0;
-  align-content: start;
-  gap: 8px;
-  padding: 8px;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-}
-
-.column-tasks[data-drop-target='true'] {
-  background: var(--surface-hover);
-}
-
-.column-tasks:empty::after {
-  display: grid;
-  min-height: 76px;
-  place-items: center;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-medium);
-  color: var(--text-tertiary);
-  content: 'Drop tasks here';
-  font-size: 12px;
-}
-
-.task-card {
-  position: relative;
-  display: block;
-  padding: 12px;
-  border-radius: var(--radius-medium);
-  color: var(--text);
-  background: var(--surface-raised);
-  box-shadow: var(--shadow-border), var(--shadow-small);
-  cursor: grab;
-  text-decoration: none;
-  transition: box-shadow var(--duration) var(--ease), transform var(--duration) var(--ease);
-}
-
-.task-card[data-moving='true'] {
-  opacity: 0.58;
-  pointer-events: none;
-}
-
-.task-card.drop-before::before,
-.task-card.drop-after::after {
-  position: absolute;
-  right: 4px;
-  left: 4px;
-  height: 2px;
-  border-radius: var(--radius-full);
-  background: var(--ds-blue-700);
-  content: '';
-}
-
-.task-card.drop-before::before {
-  top: -5px;
-}
-
-.task-card.drop-after::after {
-  bottom: -5px;
-}
-
-.task-card:hover {
-  box-shadow: 0 0 0 1px var(--ds-gray-alpha-500), var(--shadow-medium);
-  transform: translateY(-1px);
-}
-
-.task-card:active {
-  cursor: grabbing;
-  transform: none;
-}
-
-.task-card-ghost {
-  opacity: 0.4;
-}
-
-.task-card-drag {
-  box-shadow: 0 0 0 1px var(--ds-gray-alpha-500), var(--shadow-modal);
-  transform: rotate(1.5deg);
-}
-
-.task-card h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.45;
-}
-
-.task-card p {
-  display: -webkit-box;
-  margin: 6px 0 0;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.task-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.task-badges {
-  display: flex;
-  gap: 10px;
-  margin-left: auto;
-  color: var(--text-tertiary);
-  font-size: 11px;
-}
-
-.task-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.task-badge svg {
-  width: 12px;
-  height: 12px;
-}
-
-/* ==========================================================================
    Tables
    ========================================================================== */
 
@@ -433,4 +197,53 @@
   margin: 0 6px;
   color: var(--text-tertiary);
   content: '·';
+}
+
+/* ==========================================================================
+   Empty states
+   ========================================================================== */
+
+.empty-state {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  padding: 40px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-large);
+  text-align: center;
+}
+
+.empty-state-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  margin: 0 auto 16px;
+  border-radius: var(--radius-medium);
+  color: var(--text-tertiary);
+  background: var(--surface-hover);
+}
+
+.empty-state-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.empty-state h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.empty-state p {
+  max-width: 380px;
+  margin: 6px auto 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.empty-state .button {
+  margin-top: 20px;
 }
