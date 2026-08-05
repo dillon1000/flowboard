@@ -1,0 +1,578 @@
+/* ==========================================================================
+   Course workspace
+
+   The course page shares the planner frame used by the week and the term: a
+   sunken panel holds the course's standing, and the active view scrolls beside
+   it between a header and a status footer. Everything that used to crowd the
+   old two-row board bar — counts, grouping, filters, sorts — now sits in the
+   panel or the footer, so the header carries only the course and its actions.
+   ========================================================================== */
+
+.course-page {
+  padding: 0;
+  overflow: hidden;
+}
+
+.course-page > * {
+  max-width: none;
+}
+
+.course-workspace {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: 268px minmax(0, 1fr);
+}
+
+/* ==========================================================================
+   Standing panel
+   ========================================================================== */
+
+.course-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  padding: 22px 14px 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+/* The grade ledger totals every score already returned for this course. It is
+   the question a course page is opened to answer, so it leads the panel. */
+.course-grade {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px;
+  margin-bottom: 18px;
+}
+
+.course-grade h2 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.course-grade-score {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  color: var(--text);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-grade-score small {
+  color: var(--text-tertiary);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.course-grade-score.empty {
+  color: var(--text-tertiary);
+}
+
+.course-grade-track {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--ds-gray-alpha-200);
+}
+
+.course-grade-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ds-green-700);
+  transition: width 240ms var(--ease-out);
+}
+
+.course-grade-detail {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.course-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px 4px;
+  margin: 0 0 18px;
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.course-stats > div {
+  display: grid;
+  gap: 4px;
+  padding: 0 10px;
+}
+
+.course-stats > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.course-stats dt {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.course-stats dd {
+  margin: 0;
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The stage census carries the board's shape into the table, calendar and
+   gallery views, which have no columns of their own to read it from. */
+.course-ladder {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+
+.course-ladder h2 {
+  padding: 0 10px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.course-ladder-rows {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.course-ladder-row {
+  display: grid;
+  min-height: 32px;
+  grid-template-columns: 8px minmax(0, 1fr) 52px 22px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.course-ladder-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-ladder-track {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--ds-gray-alpha-200);
+}
+
+.course-ladder-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ds-gray-alpha-500);
+  transition: width 200ms var(--ease-out);
+}
+
+/* Finished work is the one stage worth reading in colour. */
+.course-ladder-bar.complete {
+  background: var(--ds-green-700);
+}
+
+.course-ladder-count {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 11px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-ladder-key {
+  padding: 10px 12px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   Course header
+   ========================================================================== */
+
+.course-main {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.course-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 24px 28px 20px 40px;
+}
+
+.course-title {
+  min-width: 0;
+}
+
+.course-title h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-title p {
+  max-width: 68ch;
+  margin: 7px 0 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.course-actions .button.primary {
+  color: #fff;
+  background: var(--ds-blue-700);
+}
+
+.course-actions .button.primary:hover {
+  background: var(--ds-blue-800);
+}
+
+/* ==========================================================================
+   View tabs
+   ========================================================================== */
+
+/* The rule under the tabs is an inset shadow, not a border: the row scrolls
+   horizontally on narrow screens, and a scroll container would clip an active
+   underline drawn past its padding box. */
+.course-views {
+  display: flex;
+  min-height: 42px;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: 20px;
+  padding: 0 28px 0 40px;
+  box-shadow: inset 0 -1px 0 var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.course-views::-webkit-scrollbar {
+  display: none;
+}
+
+.view-tab {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--duration) var(--ease);
+}
+
+.view-tab:hover {
+  color: var(--text);
+}
+
+.view-tab.active {
+  color: var(--text);
+}
+
+.view-tab::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  content: '';
+  opacity: 0;
+  transform: scaleX(0.6);
+  transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.view-tab.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* ==========================================================================
+   View canvas
+   ========================================================================== */
+
+.course-canvas {
+  min-height: 0;
+  flex: 1;
+  padding: 20px 28px 24px 40px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* The kanban spends every pixel it is given on columns. The reading views do
+   not: they keep a measure and stay anchored to the header's gutter. */
+.course-canvas:not(.flush) > * {
+  max-width: 1280px;
+}
+
+/* The kanban manages its own scrolling in both axes. */
+.course-canvas.flush {
+  padding: 14px 28px 16px 40px;
+  overflow: hidden;
+}
+
+.course-error {
+  flex: 0 0 auto;
+  margin: 14px 28px 0 40px;
+}
+
+/* ==========================================================================
+   Status footer
+   ========================================================================== */
+
+.course-footer {
+  display: flex;
+  min-height: 46px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 0 28px 0 40px;
+  border-top: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.course-view-summary {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-view-summary a,
+.course-gap {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--duration) var(--ease);
+}
+
+.course-view-summary a:hover,
+a.course-gap:hover {
+  color: var(--text);
+}
+
+.course-gap {
+  font-size: 13px;
+}
+
+.course-footer svg {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   Responsive course
+   ========================================================================== */
+
+@media (width <= 1380px) {
+  .course-workspace {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .course-header,
+  .course-views,
+  .course-canvas,
+  .course-canvas.flush,
+  .course-footer {
+    padding-inline: 24px;
+  }
+
+  .course-error {
+    margin-inline: 24px;
+  }
+}
+
+@media (width <= 1120px) {
+  .course-title h1 {
+    font-size: 26px;
+  }
+
+  .course-header {
+    padding-block: 20px 16px;
+  }
+}
+
+@media (width <= 900px) {
+  /* The panel folds up into a strip: the grade and the counts stay, the stage
+     census goes, because the board below already shows the same columns. */
+  .course-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .course-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .course-grade {
+    gap: 6px;
+    padding: 0;
+    margin: 0;
+  }
+
+  .course-grade-score {
+    font-size: 28px;
+  }
+
+  .course-grade-score small {
+    font-size: 14px;
+  }
+
+  .course-stats {
+    margin: 0;
+  }
+
+  .course-ladder,
+  .course-ladder-key {
+    display: none;
+  }
+}
+
+@media (width <= 820px) {
+  /* Below the sidebar breakpoint the app frame is dropped and the document
+     scrolls again, so the course must grow with its content. */
+  .course-page {
+    overflow: visible;
+  }
+
+  .course-workspace {
+    height: auto;
+  }
+
+  .course-main {
+    overflow: visible;
+  }
+
+  .course-canvas,
+  .course-canvas.flush {
+    overflow: visible;
+  }
+}
+
+@media (width <= 640px) {
+  .course-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .course-header {
+    display: grid;
+    gap: 16px;
+    padding: 20px 16px 14px;
+  }
+
+  .course-title h1 {
+    font-size: 24px;
+    white-space: normal;
+  }
+
+  .course-title p {
+    white-space: normal;
+  }
+
+  .course-actions > .button {
+    flex: 1;
+  }
+
+  .course-views,
+  .course-canvas,
+  .course-canvas.flush,
+  .course-footer {
+    padding-inline: 16px;
+  }
+
+  .course-error {
+    margin-inline: 16px;
+  }
+
+  /* Two lines rather than one squeezed row. */
+  .course-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    padding-block: 12px;
+  }
+}
