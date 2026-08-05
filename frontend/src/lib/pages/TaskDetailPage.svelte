@@ -408,7 +408,7 @@
       {#if detail.canEdit}<button class="button" type="button" onclick={() => (editOpen = true)}>Edit task</button>{/if}
     </div>
   </header>
-  {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
+  {#if requestError && !remindersOpen}<p class="error-message" role="alert">{requestError}</p>{/if}
 
   <div class="split-layout">
     <div class="task-main">
