@@ -32,9 +32,17 @@ struct StudyPlannerTests {
             priority: .low,
             estimatedMinutes: nil
         )
+        let focusTask = try studyTaskContext(
+            board: course,
+            title: "Outline lab report",
+            dueAt: try #require(studyDate("2026-08-07")),
+            priority: .medium,
+            estimatedMinutes: 45,
+            startAt: monday
+        )
 
         let planner = OverviewPageContext(
-            tasks: [dueTask, unscheduledTask],
+            tasks: [dueTask, unscheduledTask, focusTask],
             courses: [navigation],
             selectedCourseID: nil,
             referenceDate: monday
@@ -44,6 +52,7 @@ struct StudyPlannerTests {
         #expect(planner.days.count == 7)
         #expect(planner.days[0].weekdayLabel == "Mon")
         #expect(planner.days[0].isToday)
+        #expect(planner.days[0].focusBlocks.first?.title == "Outline lab report")
         #expect(planner.days[2].assignments.first?.title == "Finish calculus problem set")
         #expect(planner.days[2].assignments.first?.typeName == "Problem Set")
         #expect(planner.days[2].workloadLabel == "Heavy")
@@ -85,7 +94,8 @@ private func studyTaskContext(
     title: String,
     dueAt: Date?,
     priority: TaskPriority,
-    estimatedMinutes: Int?
+    estimatedMinutes: Int?,
+    startAt: Date? = nil
 ) throws -> TaskCardContext {
     let task = Task(
         id: UUID(),
@@ -94,6 +104,7 @@ private func studyTaskContext(
         title: title,
         priority: priority,
         position: 1_000,
+        startAt: startAt,
         dueAt: dueAt,
         estimatedMinutes: estimatedMinutes
     )

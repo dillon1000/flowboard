@@ -506,6 +506,74 @@
   white-space: nowrap;
 }
 
+/* Focus blocks use the existing start date as an intentional work day. They
+   remain visually lighter than deadlines, which are still the main schedule. */
+.study-focus-blocks {
+  display: grid;
+  grid-template-columns: 128px repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  align-items: center;
+  padding: 12px 24px 12px 32px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.study-focus-heading {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.study-focus-assignment {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  text-decoration: none;
+}
+
+.study-focus-assignment:hover {
+  background: var(--surface-hover);
+}
+
+.study-focus-assignment > span {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-focus-assignment strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-focus-assignment small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.study-focus-assignment small svg {
+  width: 12px;
+  height: 12px;
+}
+
 .study-assignment-meta small {
   color: var(--text-tertiary);
   font-size: 12px;
@@ -582,15 +650,21 @@
 }
 
 .study-week-footer a,
-.study-week-footer span {
+.study-week-footer span,
+.study-week-footer button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  border: 0;
   color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
   text-decoration: none;
 }
 
-.study-week-footer a:hover {
+.study-week-footer a:hover,
+.study-week-footer button:hover {
   color: var(--text);
 }
 
@@ -783,5 +857,10 @@
   .study-no-assignments {
     min-height: 88px;
     padding-inline: 14px;
+  }
+
+  .study-focus-blocks {
+    grid-template-columns: 1fr;
+    padding: 12px 14px;
   }
 }
