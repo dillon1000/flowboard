@@ -540,24 +540,44 @@
 }
 
 .study-day-content-shell {
-  display: grid;
   min-width: 0;
-  grid-template-rows: 1fr;
-  opacity: 1;
-  transform: translateY(0);
-  transition: grid-template-rows 220ms var(--ease-out), opacity 160ms var(--ease-out), transform 220ms var(--ease-out);
-}
-
-.study-day-content-shell.collapsed {
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transform: translateY(-4px);
 }
 
 .study-day-content {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.study-day-summary {
+  display: grid;
+  min-height: 61px;
+  grid-template-columns: auto minmax(160px, 1fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  padding: 10px 154px 10px 24px;
+}
+
+.study-day-summary-count {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.study-day-summary strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-day-summary-meta {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .study-assignment-scroller {
@@ -603,80 +623,92 @@
 }
 
 .study-assignment {
+  position: relative;
   display: grid;
-  min-height: 78px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0;
-  gap: 8px 16px;
-  padding: 11px 13px;
-  border-radius: var(--radius-medium);
+  min-height: 108px;
+  grid-template-rows: auto minmax(34px, 1fr) auto;
+  gap: 11px;
+  padding: 14px 15px;
+  border-radius: var(--radius-large);
   color: var(--text);
   background: var(--surface);
   box-shadow: var(--shadow-border);
   text-decoration: none;
-  transition: background-color var(--duration) var(--ease);
+  transition: background-color 150ms var(--ease), box-shadow 150ms var(--ease);
 }
 
 .study-assignment + .study-assignment {
   border-left: 0;
 }
 
-.study-assignment:hover {
-  background: var(--surface-hover);
-}
-
-.study-assignment-main {
-  grid-column: 1 / -1;
-  display: grid;
+.study-assignment-header,
+.study-assignment-footer {
+  display: flex;
   min-width: 0;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.study-assignment-main > strong {
+.study-assignment > strong {
+  display: -webkit-box;
   overflow: hidden;
-  font-size: 14px;
+  align-self: center;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.015em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .study-assignment-course {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 7px;
+  overflow: hidden;
   color: var(--text-tertiary);
   font-size: 11px;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.study-assignment-meta {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
-.study-assignment > .study-assignment-meta:nth-child(2) {
-  grid-column: auto;
-}
-
-.study-assignment-type {
-  display: none;
-}
-
-.study-assignment > .study-assignment-meta:last-child {
-  grid-column: auto;
-  justify-self: end;
-}
-
-.study-assignment-meta > span {
+.study-assignment-due,
+.study-assignment-footer > span {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 5px;
+  color: var(--text-tertiary);
+  font-size: 11px;
   white-space: nowrap;
+}
+
+.study-assignment-footer {
+  justify-content: flex-start;
+}
+
+.study-assignment-open {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  opacity: 0.55;
+  transition: color 150ms var(--ease), opacity 150ms var(--ease), transform 150ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .study-assignment:hover {
+    background: var(--surface-hover);
+    box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
+  }
+
+  .study-assignment:hover .study-assignment-open {
+    color: var(--text);
+    opacity: 1;
+    transform: translate(2px, -2px);
+  }
 }
 
 /* Focus blocks use the existing start date as an intentional work day. They
@@ -747,29 +779,10 @@
   height: 12px;
 }
 
-.study-assignment-meta small {
-  color: var(--text-tertiary);
-  font-size: 12px;
-}
-
-.study-assignment-meta svg,
-.study-assignment-type svg {
-  width: 17px;
-  height: 17px;
+.study-assignment-due svg,
+.study-assignment-footer svg {
   flex: 0 0 auto;
   color: var(--text-tertiary);
-}
-
-.study-assignment-type {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 15px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .study-day-load {
@@ -922,9 +935,6 @@
     grid-template-columns: 110px minmax(0, 1fr);
   }
 
-  .study-assignment-type {
-    display: none;
-  }
 }
 
 @media (width <= 820px) {
@@ -1049,15 +1059,29 @@
   }
 
   .study-assignment {
-    min-height: 88px;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
+    min-height: 104px;
+    gap: 10px;
     padding: 12px 14px;
   }
 
-  .study-assignment > .study-assignment-meta:last-child,
   .study-day-load-label {
     display: none;
+  }
+
+  .study-day-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding-right: 58px;
+    padding-left: 14px;
+  }
+
+  .study-day-summary-count {
+    display: none;
+  }
+
+  .study-day-summary-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .study-day-load {
@@ -1083,10 +1107,33 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .study-day-content-shell,
   .study-day-load,
   .study-day-toggle-icons svg,
-  .study-workload-settings {
+  .study-workload-settings,
+  .study-assignment-open {
     transition-duration: 1ms;
+  }
+}
+
+::view-transition-group(study-day-0),
+::view-transition-group(study-day-1),
+::view-transition-group(study-day-2),
+::view-transition-group(study-day-3),
+::view-transition-group(study-day-4),
+::view-transition-group(study-day-5),
+::view-transition-group(study-day-6) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(study-day-0),
+  ::view-transition-group(study-day-1),
+  ::view-transition-group(study-day-2),
+  ::view-transition-group(study-day-3),
+  ::view-transition-group(study-day-4),
+  ::view-transition-group(study-day-5),
+  ::view-transition-group(study-day-6) {
+    animation-duration: 1ms;
   }
 }

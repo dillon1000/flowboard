@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { OverviewPageContext, StudyCourseContext, StudyDayContext, StudyPlanCandidateContext, TaskResponse } from '$lib/types';
-  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, StrategyIcon as Strategy, XIcon as X } from 'phosphor-svelte';
+  import { ArrowUpRightIcon as OpenAssignment, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, StrategyIcon as Strategy, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
@@ -69,7 +69,20 @@
   }
 
   function toggleDay(dateLabel: string): void {
-    expandedDays[dateLabel] = !expandedDays[dateLabel];
+    const update = () => {
+      expandedDays[dateLabel] = !expandedDays[dateLabel];
+    };
+    const transitionDocument = document as Document & {
+      startViewTransition?: (callback: () => void) => unknown;
+    };
+
+    // A view transition moves the surrounding day rows on the compositor. The
+    // state still changes immediately on unsupported or reduced-motion clients.
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || !transitionDocument.startViewTransition) {
+      update();
+      return;
+    }
+    transitionDocument.startViewTransition(update);
   }
 
   function workloadForDay(day: StudyDayContext): { label: string; className: string } {
@@ -203,20 +216,42 @@
       </header>
 
       <div class="study-days" aria-label={`Assignments due ${overview.weekLabel}`}>
-        {#each overview.days as day}
-          <section class:today={day.isToday} class:collapsed={expandedDays[day.dateLabel] === false} class="study-day">
+        {#each overview.days as day, index}
+          <section class:today={day.isToday} class:collapsed={expandedDays[day.dateLabel] === false} class="study-day" style={`view-transition-name: study-day-${index}`}>
             <div class="study-day-date"><span>{day.weekdayLabel}</span><strong>{day.dateLabel}</strong>{#if day.isToday}<small>Today</small>{/if}</div>
-            <div class:collapsed={expandedDays[day.dateLabel] === false} class="study-day-content-shell" aria-hidden={expandedDays[day.dateLabel] === false} inert={expandedDays[day.dateLabel] === false}>
+            <div class="study-day-content-shell">
+            {#if expandedDays[day.dateLabel] === false}
+              <div class="study-day-summary">
+                {#if day.hasAssignments}
+                  <span class="study-day-summary-count">{day.assignmentCount} {day.assignmentCount === 1 ? 'deadline' : 'deadlines'}</span>
+                  <strong>{day.assignments[0].title}</strong>
+                  <span class="study-day-summary-meta">{day.assignments[0].dueTime} · {day.assignments[0].effortLabel}{#if day.assignmentCount > 1} · +{day.assignmentCount - 1} more{/if}</span>
+                {:else if day.hasFocusBlocks}
+                  <span class="study-day-summary-count">{day.focusBlockCount} planned</span>
+                  <strong>{day.focusBlocks[0].title}</strong>
+                  <span class="study-day-summary-meta">{day.focusBlocks[0].effortLabel}</span>
+                {:else}
+                  <span class="study-day-summary-count">Open day</span>
+                  <strong>No deadlines or focus blocks</strong>
+                {/if}
+              </div>
+            {:else}
               <div class="study-day-content">
               {#if day.hasAssignments}
                 <div class="study-assignment-scroller" use:scrollFades>
                   <div class="study-assignment-track">
                     {#each day.assignments as assignment}
                       <a class="study-assignment" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}>
-                        <span class="study-assignment-main"><span class="study-assignment-course"><span class={`study-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>{assignment.courseName}</span><strong>{assignment.title}</strong></span>
-                        <span class="study-assignment-meta"><span>{assignment.dueTime}</span><small>Due</small></span>
-                        <span class="study-assignment-type"><FileText size={15} />{assignment.typeName}</span>
-                        <span class="study-assignment-meta"><span><Clock3 size={13} />{assignment.effortLabel}</span><small>Est. effort</small></span>
+                        <span class="study-assignment-header">
+                          <span class="study-assignment-course"><span class={`study-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>{assignment.courseName}</span>
+                          <span class="study-assignment-due"><CalendarDays size={13} />{assignment.dueTime}</span>
+                        </span>
+                        <strong title={assignment.title}>{assignment.title}</strong>
+                        <span class="study-assignment-footer">
+                          <span><FileText size={14} />{assignment.typeName}</span>
+                          <span><Clock3 size={14} />{assignment.effortLabel}</span>
+                          <OpenAssignment class="study-assignment-open" size={14} aria-hidden="true" />
+                        </span>
                       </a>
                     {/each}
                   </div>
@@ -233,6 +268,7 @@
                 </div>
               {/if}
               </div>
+            {/if}
             </div>
             <button class:collapsed={expandedDays[day.dateLabel] === false} class={`study-day-load ${workloadForDay(day).className}`} type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{workloadForDay(day).label}</span><span class="study-day-toggle-icons" aria-hidden="true"><Minus class="collapse-icon" size={13} /><Plus class="expand-icon" size={13} /></span></button>
           </section>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { hideTaskPreview, taskPreviewState } from '$lib/ui/taskPreview';
+  import { ArrowRightIcon as ArrowRight, NotePencilIcon as Note, UserCircleIcon as User } from 'phosphor-svelte';
 </script>
 
 <svelte:window onscroll={() => hideTaskPreview()} onresize={() => hideTaskPreview()} />
@@ -8,17 +9,21 @@
   {@const preview = $taskPreviewState}
   <aside
     class="task-preview"
-    data-open="true"
+    data-open={preview.open}
+    data-motion={preview.motion}
+    data-side={preview.side}
     style={`left: ${preview.left}px; top: ${preview.top}px`}
     aria-hidden="true"
   >
-    <span class="preview-board">{preview.task.boardName}</span>
-    <h3>{preview.task.title}</h3>
-    <div class="preview-badges">
-      <span class={`badge status ${preview.task.statusColorClass}`} style={preview.task.statusColorStyle}>{preview.task.statusName}</span>
-      <span class={`badge ${preview.task.priorityColorClass}`} style={preview.task.priorityColorStyle}>{preview.task.priorityName}</span>
+    <div class="preview-heading">
+      <span>Quick context</span>
+      <div class="preview-badges">
+        <span class={`badge status ${preview.task.statusColorClass}`} style={preview.task.statusColorStyle}>{preview.task.statusName}</span>
+        <span class={`badge ${preview.task.priorityColorClass}`} style={preview.task.priorityColorStyle}>{preview.task.priorityName}</span>
+      </div>
     </div>
-    {#if preview.task.description}<p class="preview-body">{preview.task.description}</p>{/if}
-    <dl><dt>Assignee</dt><dd>{preview.task.assigneeName}</dd><dt>Due</dt><dd>{preview.task.dueDisplay}</dd></dl>
+    <div class:empty={!preview.task.description} class="preview-note"><Note size={15} /><span>{preview.task.description || 'No notes have been added yet.'}</span></div>
+    <div class="preview-assignee"><User size={16} /><span><small>Assigned to</small><strong>{preview.task.assigneeName}</strong></span></div>
+    <span class="preview-open-hint">Open for checklist, files, and discussion <ArrowRight size={14} /></span>
   </aside>
 {/if}

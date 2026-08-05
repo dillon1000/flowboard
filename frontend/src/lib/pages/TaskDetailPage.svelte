@@ -3,7 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { AlarmIcon as Alarm, ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
+  import { AlarmIcon as Alarm, ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, ChatCircleIcon as ChatCircle, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperPlaneTiltIcon as Send, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
@@ -436,9 +436,25 @@
       </section>
 
       <section class="card comments-card">
-        <div class="card-header"><h2>Comments</h2><span class="badge count tabular">{detail.comments.length}</span></div>
-        <div class="comments-layout"><div class="comment-thread">{#if !detail.hasComments}<p class="comment-empty">No comments yet. Keep questions and feedback with the assignment.</p>{/if}{#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' }, 'Comment deleted')}>Delete</button></div>{/if}</div></div>{/each}</div>
-        {#if detail.canComment}<form class="comment-composer" onsubmit={addComment}><div><label class="sr-only" for="new-comment">Add a comment</label><textarea class="textarea" id="new-comment" value={commentBody} oninput={updateCommentDraft} onkeydown={submitCommentShortcut} maxlength="4000" placeholder="Leave a comment…" required></textarea><div class="form-actions"><span class="comment-draft-meta"><span class="tabular">{commentBody.length} / 4000</span><kbd>⌘/Ctrl Enter</kbd></span><button class="button primary small" type="submit" disabled={pending || !commentBody.trim()}>Comment</button></div></div></form>{/if}</div>
+        <div class="comments-header"><div><h2>Comments</h2><span class="badge count tabular">{detail.comments.length}</span></div><p>Keep questions and decisions with the assignment.</p></div>
+        <div class="comments-layout">
+          <div class="comment-thread">
+            {#if !detail.hasComments}<div class="comment-empty"><span><ChatCircle size={18} /></span><div><strong>Start the conversation</strong><small>Ask a question or leave context for later.</small></div></div>{/if}
+            {#each detail.comments as comment (comment.id)}<div class="comment"><Avatar avatar={comment.authorAvatar} /><div><div class="comment-meta"><strong>{comment.authorName}</strong><span>{comment.createdDisplay}</span></div><div class="comment-body">{comment.body}</div>{#if comment.canDelete}<div class="comment-actions"><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/tasks/${detail.task.id}/comments/${comment.id}`, { method: 'DELETE' }, 'Comment deleted')}>Delete</button></div>{/if}</div></div>{/each}
+          </div>
+          {#if detail.canComment}
+            <form class="comment-composer" onsubmit={addComment}>
+              <div class="comment-input-shell">
+                <label class="sr-only" for="new-comment">Add a comment</label>
+                <textarea class="textarea" id="new-comment" value={commentBody} oninput={updateCommentDraft} onkeydown={submitCommentShortcut} maxlength="4000" rows="2" placeholder="Write a comment…" required></textarea>
+                <div class="comment-composer-footer">
+                  <span class="comment-draft-meta"><span class="tabular">{commentBody.length ? `${commentBody.length} / 4000` : 'Draft saves automatically'}</span><kbd>⌘/Ctrl Enter</kbd></span>
+                  <button class="button primary small" type="submit" disabled={pending || !commentBody.trim()}><Send size={14} />Send</button>
+                </div>
+              </div>
+            </form>
+          {/if}
+        </div>
       </section>
     </div>
 

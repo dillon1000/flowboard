@@ -2,8 +2,6 @@ import type { StudyAssignmentContext, TaskCardContext } from '$lib/types';
 import { writable } from 'svelte/store';
 
 export interface TaskPreviewData {
-  title: string;
-  boardName: string;
   description: string;
   statusName: string;
   statusColorClass: string;
@@ -12,7 +10,6 @@ export interface TaskPreviewData {
   priorityColorClass: string;
   priorityColorStyle: string;
   assigneeName: string;
-  dueDisplay: string;
 }
 
 interface TaskPreviewState {
@@ -20,14 +17,17 @@ interface TaskPreviewState {
   task: TaskPreviewData;
   left: number;
   top: number;
+  side: 'left' | 'right';
+  open: boolean;
+  motion: boolean;
 }
 
 export const taskPreviewState = writable<TaskPreviewState | null>(null);
+let removeTimer: ReturnType<typeof setTimeout> | undefined;
+let hasShownPreview = false;
 
 export function previewFromTask(task: TaskCardContext): TaskPreviewData {
   return {
-    title: task.title,
-    boardName: task.boardName,
     description: task.description,
     statusName: task.statusName,
     statusColorClass: task.statusColorClass,
@@ -35,15 +35,12 @@ export function previewFromTask(task: TaskCardContext): TaskPreviewData {
     priorityName: task.priorityName,
     priorityColorClass: task.priorityColorClass,
     priorityColorStyle: task.priorityColorStyle,
-    assigneeName: task.assigneeName,
-    dueDisplay: task.dueDisplay
+    assigneeName: task.assigneeName
   };
 }
 
 export function previewFromAssignment(assignment: StudyAssignmentContext): TaskPreviewData {
   return {
-    title: assignment.title,
-    boardName: assignment.courseName,
     description: assignment.description,
     statusName: assignment.statusName,
     statusColorClass: assignment.statusColorClass,
@@ -51,13 +48,21 @@ export function previewFromAssignment(assignment: StudyAssignmentContext): TaskP
     priorityName: assignment.priorityName,
     priorityColorClass: assignment.priorityColorClass,
     priorityColorStyle: assignment.priorityCustomColor ? `--workflow-color: ${assignment.priorityCustomColor}` : '',
-    assigneeName: assignment.assigneeName,
-    dueDisplay: assignment.dueDisplay
+    assigneeName: assignment.assigneeName
   };
 }
 
 export function hideTaskPreview(anchor?: HTMLElement): void {
-  taskPreviewState.update((state) => !anchor || state?.anchor === anchor ? null : state);
+  clearTimeout(removeTimer);
+  taskPreviewState.update((state) => {
+    if (!state || (anchor && state.anchor !== anchor)) return state;
+    return { ...state, open: false };
+  });
+
+  // Keep the closed preview mounted until its pointer exit transition finishes.
+  removeTimer = setTimeout(() => {
+    taskPreviewState.update((state) => state?.open ? state : null);
+  }, 120);
 }
 
 /** Shows a delayed, viewport-bound task summary for pointer and keyboard users. */
@@ -65,22 +70,32 @@ export function taskPreview(node: HTMLElement, initialTask: TaskPreviewData) {
   let task = initialTask;
   let showTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function show(): void {
+  function show(motion: boolean): void {
+    clearTimeout(removeTimer);
     const bounds = node.getBoundingClientRect();
-    const previewWidth = 300;
-    const previewHeight = 260;
+    const previewWidth = 320;
+    const previewHeight = 220;
     const gap = 12;
     const margin = 12;
     let left = bounds.right + gap;
-    if (left + previewWidth > window.innerWidth - margin) left = bounds.left - previewWidth - gap;
+    let side: TaskPreviewState['side'] = 'right';
+    if (left + previewWidth > window.innerWidth - margin) {
+      left = bounds.left - previewWidth - gap;
+      side = 'left';
+    }
     left = Math.max(margin, Math.min(left, window.innerWidth - previewWidth - margin));
     const top = Math.max(margin, Math.min(bounds.top, window.innerHeight - previewHeight - margin));
-    taskPreviewState.set({ anchor: node, task, left, top });
+    taskPreviewState.set({ anchor: node, task, left, top, side, open: true, motion });
+    hasShownPreview = true;
   }
 
   function showSoon(): void {
     clearTimeout(showTimer);
-    showTimer = setTimeout(show, 180);
+    showTimer = setTimeout(() => show(true), hasShownPreview ? 40 : 140);
+  }
+
+  function showFromFocus(): void {
+    show(false);
   }
 
   function hide(): void {
@@ -90,7 +105,7 @@ export function taskPreview(node: HTMLElement, initialTask: TaskPreviewData) {
 
   node.addEventListener('pointerenter', showSoon);
   node.addEventListener('pointerleave', hide);
-  node.addEventListener('focus', show);
+  node.addEventListener('focus', showFromFocus);
   node.addEventListener('blur', hide);
   node.addEventListener('dragstart', hide);
 
@@ -102,7 +117,7 @@ export function taskPreview(node: HTMLElement, initialTask: TaskPreviewData) {
       hide();
       node.removeEventListener('pointerenter', showSoon);
       node.removeEventListener('pointerleave', hide);
-      node.removeEventListener('focus', show);
+      node.removeEventListener('focus', showFromFocus);
       node.removeEventListener('blur', hide);
       node.removeEventListener('dragstart', hide);
     }
