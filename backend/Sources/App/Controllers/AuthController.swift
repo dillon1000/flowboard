@@ -56,6 +56,9 @@ struct AuthController: RouteCollection {
         let input = try req.content.decode(UpdateProfileRequest.self)
         let user = try req.auth.require(User.self)
         user.name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let timeZoneIdentifier = try validatedTimeZoneIdentifier(input.timeZone) {
+            user.timeZoneIdentifier = timeZoneIdentifier
+        }
         try await user.update(on: req.db)
         return try UserResponse(user: user)
     }

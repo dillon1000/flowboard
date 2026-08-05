@@ -17,6 +17,7 @@ enum AuthService {
             email: email,
             passwordHash: Bcrypt.hash(input.password),
             profilePictureURL: nil,
+            timeZoneIdentifier: try validatedTimeZoneIdentifier(input.timeZone) ?? "UTC",
             oauthIdentity: nil,
             on: database
         )
@@ -29,6 +30,11 @@ enum AuthService {
             try user.verify(password: input.password)
         else {
             throw Abort(.unauthorized, reason: "The email or password is incorrect.")
+        }
+        if let timeZoneIdentifier = try validatedTimeZoneIdentifier(input.timeZone),
+           user.timeZoneIdentifier != timeZoneIdentifier {
+            user.timeZoneIdentifier = timeZoneIdentifier
+            try await user.update(on: database)
         }
         return user
     }
@@ -93,6 +99,7 @@ enum AuthService {
             email: email,
             passwordHash: Bcrypt.hash(OAuthService.randomURLSafeValue(byteCount: 48)),
             profilePictureURL: profilePictureURL,
+            timeZoneIdentifier: "UTC",
             oauthIdentity: (providerID, profile.providerUserID),
             on: database
         )
@@ -106,6 +113,7 @@ enum AuthService {
         email: String,
         passwordHash: String,
         profilePictureURL: String?,
+        timeZoneIdentifier: String,
         oauthIdentity: (providerID: String, providerUserID: String)?,
         on database: any Database
     ) async throws -> User {
@@ -115,7 +123,8 @@ enum AuthService {
             name: name,
             email: email,
             passwordHash: passwordHash,
-            profilePictureURL: profilePictureURL
+            profilePictureURL: profilePictureURL,
+            timeZoneIdentifier: timeZoneIdentifier
         )
 
         return try await database.transaction { transaction in

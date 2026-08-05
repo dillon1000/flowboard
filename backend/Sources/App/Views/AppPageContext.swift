@@ -77,6 +77,7 @@ struct AppPageContext: Encodable {
 struct CommonPageContext: Encodable {
     let userName: String
     let userEmail: String
+    let userTimeZone: String
     let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
 }
@@ -150,9 +151,10 @@ struct OverviewPageContext: Encodable {
         tasks: [TaskCardContext],
         courses: [BoardNavigationContext],
         selectedCourseID: UUID?,
+        timeZoneIdentifier: String = "UTC",
         referenceDate: Date = Date()
     ) {
-        let calendar = studyCalendar()
+        let calendar = planningCalendar(timeZoneIdentifier: timeZoneIdentifier)
         let today = calendar.startOfDay(for: referenceDate)
         let daysSinceMonday = (calendar.component(.weekday, from: today) + 5) % 7
         let weekStart = calendar.date(byAdding: .day, value: -daysSinceMonday, to: today) ?? today
@@ -181,7 +183,7 @@ struct OverviewPageContext: Encodable {
         self.hasCourses = defaultCourse != nil
         self.returnHref = selectedCourseID.map { "/app?course=\($0.uuidString)" } ?? "/app"
         self.days = weekDates.map { date in
-            let dateKey = inputDate(date)
+            let dateKey = planningDateKey(date, calendar: calendar)
             let dueTasks = activeTaskContexts
                 .filter { $0.dueInput == dateKey }
                 .sorted(by: studyTaskOrder)
@@ -202,7 +204,8 @@ struct OverviewPageContext: Encodable {
                 dueTasks: dueTasks,
                 focusTasks: focusTasks,
                 workloadTasks: workloadTasks,
-                courseColors: courseColors
+                courseColors: courseColors,
+                calendar: calendar
             )
         }
         self.workloadDays = days.map(StudyWorkloadDayContext.init)
@@ -284,10 +287,11 @@ struct StudyDayContext: Encodable {
         dueTasks: [TaskCardContext],
         focusTasks: [TaskCardContext],
         workloadTasks: [TaskCardContext],
-        courseColors: [UUID: String]
+        courseColors: [UUID: String],
+        calendar: Calendar
     ) {
-        self.weekdayLabel = studyDateLabel(date, format: "EEE")
-        self.dateLabel = studyDateLabel(date, format: "MMM d")
+        self.weekdayLabel = planningDateLabel(date, format: "EEE", calendar: calendar)
+        self.dateLabel = planningDateLabel(date, format: "MMM d", calendar: calendar)
         self.isToday = isToday
         self.assignments = dueTasks.map {
             StudyAssignmentContext(
@@ -414,31 +418,18 @@ struct StudyWorkloadDayContext: Encodable {
     }
 }
 
-private func studyCalendar() -> Calendar {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.locale = Locale(identifier: "en_US_POSIX")
-    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-    calendar.firstWeekday = 2
-    calendar.minimumDaysInFirstWeek = 4
-    return calendar
-}
-
 private func studyWeekLabel(start: Date, calendar: Calendar) -> String {
     let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
     let startMonth = calendar.component(.month, from: start)
     let endMonth = calendar.component(.month, from: end)
     if startMonth == endMonth {
-        return "\(studyDateLabel(start, format: "MMMM d"))–\(studyDateLabel(end, format: "d"))"
+        return planningDateLabel(start, format: "MMMM d", calendar: calendar)
+            + "–"
+            + planningDateLabel(end, format: "d", calendar: calendar)
     }
-    return "\(studyDateLabel(start, format: "MMM d"))–\(studyDateLabel(end, format: "MMM d"))"
-}
-
-private func studyDateLabel(_ date: Date, format: String) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    formatter.dateFormat = format
-    return formatter.string(from: date)
+    return planningDateLabel(start, format: "MMM d", calendar: calendar)
+        + "–"
+        + planningDateLabel(end, format: "MMM d", calendar: calendar)
 }
 
 private func studyTaskOrder(_ left: TaskCardContext, _ right: TaskCardContext) -> Bool {

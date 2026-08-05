@@ -72,6 +72,38 @@ struct StudyPlannerTests {
         #expect(planner.studyStreakDays == 1)
     }
 
+    @Test("Local dates do not advance at the UTC boundary")
+    func respectsLocalDateBoundaries() throws {
+        let utcBoundary = try #require(ISO8601DateFormatter().date(from: "2026-08-03T00:30:00Z"))
+
+        let chicagoPlanner = OverviewPageContext(
+            tasks: [],
+            courses: [],
+            selectedCourseID: nil,
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: utcBoundary
+        )
+        let tokyoPlanner = OverviewPageContext(
+            tasks: [],
+            courses: [],
+            selectedCourseID: nil,
+            timeZoneIdentifier: "Asia/Tokyo",
+            referenceDate: utcBoundary
+        )
+        let chicagoSemester = SemesterPageContext(
+            tasks: [],
+            courses: [],
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: utcBoundary
+        )
+
+        #expect(chicagoPlanner.weekLabel == "Jul 27–Aug 2")
+        #expect(chicagoPlanner.days[6].isToday)
+        #expect(tokyoPlanner.weekLabel == "August 3–9")
+        #expect(tokyoPlanner.days[0].isToday)
+        #expect(chicagoSemester.weeks[0].label == "Jul 27–Aug 2")
+    }
+
     @Test("The overview API returns course planning data")
     func overviewReturnsPlannerData() async throws {
         try await withApp(configure: configure) { app in
