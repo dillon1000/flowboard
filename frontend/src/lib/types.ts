@@ -213,12 +213,19 @@ export interface BoardPageContext {
   newTaskLabels: string;
   statusOptions: TaskOptionContext[];
   severityOptions: TaskOptionContext[];
+  assignmentCount: number;
+  completedAssignmentCount: number;
+  undatedAssignmentCount: number;
+  unestimatedAssignmentCount: number;
 }
 
 export interface TasksPageContext {
   query: string;
   tasks: TaskCardContext[];
   hasTasks: boolean;
+  completedAssignmentCount: number;
+  undatedAssignmentCount: number;
+  unestimatedAssignmentCount: number;
 }
 
 export interface CommentContext {

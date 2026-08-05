@@ -200,12 +200,31 @@ struct TasksPageContext: Encodable {
     let query: String
     let tasks: [TaskCardContext]
     let hasTasks: Bool
+    let completedAssignmentCount: Int
+    let undatedAssignmentCount: Int
+    let unestimatedAssignmentCount: Int
 
     init(query: String, tasks: [TaskCardContext]) {
         self.query = query
-        self.tasks = tasks
+        self.tasks = tasks.sorted(by: taskListOrder)
         self.hasTasks = !tasks.isEmpty
+        self.completedAssignmentCount = tasks.filter { task in
+            task.completionStatuses.split(separator: ",").contains(Substring(task.statusValue))
+        }.count
+        self.undatedAssignmentCount = tasks.filter { !$0.hasDueDate }.count
+        self.unestimatedAssignmentCount = tasks.filter { !$0.hasEstimate }.count
     }
+}
+
+/// Places unfinished dated work first, then undated work, so the assignment list
+/// helps students decide what to plan next rather than echoing edit history.
+private func taskListOrder(_ left: TaskCardContext, _ right: TaskCardContext) -> Bool {
+    let leftCompleted = left.completionStatuses.split(separator: ",").contains(Substring(left.statusValue))
+    let rightCompleted = right.completionStatuses.split(separator: ",").contains(Substring(right.statusValue))
+    if leftCompleted != rightCompleted { return !leftCompleted }
+    if left.hasDueDate != right.hasDueDate { return left.hasDueDate }
+    if left.dueInput != right.dueInput { return left.dueInput < right.dueInput }
+    return left.title.localizedCaseInsensitiveCompare(right.title) == .orderedAscending
 }
 
 struct SettingsPageContext: Encodable {}

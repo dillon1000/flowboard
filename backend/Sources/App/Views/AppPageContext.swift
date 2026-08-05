@@ -424,6 +424,10 @@ struct BoardPageContext: Encodable {
     let newTaskLabels: String
     let statusOptions: [TaskOptionContext]
     let severityOptions: [TaskOptionContext]
+    let assignmentCount: Int
+    let completedAssignmentCount: Int
+    let undatedAssignmentCount: Int
+    let unestimatedAssignmentCount: Int
 
     init(
         board: Board,
@@ -512,6 +516,12 @@ struct BoardPageContext: Encodable {
         self.severityOptions = board.taskSeverities.map {
             TaskOptionContext(option: $0, selectedValue: defaultPriority.rawValue)
         }
+        self.assignmentCount = tasks.count
+        self.completedAssignmentCount = tasks.filter {
+            board.isCompleted(TaskStatus(rawValue: $0.statusValue))
+        }.count
+        self.undatedAssignmentCount = tasks.filter { !$0.hasDueDate }.count
+        self.unestimatedAssignmentCount = tasks.filter { !$0.hasEstimate }.count
     }
 }
 

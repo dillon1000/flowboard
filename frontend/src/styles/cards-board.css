@@ -212,6 +212,32 @@
   margin-bottom: 12px;
 }
 
+/* Course summaries keep planning gaps visible without turning the course page
+   into a dashboard. The short row makes missing dates and estimates easy to spot. */
+.course-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.course-summary span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.course-summary strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.course-summary .needs-attention strong {
+  color: var(--ds-amber-800);
+}
+
 .board-canvas {
   flex: 1;
   min-height: 0;
@@ -296,3 +322,12 @@
   min-width: 8px;
 }
 
+.column-empty {
+  padding: 14px 12px;
+  margin: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-medium);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}

@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { TasksPageContext } from '$lib/types';
-  import { ArchiveIcon as Archive, CheckSquareIcon as CheckSquare, MagnifyingGlassIcon as Search } from 'phosphor-svelte';
+  import { ArchiveIcon as Archive, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock, MagnifyingGlassIcon as Search } from 'phosphor-svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
 
@@ -33,16 +33,23 @@
   </header>
   {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
   {#if tasks.hasTasks}
+    {#if !archived && !tasks.query}
+      <section class="stats" aria-label="Assignment planning summary">
+        <div class="stat"><span><CheckSquare size={14} />Active assignments</span><strong>{tasks.tasks.length - tasks.completedAssignmentCount}</strong></div>
+        <div class="stat"><span><CalendarDays size={14} />Need a due date</span><strong>{tasks.undatedAssignmentCount}</strong></div>
+        <div class="stat"><span><Clock size={14} />Need an estimate</span><strong>{tasks.unestimatedAssignmentCount}</strong></div>
+      </section>
+    {/if}
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Assignment</th><th>Course</th><th>Status</th><th>Severity</th><th>Assignee</th><th>Due</th>{#if archived}<th>Action</th>{/if}</tr></thead>
+        <thead><tr><th>Assignment</th><th>Course</th><th>Status</th><th>Severity</th><th>Plan</th><th>Due</th>{#if archived}<th>Action</th>{/if}</tr></thead>
         <tbody>
           {#each tasks.tasks as task (task.id)}
             <tr>
               <td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td>{task.boardName}</td>
               <td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td>
               <td><span class={`badge ${task.priorityColorClass}`} style={task.priorityColorStyle}>{task.priorityName}</span></td>
-              <td class:muted={!task.hasAssignee}>{task.assigneeName}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}</td>
+              <td class:muted={!task.hasEstimate}>{task.estimatedDisplay}</td><td class:muted={!task.hasDueDate}>{task.dueDisplay}{#if task.hasDueDate} · {task.dueTimeDisplay}{/if}</td>
               {#if archived}<td>{#if task.canEdit}<button class="button small" type="button" onclick={() => restore(task.id)}>Restore</button>{:else}<span class="muted">View only</span>{/if}</td>{/if}
             </tr>
           {/each}
