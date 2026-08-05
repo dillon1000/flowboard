@@ -93,6 +93,10 @@ struct TaskCardContext: Encodable {
     let estimatedMinutes: Int
     let estimatedDisplay: String
     let hasEstimate: Bool
+    let gradeEarned: Double
+    let gradePossible: Double
+    let gradeDisplay: String
+    let hasGrade: Bool
     let assigneeID: String
     let assigneeName: String
     let hasAssignee: Bool
@@ -144,6 +148,12 @@ struct TaskCardContext: Encodable {
         self.estimatedMinutes = task.estimatedMinutes ?? 0
         self.estimatedDisplay = task.estimatedMinutes.map(displayDuration) ?? "Not estimated"
         self.hasEstimate = task.estimatedMinutes != nil
+        self.gradeEarned = task.gradeEarned ?? 0
+        self.gradePossible = task.gradePossible ?? 0
+        self.hasGrade = task.gradeEarned != nil && task.gradePossible != nil
+        self.gradeDisplay = self.hasGrade
+            ? "\(displayScore(self.gradeEarned)) / \(displayScore(self.gradePossible))"
+            : "Not graded"
         self.assigneeID = assignee?.id?.uuidString ?? ""
         self.assigneeName = assignee?.name ?? "Unassigned"
         self.hasAssignee = assignee != nil
@@ -165,6 +175,11 @@ struct TaskCardContext: Encodable {
             .map(\.id)
             .joined(separator: ",")
     }
+}
+
+/// Uses whole points where possible while retaining meaningful decimal scores.
+func displayScore(_ value: Double) -> String {
+    value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value)
 }
 
 /// Formats the stored 24-hour clock value for the study UI without applying a

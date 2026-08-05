@@ -64,6 +64,10 @@ export interface TaskCardContext {
   estimatedMinutes: number;
   estimatedDisplay: string;
   hasEstimate: boolean;
+  gradeEarned: number;
+  gradePossible: number;
+  gradeDisplay: string;
+  hasGrade: boolean;
   assigneeID: string;
   assigneeName: string;
   hasAssignee: boolean;
@@ -85,6 +89,8 @@ export interface StudyCourseContext {
   href: string;
   colorClass: string;
   isSelected: boolean;
+  gradeDisplay: string;
+  hasGrade: boolean;
 }
 
 export interface StudyAssignmentContext {

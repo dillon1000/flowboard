@@ -169,7 +169,7 @@ struct OverviewPageContext: Encodable {
 
         self.weekLabel = studyWeekLabel(start: weekStart, calendar: calendar)
         self.courseFilters = activeCourses.map {
-            StudyCourseContext(course: $0, selectedCourseID: selectedCourseID)
+            StudyCourseContext(course: $0, tasks: tasks, selectedCourseID: selectedCourseID)
         }
         self.isAllCoursesSelected = selectedCourseID == nil
         let defaultCourse = activeCourses.first {
@@ -231,13 +231,20 @@ struct StudyCourseContext: Encodable {
     let href: String
     let colorClass: String
     let isSelected: Bool
+    let gradeDisplay: String
+    let hasGrade: Bool
 
-    init(course: BoardNavigationContext, selectedCourseID: UUID?) {
+    init(course: BoardNavigationContext, tasks: [TaskCardContext], selectedCourseID: UUID?) {
         self.id = course.id
         self.name = course.name
         self.href = "/app?course=\(course.id.uuidString)"
         self.colorClass = course.courseColorClass
         self.isSelected = course.id == selectedCourseID
+        let grades = tasks.filter { $0.boardID == course.id && $0.hasGrade }
+        let earned = grades.reduce(0) { $0 + $1.gradeEarned }
+        let possible = grades.reduce(0) { $0 + $1.gradePossible }
+        self.hasGrade = possible > 0
+        self.gradeDisplay = hasGrade ? "\(Int((earned / possible * 100).rounded()))%" : "No grades"
     }
 }
 

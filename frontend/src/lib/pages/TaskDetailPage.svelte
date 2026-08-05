@@ -69,6 +69,13 @@
     return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
   }
 
+  function score(value: FormDataEntryValue | null): number | null {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    const number = Number(raw);
+    return Number.isFinite(number) && number >= 0 ? number : null;
+  }
+
   async function mutate(path: string, init: RequestInit, successMessage = ''): Promise<boolean> {
     pending = true;
     requestError = '';
@@ -116,6 +123,8 @@
         dueAt: apiDate(data.get('dueAt')),
         dueTime: data.get('dueAt') ? String(data.get('dueTime') ?? '') || null : null,
         estimatedMinutes: estimateMinutes(data.get('estimatedMinutes')),
+        gradeEarned: score(data.get('gradeEarned')),
+        gradePossible: score(data.get('gradePossible')),
         labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6)
       })
     }, 'Task updated');
@@ -329,7 +338,7 @@
     </div>
 
     <aside class="task-sidebar">
-      <div class="card"><div class="card-header"><h2>Properties</h2></div><dl class="property-list"><div class="property-row"><dt>Status</dt><dd><span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span></dd></div><div class="property-row"><dt>Severity</dt><dd><span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span></dd></div><div class="property-row"><dt>Estimate</dt><dd class:muted={!detail.task.hasEstimate}>{detail.task.estimatedDisplay}</dd></div><div class="property-row"><dt>Assignee</dt><dd>{detail.task.assigneeName}</dd></div><div class="property-row"><dt>Creator</dt><dd>{detail.creatorName}</dd></div><div class="property-row"><dt>Start</dt><dd class="muted">{detail.task.startDisplay}</dd></div><div class="property-row"><dt>Due</dt><dd>{detail.task.dueDisplay}{#if detail.task.hasDueDate} · {detail.task.dueTimeDisplay}{/if}</dd></div>{#each detail.properties as property}<div class="property-row"><dt>{property.name}</dt><dd>{property.value}</dd></div>{/each}</dl></div>
+      <div class="card"><div class="card-header"><h2>Properties</h2></div><dl class="property-list"><div class="property-row"><dt>Status</dt><dd><span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span></dd></div><div class="property-row"><dt>Severity</dt><dd><span class={`badge ${detail.task.priorityColorClass}`} style={detail.task.priorityColorStyle}>{detail.task.priorityName}</span></dd></div><div class="property-row"><dt>Estimate</dt><dd class:muted={!detail.task.hasEstimate}>{detail.task.estimatedDisplay}</dd></div><div class="property-row"><dt>Grade</dt><dd class:muted={!detail.task.hasGrade}>{detail.task.gradeDisplay}</dd></div><div class="property-row"><dt>Assignee</dt><dd>{detail.task.assigneeName}</dd></div><div class="property-row"><dt>Creator</dt><dd>{detail.creatorName}</dd></div><div class="property-row"><dt>Start</dt><dd class="muted">{detail.task.startDisplay}</dd></div><div class="property-row"><dt>Due</dt><dd>{detail.task.dueDisplay}{#if detail.task.hasDueDate} · {detail.task.dueTimeDisplay}{/if}</dd></div>{#each detail.properties as property}<div class="property-row"><dt>{property.name}</dt><dd>{property.value}</dd></div>{/each}</dl></div>
 
       {#if detail.canEdit && detail.hasProperties}<section class="card"><div class="card-header"><h2>Custom fields</h2></div><form class="card-body" onsubmit={saveProperties}>{#each detail.properties as property}<div class="field"><label for={`property-${property.id}`}>{property.name}</label>{#if property.usesInput}{#if property.inputType === 'date'}<DatePicker id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} label={property.name} />{:else}<input class="input" type={property.inputType} step="any" id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} />{/if}{:else if property.usesSelect}<SelectMenu id={`property-${property.id}`} name={`property-${property.id}`} value={property.inputValue} ariaLabel={property.name} options={[{ value: '', label: 'No value' }, ...property.options.map((option: TaskPropertyOptionContext) => ({ value: option.id, label: option.name }))]} />{:else if property.usesMultiSelect}<div class="property-options" id={`property-${property.id}`}>{#each property.options as option}<label class="property-option"><input type="checkbox" name={`property-${property.id}-${option.id}`} checked={option.isSelected} /><span>{option.name}</span></label>{/each}</div>{:else if property.usesCheckbox}<label class="property-boolean"><input type="checkbox" name={`property-${property.id}`} value="true" checked={property.isChecked} /><span>Checked</span></label>{/if}</div>{/each}<div class="form-actions"><button class="button small" type="submit" disabled={pending}>Save fields</button></div></form></section>{/if}
 
@@ -352,6 +361,8 @@
         <div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div>
         <div class="field"><label for="edit-time">Due time</label><input class="input" id="edit-time" name="dueTime" type="time" value={detail.task.dueTimeInput} /></div>
         <div class="field"><label for="edit-estimate">Time estimate</label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
+        <div class="field"><label for="edit-grade-earned">Points earned</label><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></div>
+        <div class="field"><label for="edit-grade-possible">Points possible</label><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0.1" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradePossible : ''} placeholder="e.g. 100" /><span class="field-help">Enter both fields to include this grade in your course total.</span></div>
         <div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div>
       </div></div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div>
