@@ -9,7 +9,7 @@
   align-items: center;
   gap: 5px;
   padding: 0 8px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-medium);
   color: var(--text-secondary);
   background: var(--surface);
   box-shadow: var(--shadow-border);
@@ -17,6 +17,15 @@
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
+}
+
+/* Browsers with corner-shape support need a larger radius to keep the same
+   visual corner size. Other browsers retain the compact rounded fallback. */
+@supports (corner-shape: squircle) {
+  .badge:not(.count) {
+    border-radius: calc(var(--radius-medium) * 2);
+    corner-shape: squircle;
+  }
 }
 
 .badge svg {
@@ -108,6 +117,7 @@
 .badge.count {
   min-height: 18px;
   padding: 0 6px;
+  border-radius: var(--radius-full);
   background: var(--surface-active);
   box-shadow: none;
   font-size: 10px;
