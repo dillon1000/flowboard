@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { OverviewPageContext, StudyCourseContext, StudyDayContext, StudyPlanCandidateContext, TaskResponse } from '$lib/types';
-  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, XIcon as X } from 'phosphor-svelte';
+  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, StrategyIcon as Strategy, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
@@ -183,7 +183,7 @@
           <h1 id="study-week-title">This week</h1>
           <p>{overview.weekLabel}</p>
           <div class="study-week-actions">
-            <button class="button primary large" type="button" disabled={!overview.hasPlanCandidates} onclick={() => (planOpen = true)}><CalendarDays size={16} />Plan this week</button>
+            <button class="button primary large" type="button" disabled={!overview.hasPlanCandidates} onclick={() => (planOpen = true)}><Strategy size={16} />Plan this week</button>
             <button class="button large" type="button" disabled={!overview.hasCourses} onclick={() => (createTaskOpen = true)}><Plus size={16} />Add assignment</button>
           </div>
         </div>
