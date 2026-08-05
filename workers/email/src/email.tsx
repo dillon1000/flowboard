@@ -248,6 +248,29 @@ function notificationContent(payload: NotificationPayload): NotificationContent 
         actionLabel: 'View task'
       };
     }
+    case 'task_reminder': {
+      const taskTitle = dataValue(payload.data, 'taskTitle') || 'your task';
+      const boardName = dataValue(payload.data, 'boardName');
+      const reminderTime = dataValue(payload.data, 'reminderTime');
+      const taskDue = dataValue(payload.data, 'taskDue');
+      return {
+        subject: safeLine(`Reminder: ${taskTitle}`),
+        preview: safeLine(`Your reminder for ${taskTitle}.`),
+        heading: 'Assignment reminder',
+        greeting: `Hi ${recipientName},`,
+        body: (
+          <>
+            <Text style={styles.paragraph}>
+              {reminderTime ? `You set this reminder for ${reminderTime}.` : 'Your reminder is due.'}
+            </Text>
+            {taskDetails(taskTitle, boardName)}
+            {taskDue ? <Text style={styles.paragraph}>Due {taskDue}</Text> : null}
+          </>
+        ),
+        actionURL: appURL,
+        actionLabel: 'View task'
+      };
+    }
   }
 }
 

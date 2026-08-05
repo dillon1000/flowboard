@@ -104,4 +104,25 @@ describe('flowboard email worker', () => {
     expect(result.html).not.toContain('Work, in view.');
     expect(result.html).not.toContain('<script>alert(1)</script>');
   });
+
+  it('renders a task reminder with its schedule and due date', async () => {
+    const result = await renderNotification({
+      eventID: 'reminder-1',
+      type: 'task_reminder',
+      to: 'person@example.com',
+      data: {
+        recipientName: 'Person',
+        taskTitle: 'Finish the report',
+        boardName: 'Launch',
+        reminderTime: 'Tue, Aug 4 at 9:00 AM',
+        taskDue: 'Wed, Aug 5 at 17:00',
+        taskURL: 'https://app.example/tasks/finish-the-report-abc123'
+      }
+    });
+
+    expect(result.subject).toBe('Reminder: Finish the report');
+    expect(result.text).toContain('You set this reminder for Tue, Aug 4 at 9:00 AM.');
+    expect(result.text).toContain('Due Wed, Aug 5 at 17:00');
+    expect(result.html).toContain('https://app.example/tasks/finish-the-report-abc123');
+  });
 });
