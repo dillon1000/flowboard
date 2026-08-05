@@ -1,9 +1,9 @@
 <script lang="ts">
   import { goto, invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
-  import type { AvatarContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
+  import type { ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
+  import { AlarmIcon as Alarm, ArchiveIcon as Archive, BellIcon as Bell, CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, CheckIcon as Check, DownloadIcon as Download, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, UserIcon as User, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
@@ -17,13 +17,16 @@
   // server limit so a user gets a useful message before an upload starts.
   const maxAttachmentBytes = 10_000_000;
 
-  let { detail, currentUserAvatar, descriptionHTML } = $props<{
+  let { detail, currentUserEmail, descriptionHTML } = $props<{
     detail: TaskDetailPageContext;
-    currentUserAvatar: AvatarContext;
+    currentUserEmail: string;
     descriptionHTML: string;
   }>();
   let editOpen = $state(false);
   let deleteOpen = $state(false);
+  let remindersOpen = $state(false);
+  let reminderDate = $state('');
+  let reminderTime = $state('09:00');
   let pending = $state(false);
   let requestError = $state('');
   let commentBody = $state('');
@@ -109,6 +112,51 @@
     await mutate(`/api/v1/tasks/${detail.task.id}/followers/me`, {
       method: detail.isFollowing ? 'DELETE' : 'POST'
     }, detail.isFollowing ? 'Task unfollowed' : 'Task followed');
+  }
+
+  function openReminders(): void {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    reminderDate = futureDateInput(detail.task.dueInput) || localDateInput(tomorrow);
+    reminderTime = detail.task.hasDueTime ? detail.task.dueTimeInput : '09:00';
+    requestError = '';
+    remindersOpen = true;
+  }
+
+  function futureDateInput(value: string): string {
+    if (!value) return '';
+    const endOfDay = new Date(`${value}T23:59:59`);
+    return endOfDay > new Date() ? value : '';
+  }
+
+  function localDateInput(date: Date): string {
+    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return offsetDate.toISOString().slice(0, 10);
+  }
+
+  async function addReminder(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const date = String(data.get('reminderDate') ?? '');
+    const time = String(data.get('reminderTime') ?? '');
+    const remindAt = new Date(`${date}T${time}:00`);
+    if (!date || !time || Number.isNaN(remindAt.getTime())) {
+      requestError = 'Choose a reminder date and time.';
+      return;
+    }
+    await mutate(`/api/v1/tasks/${detail.task.id}/reminders`, {
+      method: 'POST',
+      body: JSON.stringify({
+        remindAt: remindAt.toISOString(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
+    }, 'Reminder added');
+  }
+
+  async function deleteReminder(reminderID: string): Promise<void> {
+    await mutate(`/api/v1/tasks/${detail.task.id}/reminders/${reminderID}`, {
+      method: 'DELETE'
+    }, 'Reminder removed');
   }
 
   async function saveTask(event: SubmitEvent): Promise<void> {
@@ -355,6 +403,7 @@
     <div class="page-actions">
       {#if detail.canEdit}<PromoteMenu value={detail.task.statusValue} options={detail.task.statusOptions} disabled={pending} onchange={changeStatus} />{/if}
       {#if detail.canEdit && completionOption && !completionOption.isSelected}<button class="button primary" type="button" onclick={() => changeStatus(completionOption.value)} disabled={pending}><CheckCircle size={15} />Mark complete</button>{/if}
+      <button class="button" type="button" onclick={openReminders}><Alarm size={15} />Configure notifications{#if detail.reminders.length}<span class="badge count tabular">{detail.reminders.length}</span>{/if}</button>
       <button class="button" type="button" onclick={toggleFollow} disabled={pending}><Bell size={15} />{detail.isFollowing ? 'Unfollow' : 'Follow'}<span class="badge count tabular">{detail.followerCount}</span></button>
       {#if detail.canEdit}<button class="button" type="button" onclick={() => (editOpen = true)}>Edit task</button>{/if}
     </div>
@@ -435,6 +484,41 @@
       </div></div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div>
     </form>
+  </div>
+{/if}
+
+{#if remindersOpen}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="task-reminders-title" tabindex="-1" use:dialogLayer={{ close: () => (remindersOpen = false) }}>
+    <div class="dialog reminder-dialog">
+      <div class="dialog-header"><div><h2 id="task-reminders-title">Task reminders</h2><p>Email reminders for this assignment.</p></div><button class="icon-button" type="button" onclick={() => (remindersOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body reminder-dialog-body">
+        <div class="reminder-recipient"><Alarm size={18} /><span><strong>Send to {currentUserEmail}</strong><small>Each reminder is sent once. You can add up to three.</small></span><span class="badge count tabular">{detail.reminders.length}/3</span></div>
+
+        {#if !detail.notificationsEnabled}
+          <p class="reminder-unavailable" role="status">Email delivery is not configured for this workspace.</p>
+        {:else}
+          {#if detail.reminders.length}
+            <div class="reminder-list" aria-label="Scheduled reminders">
+              {#each detail.reminders as reminder (reminder.id)}
+                <div class="reminder-row"><span class="reminder-icon"><Alarm size={15} /></span><span><strong>{reminder.remindAtDisplay}</strong><small>{reminder.timeZone}</small></span><button class="icon-button" type="button" onclick={() => deleteReminder(reminder.id)} disabled={pending} aria-label={`Remove reminder for ${reminder.remindAtDisplay}`} title="Remove reminder"><Trash2 size={14} /></button></div>
+              {/each}
+            </div>
+          {:else}
+            <p class="reminder-empty">No reminders yet. Add one before the deadline gets loud.</p>
+          {/if}
+
+          {#if detail.reminders.length < 3}
+            <form class="reminder-form" onsubmit={addReminder}>
+              <div class="reminder-form-heading"><strong>Add a reminder</strong><span>Times use your current time zone.</span></div>
+              <div class="reminder-fields"><div class="field"><label for="reminder-date">Date</label><DatePicker id="reminder-date" name="reminderDate" value={reminderDate} label="Reminder date" required initialFocus /></div><div class="field"><label for="reminder-time">Time</label><TimePicker id="reminder-time" name="reminderTime" value={reminderTime} label="Reminder time" /></div></div>
+              <div class="reminder-form-actions"><button class="button primary" type="submit" disabled={pending}><Alarm size={15} />{pending ? 'Saving…' : 'Add reminder'}</button></div>
+            </form>
+          {/if}
+        {/if}
+        {#if requestError}<p class="error-message reminder-error" role="alert">{requestError}</p>{/if}
+      </div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (remindersOpen = false)}>Done</button></div>
+    </div>
   </div>
 {/if}
 
