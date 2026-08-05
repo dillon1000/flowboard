@@ -40,9 +40,17 @@ struct StudyPlannerTests {
             estimatedMinutes: 45,
             startAt: monday
         )
+        let plannedOnDeadline = try studyTaskContext(
+            board: course,
+            title: "Prepare seminar notes",
+            dueAt: monday,
+            priority: .medium,
+            estimatedMinutes: 180,
+            startAt: monday
+        )
 
         let planner = OverviewPageContext(
-            tasks: [dueTask, unscheduledTask, focusTask],
+            tasks: [dueTask, unscheduledTask, focusTask, plannedOnDeadline],
             courses: [navigation],
             selectedCourseID: nil,
             referenceDate: monday
@@ -53,12 +61,15 @@ struct StudyPlannerTests {
         #expect(planner.days[0].weekdayLabel == "Mon")
         #expect(planner.days[0].isToday)
         #expect(planner.days[0].focusBlocks.first?.title == "Outline lab report")
+        #expect(planner.days[0].assignments.first?.title == "Prepare seminar notes")
+        #expect(planner.days[0].workloadMinutes == 225)
         #expect(planner.days[2].assignments.first?.title == "Finish calculus problem set")
         #expect(planner.days[2].assignments.first?.typeName == "Problem Set")
         #expect(planner.days[2].workloadLabel == "Heavy")
         #expect(planner.days[2].workloadMinutes == 180)
-        #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 1)
+        #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 2)
         #expect(planner.unscheduledAssignmentCount == 1)
+        #expect(planner.studyStreakDays == 1)
     }
 
     @Test("The overview API returns course planning data")

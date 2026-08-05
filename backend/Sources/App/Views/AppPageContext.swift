@@ -144,6 +144,7 @@ struct OverviewPageContext: Encodable {
     let hasPlanCandidates: Bool
     let unplannedFocusCount: Int
     let hasUnplannedFocus: Bool
+    let studyStreakDays: Int
 
     init(
         tasks: [TaskCardContext],
@@ -187,11 +188,20 @@ struct OverviewPageContext: Encodable {
             let focusTasks = activeTaskContexts
                 .filter { $0.startInput == dateKey && $0.dueInput != dateKey }
                 .sorted(by: studyTaskOrder)
+            // A task planned for its due date does not need a duplicate focus
+            // card, but its estimate must still count toward that day's load.
+            let workloadTasks = activeTaskContexts
+                .filter {
+                    $0.startInput == dateKey
+                        || ($0.dueInput == dateKey && $0.startInput.isEmpty)
+                }
+                .sorted(by: studyTaskOrder)
             return StudyDayContext(
                 date: date,
                 isToday: calendar.isDate(date, inSameDayAs: today),
                 dueTasks: dueTasks,
                 focusTasks: focusTasks,
+                workloadTasks: workloadTasks,
                 courseColors: courseColors
             )
         }
@@ -222,6 +232,11 @@ struct OverviewPageContext: Encodable {
         self.hasPlanCandidates = !planCandidates.isEmpty
         self.unplannedFocusCount = planCandidates.count
         self.hasUnplannedFocus = unplannedFocusCount > 0
+        self.studyStreakDays = studyPlanningStreakDays(
+            tasks: taskContexts.filter { !$0.isArchived },
+            referenceDate: today,
+            calendar: calendar
+        )
     }
 }
 
@@ -268,6 +283,7 @@ struct StudyDayContext: Encodable {
         isToday: Bool,
         dueTasks: [TaskCardContext],
         focusTasks: [TaskCardContext],
+        workloadTasks: [TaskCardContext],
         courseColors: [UUID: String]
     ) {
         self.weekdayLabel = studyDateLabel(date, format: "EEE")
@@ -289,15 +305,12 @@ struct StudyDayContext: Encodable {
         }
         self.focusBlockCount = focusBlocks.count
         self.hasFocusBlocks = !focusBlocks.isEmpty
-        let unplannedDueBlocks = dueTasks
-            .filter { $0.startInput.isEmpty }
-            .map {
-                StudyAssignmentContext(
-                    task: $0,
-                    courseColorClass: courseColors[$0.boardID] ?? "course-blue"
-                )
-            }
-        let workloadAssignments = focusBlocks + unplannedDueBlocks
+        let workloadAssignments = workloadTasks.map {
+            StudyAssignmentContext(
+                task: $0,
+                courseColorClass: courseColors[$0.boardID] ?? "course-blue"
+            )
+        }
         self.workloadMinutes = workloadAssignments.reduce(0) { $0 + $1.estimatedMinutes }
         self.unestimatedAssignmentCount = workloadAssignments.filter { !$0.hasEstimate }.count
         switch workloadMinutes {
@@ -439,6 +452,31 @@ private func studyTaskOrder(_ left: TaskCardContext, _ right: TaskCardContext) -
 
 private func studyTaskIsCompleted(_ task: TaskCardContext) -> Bool {
     task.completionStatuses.split(separator: ",").contains(Substring(task.statusValue))
+}
+
+/// Counts consecutive planned study days ending today, or yesterday when the
+/// user has not planned today's work yet. Empty and future dates do not extend
+/// the streak, and completed tasks remain valid evidence of past study plans.
+private func studyPlanningStreakDays(
+    tasks: [TaskCardContext],
+    referenceDate: Date,
+    calendar: Calendar
+) -> Int {
+    let plannedDates = Set(tasks.map(\.startInput).filter { !$0.isEmpty })
+    let today = calendar.startOfDay(for: referenceDate)
+    let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+    var cursor = plannedDates.contains(inputDate(today)) ? today : yesterday
+    var streak = 0
+
+    while plannedDates.contains(inputDate(cursor)) {
+        streak += 1
+        guard let previousDay = calendar.date(byAdding: .day, value: -1, to: cursor) else {
+            break
+        }
+        cursor = previousDay
+    }
+
+    return streak
 }
 
 private func studyAssignmentType(title: String, labels: [String]) -> (name: String, icon: String) {
