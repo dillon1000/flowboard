@@ -31,7 +31,7 @@
   const planOptions = $derived<SelectMenuOption[]>(
     overview.planCandidates.map((assignment: StudyPlanCandidateContext) => ({
       value: assignment.id,
-      label: `${assignment.title} · ${assignment.courseName}`
+      label: `${assignment.title} - ${assignment.courseName}`
     }))
   );
   const workloadSummary = $derived.by(() => {
@@ -39,12 +39,12 @@
       return { name: 'Needs estimates', description: `${overview.unestimatedAssignmentCount} assignments are not counted yet.` };
     }
     if (overview.days.some((day: StudyDayContext) => day.workloadMinutes >= heavyMinutes)) {
-      return { name: 'Heavy day', description: 'One or more days exceed your heavy limit.' };
+      return { name: 'Heavy day 😓', description: 'One or more days exceed your heavy limit.' };
     }
     if (overview.days.some((day: StudyDayContext) => day.workloadMinutes >= balancedMinutes)) {
-      return { name: 'Balanced week', description: 'Your work stays within the limits you set.' };
+      return { name: 'Balanced week 🤓', description: 'Your work stays within the limits you set.' };
     }
-    return { name: 'Light week', description: 'Room to work ahead.' };
+    return { name: 'Light week 😮‍💨', description: 'Room to work ahead.' };
   });
 
   onMount(() => {
