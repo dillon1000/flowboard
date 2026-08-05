@@ -110,6 +110,7 @@ struct TaskController: RouteCollection {
             .filter(\.$board.$id == input.boardID)
             .filter(\.$statusValue == status.rawValue)
             .count()
+        let grade = try validGrade(input.gradeEarned, possible: input.gradePossible)
         let task = Task(
             publicID: try await Task.uniquePublicID(on: req.db),
             boardID: input.boardID,
@@ -123,6 +124,8 @@ struct TaskController: RouteCollection {
             dueAt: input.dueAt,
             dueTime: try validDueTime(input.dueTime, dueAt: input.dueAt),
             estimatedMinutes: try validEstimatedMinutes(input.estimatedMinutes),
+            gradeEarned: grade.earned,
+            gradePossible: grade.possible,
             creatorID: userID
         )
         task.properties = sanitize(
@@ -222,6 +225,13 @@ struct TaskController: RouteCollection {
         case .omitted:
             break
         }
+        var gradeEarned = task.gradeEarned
+        var gradePossible = task.gradePossible
+        apply(input.gradeEarned, to: &gradeEarned)
+        apply(input.gradePossible, to: &gradePossible)
+        let grade = try validGrade(gradeEarned, possible: gradePossible)
+        task.gradeEarned = grade.earned
+        task.gradePossible = grade.possible
         switch input.properties {
         case let .value(properties):
             task.properties = sanitize(
@@ -418,6 +428,29 @@ struct TaskController: RouteCollection {
             throw Abort(.unprocessableEntity, reason: "Use an estimate from 5 minutes to 24 hours.")
         }
         return value
+    }
+
+    /// Validates the complete score pair. A partial grade is rejected because it
+    /// would make the course total misleading until a later edit fills the gap.
+    private func validGrade(_ earned: Double?, possible: Double?) throws -> (earned: Double?, possible: Double?) {
+        guard let earned, let possible else {
+            guard earned == nil && possible == nil else {
+                throw Abort(.unprocessableEntity, reason: "Enter both points earned and points possible.")
+            }
+            return (nil, nil)
+        }
+        guard possible > 0, possible <= 100_000, earned >= 0, earned <= possible else {
+            throw Abort(.unprocessableEntity, reason: "Points earned must be between 0 and points possible, up to 100,000.")
+        }
+        return (earned, possible)
+    }
+
+    private func apply(_ patch: PatchField<Double>.State, to value: inout Double?) {
+        switch patch {
+        case let .value(number): value = number
+        case .null: value = nil
+        case .omitted: break
+        }
     }
 
     private func boardDefinitions(

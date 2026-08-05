@@ -112,6 +112,14 @@ final class Task: Model, @unchecked Sendable {
     @OptionalField(key: "estimated_minutes")
     var estimatedMinutes: Int?
 
+    /// A recorded assessment score is optional until the instructor returns it.
+    /// Both values are stored together so course totals only use complete grades.
+    @OptionalField(key: "grade_earned")
+    var gradeEarned: Double?
+
+    @OptionalField(key: "grade_possible")
+    var gradePossible: Double?
+
     @OptionalParent(key: "assignee_id")
     var assignee: User?
 
@@ -160,6 +168,8 @@ final class Task: Model, @unchecked Sendable {
         dueAt: Date? = nil,
         dueTime: String? = nil,
         estimatedMinutes: Int? = nil,
+        gradeEarned: Double? = nil,
+        gradePossible: Double? = nil,
         creatorID: UUID? = nil
     ) {
         self.id = id
@@ -175,6 +185,8 @@ final class Task: Model, @unchecked Sendable {
         self.dueAt = dueAt
         self.dueTime = dueTime
         self.estimatedMinutes = estimatedMinutes
+        self.gradeEarned = gradeEarned
+        self.gradePossible = gradePossible
         self.$creator.id = creatorID
         self.properties = [:]
         self.isArchived = false
@@ -248,6 +260,8 @@ struct TaskResponse: Content {
     let dueAt: Date?
     let dueTime: String?
     let estimatedMinutes: Int?
+    let gradeEarned: Double?
+    let gradePossible: Double?
     let assigneeID: UUID?
     let creatorID: UUID?
     let properties: [String: String]
@@ -271,6 +285,8 @@ struct TaskResponse: Content {
         self.dueAt = task.dueAt
         self.dueTime = task.dueTime
         self.estimatedMinutes = task.estimatedMinutes
+        self.gradeEarned = task.gradeEarned
+        self.gradePossible = task.gradePossible
         self.assigneeID = task.$assignee.id
         self.creatorID = task.$creator.id
         self.properties = task.properties ?? [:]
@@ -292,6 +308,8 @@ struct CreateTaskRequest: Content, Validatable {
     let dueAt: Date?
     let dueTime: String?
     let estimatedMinutes: Int?
+    let gradeEarned: Double?
+    let gradePossible: Double?
     let assigneeID: UUID?
     let properties: [String: String]?
 
@@ -306,6 +324,8 @@ struct CreateTaskRequest: Content, Validatable {
         dueAt: Date?,
         dueTime: String? = nil,
         estimatedMinutes: Int? = nil,
+        gradeEarned: Double? = nil,
+        gradePossible: Double? = nil,
         assigneeID: UUID? = nil,
         properties: [String: String]? = nil
     ) {
@@ -319,6 +339,8 @@ struct CreateTaskRequest: Content, Validatable {
         self.dueAt = dueAt
         self.dueTime = dueTime
         self.estimatedMinutes = estimatedMinutes
+        self.gradeEarned = gradeEarned
+        self.gradePossible = gradePossible
         self.assigneeID = assigneeID
         self.properties = properties
     }
@@ -340,6 +362,8 @@ struct UpdateTaskRequest: Content, Validatable {
     let dueAt: Date?
     let dueTime: String?
     let estimatedMinutes: Int?
+    let gradeEarned: Double?
+    let gradePossible: Double?
     let assigneeID: UUID?
     let properties: [String: String]?
 
@@ -353,6 +377,8 @@ struct UpdateTaskRequest: Content, Validatable {
         dueAt: Date?,
         dueTime: String? = nil,
         estimatedMinutes: Int? = nil,
+        gradeEarned: Double? = nil,
+        gradePossible: Double? = nil,
         assigneeID: UUID? = nil,
         properties: [String: String]? = nil
     ) {
@@ -365,6 +391,8 @@ struct UpdateTaskRequest: Content, Validatable {
         self.dueAt = dueAt
         self.dueTime = dueTime
         self.estimatedMinutes = estimatedMinutes
+        self.gradeEarned = gradeEarned
+        self.gradePossible = gradePossible
         self.assigneeID = assigneeID
         self.properties = properties
     }
@@ -388,6 +416,8 @@ struct PatchTaskRequest: Content {
     @PatchField var dueAt: PatchField<Date>.State
     @PatchField var dueTime: PatchField<String>.State
     @PatchField var estimatedMinutes: PatchField<Int>.State
+    @PatchField var gradeEarned: PatchField<Double>.State
+    @PatchField var gradePossible: PatchField<Double>.State
     @PatchField var assigneeID: PatchField<UUID>.State
     @PatchField var properties: PatchField<[String: String]>.State
     @PatchField var isArchived: PatchField<Bool>.State

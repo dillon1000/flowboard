@@ -99,7 +99,7 @@
         </a>
         {#each overview.courseFilters as course (course.id)}
           <a class:active={course.isSelected} class="study-course-link" href={course.href} aria-current={course.isSelected ? 'page' : undefined}>
-            <span class={`study-course-dot ${course.colorClass}`} aria-hidden="true"></span><span>{course.name}</span>
+            <span class={`study-course-dot ${course.colorClass}`} aria-hidden="true"></span><span>{course.name}</span><small class:muted={!course.hasGrade}>{course.gradeDisplay}</small>
           </a>
         {/each}
       </nav>

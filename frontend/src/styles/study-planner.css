@@ -162,6 +162,18 @@
   color: var(--text-tertiary);
 }
 
+.study-course-link small {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-course-link small:not(.muted) {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 .study-course-dot {
   width: 8px;
   height: 8px;
