@@ -2,7 +2,7 @@
   import { invalidateAll } from '$app/navigation';
   import { api, messageFor } from '$lib/api';
   import type { OverviewPageContext, StudyCourseContext, StudyDayContext, StudyPlanCandidateContext, TaskResponse } from '$lib/types';
-  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, CaretDownIcon as ChevronDown, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, StackIcon as Layers, PlusIcon as Plus, XIcon as X } from 'phosphor-svelte';
+  import { CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock3, FileTextIcon as FileText, InfoIcon as Info, MinusIcon as Minus, StackIcon as Layers, PlusIcon as Plus, XIcon as X } from 'phosphor-svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
@@ -198,15 +198,16 @@
             </div>
           </div>
           <div class="study-workload-summary"><strong>{workloadSummary.name}</strong><span>{workloadSummary.description}</span></div>
-          {#if workloadSettingsOpen}<form class="study-workload-settings" id="workload-settings" onsubmit={saveWorkloadPreferences}><div><strong>Workload limits</strong><button class="icon-button" type="button" aria-label="Close workload settings" onclick={() => (workloadSettingsOpen = false)}><X size={14} /></button></div><p>Estimated minutes due each day set the chart and day labels.</p><label>Balanced from<input class="input" name="balancedMinutes" type="number" min="30" max="1380" step="15" value={balancedMinutes} required /><span>minutes</span></label><label>Heavy from<input class="input" name="heavyMinutes" type="number" min="45" max="1440" step="15" value={heavyMinutes} required /><span>minutes</span></label><button class="button primary small" type="submit">Save limits</button></form>{/if}
+          {#if workloadSettingsOpen}<form class="study-workload-settings" id="workload-settings" onsubmit={saveWorkloadPreferences}><div class="study-workload-settings-header"><span><strong>Daily limits</strong><small>Based on estimated minutes due.</small></span><button class="icon-button" type="button" aria-label="Close workload settings" onclick={() => (workloadSettingsOpen = false)}><X size={14} /></button></div><label><span>Balanced</span><span class="study-workload-input"><input class="input" name="balancedMinutes" type="number" min="30" max="1380" step="15" value={balancedMinutes} required /><small>min</small></span></label><label><span>Heavy</span><span class="study-workload-input"><input class="input" name="heavyMinutes" type="number" min="45" max="1440" step="15" value={heavyMinutes} required /><small>min</small></span></label><div class="study-workload-settings-footer"><span>Heavy must be higher.</span><button class="button primary small" type="submit">Save</button></div></form>{/if}
         </section>
       </header>
 
       <div class="study-days" aria-label={`Assignments due ${overview.weekLabel}`}>
         {#each overview.days as day}
-          <section class:today={day.isToday} class="study-day">
+          <section class:today={day.isToday} class:collapsed={expandedDays[day.dateLabel] === false} class="study-day">
             <div class="study-day-date"><span>{day.weekdayLabel}</span><strong>{day.dateLabel}</strong>{#if day.isToday}<small>Today</small>{/if}</div>
-            {#if expandedDays[day.dateLabel] !== false}<div class="study-day-content">
+            <div class:collapsed={expandedDays[day.dateLabel] === false} class="study-day-content-shell" aria-hidden={expandedDays[day.dateLabel] === false} inert={expandedDays[day.dateLabel] === false}>
+              <div class="study-day-content">
               {#if day.hasAssignments}
                 <div class="study-assignment-scroller" use:scrollFades>
                   <div class="study-assignment-track">
@@ -231,8 +232,9 @@
                   {/each}
                 </div>
               {/if}
-            </div>{/if}
-            <button class:collapsed={expandedDays[day.dateLabel] === false} class={`study-day-load ${workloadForDay(day).className}`} type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{workloadForDay(day).label}</span><ChevronDown size={14} aria-hidden="true" /></button>
+              </div>
+            </div>
+            <button class:collapsed={expandedDays[day.dateLabel] === false} class={`study-day-load ${workloadForDay(day).className}`} type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-load-label"><span class="study-course-dot" aria-hidden="true"></span>{workloadForDay(day).label}</span><span class="study-day-toggle-icons" aria-hidden="true"><Minus class="collapse-icon" size={13} /><Plus class="expand-icon" size={13} /></span></button>
           </section>
         {/each}
       </div>
