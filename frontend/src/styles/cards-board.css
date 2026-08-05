@@ -198,7 +198,7 @@
    board content scrolls beneath. */
 .board-bar {
   flex: 0 0 auto;
-  padding: 24px 24px 0;
+  padding: 14px 24px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -208,17 +208,47 @@
   margin-inline: auto;
 }
 
-.board-bar .page-header {
-  margin-bottom: 12px;
+.board-header-compact {
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: minmax(220px, 1.1fr) auto auto;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 6px;
+}
+
+.board-identity {
+  min-width: 0;
+}
+
+.board-identity h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.board-identity p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-header-compact .page-actions {
+  flex-wrap: nowrap;
 }
 
 /* Course summaries keep planning gaps visible without turning the course page
    into a dashboard. The short row makes missing dates and estimates easy to spot. */
 .course-summary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin: 0 0 12px;
+  flex-wrap: nowrap;
+  gap: 18px;
+  margin: 0;
   color: var(--text-secondary);
   font-size: 13px;
 }
@@ -227,6 +257,22 @@
   display: inline-flex;
   gap: 4px;
   align-items: baseline;
+}
+
+.course-summary span + span {
+  position: relative;
+}
+
+.course-summary span + span::before {
+  position: absolute;
+  top: 50%;
+  left: -9px;
+  width: 2px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  content: '';
+  transform: translateY(-50%);
 }
 
 .course-summary strong {
@@ -265,6 +311,39 @@
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+@media (width <= 1080px) {
+  .board-header-compact {
+    grid-template-columns: minmax(220px, 1fr) auto;
+  }
+
+  .board-header-compact .course-summary {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-bottom: 6px;
+  }
+}
+
+@media (width <= 700px) {
+  .board-bar {
+    padding-inline: 16px;
+  }
+
+  .board-header-compact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .board-header-compact .page-actions,
+  .board-header-compact .course-summary {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .course-summary {
+    overflow-x: auto;
+  }
 }
 
 .board-toolbar::-webkit-scrollbar {

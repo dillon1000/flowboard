@@ -109,20 +109,19 @@
 
 <div class="page framed">
   <div class="board-bar">
-    <header class="page-header">
-      <div class="page-title"><h1>{board.name}</h1><p>{board.description || (board.canAdmin ? 'Add a course description in Course settings.' : 'Keep assignments, notes, and course material together.')}</p></div>
+    <header class="board-header-compact">
+      <div class="board-identity"><h1>{board.name}</h1><p>{board.description || (board.canAdmin ? 'Add a course description in Course settings.' : 'Keep assignments, notes, and course material together.')}</p></div>
+      <div class="course-summary" aria-label="Current view planning summary">
+        <span><strong>{board.assignmentCount}</strong> assignments</span>
+        <span><strong>{board.completedAssignmentCount}</strong> completed</span>
+        <span class:needs-attention={board.undatedAssignmentCount > 0}><strong>{board.undatedAssignmentCount}</strong> need dates</span>
+        <span class:needs-attention={board.unestimatedAssignmentCount > 0}><strong>{board.unestimatedAssignmentCount}</strong> need estimates</span>
+      </div>
       <div class="page-actions">
         {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Course settings</a>{/if}
         {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />Add assignment</button>{/if}
       </div>
     </header>
-
-    <div class="course-summary" aria-label="Current view planning summary">
-      <span><strong>{board.assignmentCount}</strong> assignments in this view</span>
-      <span><strong>{board.completedAssignmentCount}</strong> completed</span>
-      <span class:needs-attention={board.undatedAssignmentCount > 0}><strong>{board.undatedAssignmentCount}</strong> need dates</span>
-      <span class:needs-attention={board.unestimatedAssignmentCount > 0}><strong>{board.unestimatedAssignmentCount}</strong> need estimates</span>
-    </div>
 
     <nav class="board-toolbar" aria-label="Course views">
       {#each board.views as view (view.id)}
