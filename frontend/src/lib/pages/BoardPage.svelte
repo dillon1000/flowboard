@@ -253,7 +253,6 @@
     const target = dropTarget;
     finishDrag();
 
-    const snapshot = cloneColumns(columns);
     const sourceColumn = columns.find((column) => column.value === source.status);
     const destinationColumn = columns.find((column) => column.value === status);
     const sourceTaskIndex = sourceColumn?.tasks.findIndex((task) => task.id === source.id) ?? -1;
@@ -268,7 +267,18 @@
     const targetIndex = source.status === status && sourceTaskIndex < rawTargetIndex
       ? rawTargetIndex - 1
       : rawTargetIndex;
-    if (source.status === status && sourceTaskIndex === targetIndex) return;
+    await moveColumnTask(source.id, source.status, status, targetIndex);
+  }
+
+  /** Moves one card in the optimistic lane model, then saves the same order. */
+  async function moveColumnTask(taskID: string, sourceStatus: string, status: string, targetIndex: number): Promise<void> {
+    if (movingTaskID) return;
+    const snapshot = cloneColumns(columns);
+    const sourceColumn = columns.find((column) => column.value === sourceStatus);
+    const destinationColumn = columns.find((column) => column.value === status);
+    const sourceTaskIndex = sourceColumn?.tasks.findIndex((task) => task.id === taskID) ?? -1;
+    if (!sourceColumn || !destinationColumn || sourceTaskIndex < 0) return;
+    if (sourceStatus === status && sourceTaskIndex === targetIndex) return;
 
     const sourceWasCompleted = sourceColumn.isCompleted;
     const [task] = sourceColumn.tasks.splice(sourceTaskIndex, 1);
@@ -281,16 +291,64 @@
     };
     destinationColumn.tasks.splice(Math.min(targetIndex, destinationColumn.tasks.length), 0, movedTask);
     columns = [...columns];
-    movingTaskID = source.id;
+    movingTaskID = taskID;
     requestError = '';
     try {
-      await api(`/api/v1/tasks/${source.id}/move`, {
+      await api(`/api/v1/tasks/${taskID}/move`, {
         method: 'POST',
         body: JSON.stringify({ status, targetIndex })
       });
       if (!sourceWasCompleted && destinationColumn.isCompleted) confetti({ particleCount: 70, spread: 65, origin: { y: 0.75 } });
       await refreshAll();
-      showToast('Task moved');
+      showToast('Assignment moved');
+    } catch (cause) {
+      columns = snapshot;
+      requestError = messageFor(cause);
+    } finally {
+      movingTaskID = null;
+    }
+  }
+
+  /**
+   * Gives touch and keyboard users the same stage change as drag. A board that
+   * is grouped by another field keeps the card in place until fresh data loads.
+   */
+  async function moveTaskToStage(taskID: string, status: string): Promise<void> {
+    if (movingTaskID) return;
+    const sourceColumn = columns.find((column) => column.tasks.some((task) => task.id === taskID));
+    const task = sourceColumn?.tasks.find((candidate) => candidate.id === taskID);
+    if (!sourceColumn || !task || task.statusValue === status) return;
+
+    if (canDrag) {
+      const destinationColumn = columns.find((column) => column.value === status);
+      if (destinationColumn) {
+        await moveColumnTask(taskID, sourceColumn.value, status, destinationColumn.tasks.length);
+        return;
+      }
+    }
+
+    const snapshot = cloneColumns(columns);
+    const option = board.statusOptions.find((candidate: TaskOptionContext) => candidate.value === status);
+    columns = columns.map((column) => ({
+      ...column,
+      tasks: column.tasks.map((candidate) => candidate.id === taskID && option ? {
+        ...candidate,
+        statusValue: option.value,
+        statusName: option.name,
+        statusColorClass: option.colorClass,
+        statusColorStyle: option.colorStyle
+      } : candidate)
+    }));
+    movingTaskID = taskID;
+    requestError = '';
+    try {
+      const targetIndex = board.tasks.filter((candidate: TaskCardContext) => candidate.statusValue === status).length;
+      await api(`/api/v1/tasks/${taskID}/move`, {
+        method: 'POST',
+        body: JSON.stringify({ status, targetIndex })
+      });
+      showToast('Assignment moved');
+      await refreshAll();
     } catch (cause) {
       columns = snapshot;
       requestError = messageFor(cause);
@@ -544,6 +602,8 @@
                       draggable={canDrag && !movingTaskID}
                       moving={movingTaskID === task.id}
                       dropPosition={dropTarget?.taskID === task.id ? dropTarget.position : null}
+                      moveOptions={board.canEdit ? board.statusOptions : []}
+                      onmove={(status) => moveTaskToStage(task.id, status)}
                       ondragstart={(event) => startDrag(task.id, column.value, event)}
                       ondragend={finishDrag}
                       ondragover={(event) => dragOverTask(event, column.value, task.id)}

@@ -267,9 +267,7 @@
 .lane-card {
   position: relative;
   --lane-card-glow: var(--stage, var(--ds-gray-600));
-  display: grid;
-  gap: 7px;
-  padding: 11px 12px 11px 14px;
+  display: block;
   border-radius: var(--radius-medium);
   color: var(--text);
   background: radial-gradient(
@@ -280,8 +278,51 @@
     var(--surface-raised);
   box-shadow: var(--shadow-border);
   cursor: pointer;
-  text-decoration: none;
   transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+}
+
+.lane-card-link {
+  display: grid;
+  gap: 7px;
+  padding: 11px 40px 11px 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lane-card-menu {
+  position: absolute;
+  z-index: 3;
+  top: 6px;
+  right: 6px;
+}
+
+.lane-card-menu .icon-button {
+  width: 28px;
+  height: 28px;
+  color: var(--text-tertiary);
+}
+
+.lane-card-menu .menu-panel {
+  width: 196px;
+}
+
+.lane-card-menu .menu-heading {
+  display: block;
+  padding: 7px 10px 5px;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.lane-card-menu .menu-option {
+  gap: 8px;
+}
+
+.lane-card-menu .menu-check {
+  margin-left: auto;
 }
 
 .lane-card:hover {
