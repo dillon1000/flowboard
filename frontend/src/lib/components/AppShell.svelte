@@ -8,6 +8,7 @@
   import { activityCount } from '$lib/ui/progress';
   import Avatar from './Avatar.svelte';
   import BuildSignature from './BuildSignature.svelte';
+  import CommandPalette from './CommandPalette.svelte';
   import CreateBoardDialog from './CreateBoardDialog.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
   import TaskPreview from './TaskPreview.svelte';
@@ -16,12 +17,11 @@
   let { context, children } = $props<{ context: AppPageContext; children: Snippet }>();
   let createBoardOpen = $state(false);
   let sidebarOpen = $state(false);
-  let mobileSearchOpen = $state(false);
+  let searchOpen = $state(false);
   let shortcutsOpen = $state(false);
   let collapsed = $state(false);
   let hydrated = $state(false);
   let shortcutModifier = $state('Ctrl');
-  let searchInput: HTMLInputElement;
   const shellBusy = $derived(Boolean(navigating.to) || $activityCount > 0);
   const activeBoards = $derived(
     context.common.boards.filter((board: BoardNavigationContext) => !board.isArchived)
@@ -54,11 +54,6 @@
 
   function handleShortcut(event: KeyboardEvent): void {
     if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
-    if (event.key === 'Escape' && document.activeElement === searchInput) {
-      searchInput.value = '';
-      searchInput.blur();
-      return;
-    }
     if (!(event.metaKey || event.ctrlKey)) return;
     if (event.key.toLowerCase() === 'b') {
       event.preventDefault();
@@ -75,8 +70,7 @@
   }
 
   function openSearch(): void {
-    if (searchInput?.offsetParent) searchInput.focus();
-    else mobileSearchOpen = true;
+    searchOpen = true;
   }
 </script>
 
@@ -155,10 +149,10 @@
         <span aria-current="page">{context.pageTitle}</span>
       </nav>
       <div class="topbar-actions">
-        <form class="search-control" method="get" action="/app/tasks" role="search">
-          <Search size={16} /><input bind:this={searchInput} name="q" value={searchQuery} aria-label="Search assignments" placeholder="Search assignments" /><kbd>{shortcutModifier} K</kbd>
-        </form>
-        <button class="icon-button mobile-search-button" type="button" onclick={openSearch} aria-label="Search assignments"><Search size={16} /></button>
+        <button class="search-control" type="button" onclick={openSearch} aria-label="Find courses, assignments, and actions">
+          <Search size={16} /><span class="search-control-value">{searchQuery || 'Find anything'}</span><kbd>{shortcutModifier} K</kbd>
+        </button>
+        <button class="icon-button mobile-search-button" type="button" onclick={openSearch} aria-label="Find anything"><Search size={16} /></button>
         <ThemeToggle />
       </div>
     </header>
@@ -167,25 +161,16 @@
 </div>
 
 <CreateBoardDialog bind:open={createBoardOpen} />
+<CommandPalette bind:open={searchOpen} common={context.common} initialQuery={searchQuery} />
 <TaskPreview />
 <Toast />
-
-{#if mobileSearchOpen}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="mobile-search-title" tabindex="-1" use:dialogLayer={{ close: () => (mobileSearchOpen = false) }}>
-    <form class="dialog compact shell-search-dialog" method="get" action="/app/tasks" onsubmit={() => (mobileSearchOpen = false)}>
-      <div class="dialog-header"><div><h2 id="mobile-search-title">Search assignments</h2><p>Find work across every course.</p></div><button class="icon-button" type="button" onclick={() => (mobileSearchOpen = false)} aria-label="Close"><X size={16} /></button></div>
-      <div class="dialog-body"><label class="search-control shell-search-field"><Search size={16} /><input name="q" value={searchQuery} aria-label="Search assignments" placeholder="Title or notes" data-dialog-focus /></label></div>
-      <div class="dialog-footer"><button class="button" type="button" onclick={() => (mobileSearchOpen = false)}>Cancel</button><button class="button primary" type="submit">Search</button></div>
-    </form>
-  </div>
-{/if}
 
 {#if shortcutsOpen}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1" use:dialogLayer={{ close: () => (shortcutsOpen = false) }}>
     <div class="dialog compact shortcut-dialog">
       <div class="dialog-header"><div><h2 id="shortcuts-title">Keyboard shortcuts</h2><p>Move through your study plan without reaching for the pointer.</p></div><button class="icon-button" type="button" onclick={() => (shortcutsOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body shortcut-list">
-        <div><span>Search assignments</span><kbd>{shortcutModifier} K</kbd></div>
+        <div><span>Find anything</span><kbd>{shortcutModifier} K</kbd></div>
         <div><span>Toggle navigation</span><kbd>{shortcutModifier} B</kbd></div>
         <div><span>Show this reference</span><kbd>{shortcutModifier} /</kbd></div>
         <div><span>Close a menu or dialog</span><kbd>Esc</kbd></div>

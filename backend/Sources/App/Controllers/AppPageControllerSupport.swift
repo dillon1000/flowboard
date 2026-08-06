@@ -46,6 +46,14 @@ extension AppPageController {
                 )
             )
         }
+        let searchAssignments = try boards
+            .filter { !$0.isArchived }
+            .flatMap { board in
+                try board.tasks
+                    .filter { !$0.isArchived }
+                    .map { try SearchAssignmentContext(task: $0, courseName: board.name) }
+            }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         return CommonPageContext(
             userName: user.name,
             userEmail: user.email,
@@ -54,7 +62,8 @@ extension AppPageController {
             weeklyPlanningPromptEnabled: user.weeklyPlanningPromptEnabled,
             planningEmailHour: user.planningEmailHour,
             userAvatar: AvatarContext(user: user),
-            boards: boardContexts
+            boards: boardContexts,
+            searchAssignments: searchAssignments
         )
     }
 
