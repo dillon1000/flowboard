@@ -528,6 +528,7 @@ enum PlanningBriefService {
                     dateKey: dateKey,
                     database: database
                 )
+                guard !needsWeekly || data.unplannedTaskCount > 0 else { continue }
                 if needsDaily {
                     let event = try NotificationEvent.dailyBrief(
                         user: user,
