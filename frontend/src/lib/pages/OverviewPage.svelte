@@ -61,7 +61,22 @@
   let planMinutes = $state(60);
   let pendingCount = $state(0);
   const pending = $derived(pendingCount > 0);
-  let requestError = $state('');
+  let pageError = $state('');
+  let createTaskError = $state('');
+  let planError = $state('');
+  let availabilityError = $state('');
+  let estimatesError = $state('');
+  let completeError = $state('');
+  let moveError = $state('');
+  const requestError = $derived(
+    createTaskOpen ? createTaskError
+      : planOpen ? planError
+        : availabilityOpen ? availabilityError
+          : estimatesOpen ? estimatesError
+            : completeOpen ? completeError
+              : moveOpen ? moveError
+                : ''
+  );
   let expandedDays = $state<Record<string, boolean>>({});
   let activeSession = $state<StudyAssignmentContext | null>(null);
   let actualMinutes = $state(30);
@@ -160,6 +175,7 @@
   }
 
   function openPlan(assignmentID: string): void {
+    planError = '';
     planSelection = assignmentID;
     const assignment = overview.planCandidates.find((candidate: StudyPlanCandidateContext) => candidate.id === assignmentID);
     planMinutes = Math.min(60, assignment?.remainingMinutes ?? 60);
@@ -175,7 +191,7 @@
   function openComplete(session: StudyAssignmentContext): void {
     activeSession = session;
     actualMinutes = Math.max(1, session.estimatedMinutes);
-    requestError = '';
+    completeError = '';
     completeOpen = true;
   }
 
@@ -183,7 +199,7 @@
     activeSession = session;
     const todayIndex = overview.days.findIndex((day: StudyDayContext) => day.isToday);
     moveDate = overview.days[todayIndex + 1]?.dateInput ?? todayDateInput;
-    requestError = '';
+    moveError = '';
     moveOpen = true;
   }
 
@@ -201,7 +217,7 @@
 
   function addCommitment(): void {
     if (!commitmentTitle.trim() || commitmentWeekdays.length === 0 || commitmentEnd <= commitmentStart) {
-      requestError = 'Add a title, at least one weekday, and an end time after the start time.';
+      availabilityError = 'Add a title, at least one weekday, and an end time after the start time.';
       return;
     }
     recurringCommitments = [...recurringCommitments, {
@@ -214,12 +230,12 @@
     }];
     commitmentTitle = '';
     commitmentWeekdays = [];
-    requestError = '';
+    availabilityError = '';
   }
 
   function addConflict(): void {
     if (!conflictTitle.trim() || !conflictDate || conflictEnd <= conflictStart) {
-      requestError = 'Add a conflict date and an end time after the start time.';
+      availabilityError = 'Add a conflict date and an end time after the start time.';
       return;
     }
     calendarConflicts = [...calendarConflicts, {
@@ -231,7 +247,7 @@
     }];
     conflictTitle = '';
     conflictDate = '';
-    requestError = '';
+    availabilityError = '';
   }
 
   async function persistSettings(overrides: Partial<Pick<StudySettingsContext, 'timeZoneConfirmed' | 'availabilityConfigured'>> = {}): Promise<void> {
@@ -251,7 +267,7 @@
 
   async function confirmTimeZone(): Promise<void> {
     pendingCount += 1;
-    requestError = '';
+    pageError = '';
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       await api('/api/v1/auth/me', {
@@ -262,7 +278,7 @@
       await refreshAll();
       showToast(`Time zone set to ${timeZone}`);
     } catch (cause) {
-      requestError = messageFor(cause);
+      pageError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -271,14 +287,14 @@
   async function saveAvailability(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     pendingCount += 1;
-    requestError = '';
+    availabilityError = '';
     try {
       await persistSettings({ availabilityConfigured: true });
       availabilityOpen = false;
       await refreshAll();
       showToast('Availability saved');
     } catch (cause) {
-      requestError = messageFor(cause);
+      availabilityError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -293,11 +309,11 @@
     event.preventDefault();
     const estimates = overview.estimationInbox.map((item: StudyEstimateInboxItemContext) => ({ taskID: item.id, estimatedMinutes: Number(estimateValues[item.id]) }));
     if (estimates.some((item: { taskID: string; estimatedMinutes: number }) => !Number.isInteger(item.estimatedMinutes) || item.estimatedMinutes < 5 || item.estimatedMinutes > 1_440)) {
-      requestError = 'Set every estimate between 5 and 1440 minutes.';
+      estimatesError = 'Set every estimate between 5 and 1440 minutes.';
       return;
     }
     pendingCount += 1;
-    requestError = '';
+    estimatesError = '';
     try {
       await api('/api/v1/study-settings/estimates', {
         method: 'POST',
@@ -307,7 +323,7 @@
       await refreshAll();
       showToast(`${estimates.length} ${estimates.length === 1 ? 'estimate' : 'estimates'} saved`);
     } catch (cause) {
-      requestError = messageFor(cause);
+      estimatesError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -319,7 +335,7 @@
     const data = new FormData(form);
     const dueDate = String(data.get('dueAt') ?? '');
     pendingCount += 1;
-    requestError = '';
+    createTaskError = '';
     try {
       await api<TaskResponse>('/api/v1/tasks', {
         method: 'POST',
@@ -338,7 +354,7 @@
       await refreshAll();
       showToast('Assignment added');
     } catch (cause) {
-      requestError = messageFor(cause);
+      createTaskError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -352,14 +368,14 @@
     const planned = Number(data.get('plannedMinutes'));
     if (!taskID || !focusDate) return;
     pendingCount += 1;
-    requestError = '';
+    planError = '';
     try {
       await api(`/api/v1/tasks/${taskID}/study-sessions`, { method: 'POST', body: JSON.stringify({ scheduledDate: focusDate, plannedMinutes: planned }) });
       planOpen = false;
       await refreshAll();
       showToast('Study session added');
     } catch (cause) {
-      requestError = messageFor(cause);
+      planError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -367,7 +383,7 @@
 
   async function autoPlanWeek(): Promise<void> {
     pendingCount += 1;
-    requestError = '';
+    pageError = '';
     try {
       const result = await api<AutoPlanStudySessionsResponse>('/api/v1/study-sessions/plan', {
         method: 'POST',
@@ -378,7 +394,7 @@
       else if (result.remainingMinutes > 0) showToast(`Planned ${durationLabel(result.plannedMinutes)}; ${durationLabel(result.remainingMinutes)} still needs room`);
       else showToast(`Planned ${durationLabel(result.plannedMinutes)} across the week`);
     } catch (cause) {
-      requestError = messageFor(cause);
+      pageError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -386,7 +402,7 @@
 
   async function repairWeek(): Promise<void> {
     pendingCount += 1;
-    requestError = '';
+    pageError = '';
     try {
       const result = await api<RepairStudyWeekResponse>('/api/v1/study-sessions/repair', { method: 'POST' });
       await refreshAll();
@@ -394,7 +410,7 @@
         ? `Repaired ${result.repairedSessionCount} blocks; ${durationLabel(result.remainingMinutes)} still needs room`
         : `Repaired ${result.repairedSessionCount} ${result.repairedSessionCount === 1 ? 'block' : 'blocks'}`);
     } catch (cause) {
-      requestError = messageFor(cause);
+      pageError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -404,14 +420,14 @@
     event.preventDefault();
     if (!activeSession) return;
     pendingCount += 1;
-    requestError = '';
+    completeError = '';
     try {
       await api(`/api/v1/study-sessions/${activeSession.studySessionID}/complete`, { method: 'POST', body: JSON.stringify({ actualMinutes: Number(actualMinutes) }) });
       completeOpen = false;
       await refreshAll();
       showToast('Study session completed');
     } catch (cause) {
-      requestError = messageFor(cause);
+      completeError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -421,14 +437,14 @@
     event.preventDefault();
     if (!activeSession || !moveDate) return;
     pendingCount += 1;
-    requestError = '';
+    moveError = '';
     try {
       await api(`/api/v1/study-sessions/${activeSession.studySessionID}`, { method: 'PATCH', body: JSON.stringify({ scheduledDate: moveDate }) });
       moveOpen = false;
       await refreshAll();
       showToast('Study session moved');
     } catch (cause) {
-      requestError = messageFor(cause);
+      moveError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -436,13 +452,13 @@
 
   async function skipSession(sessionID: string): Promise<void> {
     pendingCount += 1;
-    requestError = '';
+    pageError = '';
     try {
       await api(`/api/v1/study-sessions/${sessionID}/skip`, { method: 'POST' });
       await refreshAll();
       showToast('Study session skipped');
     } catch (cause) {
-      requestError = messageFor(cause);
+      pageError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -450,13 +466,13 @@
 
   async function deleteStudySession(sessionID: string): Promise<void> {
     pendingCount += 1;
-    requestError = '';
+    pageError = '';
     try {
       await api(`/api/v1/study-sessions/${sessionID}`, { method: 'DELETE' });
       await refreshAll();
       showToast('Study session removed');
     } catch (cause) {
-      requestError = messageFor(cause);
+      pageError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -506,7 +522,7 @@
             <button class="button primary large" type="button" disabled={!overview.hasPlanCandidates || pending} onclick={autoPlanWeek}><Strategy size={16} />{pending ? 'Working…' : 'Plan this week'}</button>
             <button class="button large" type="button" disabled={!overview.hasCourses} onclick={() => (createTaskOpen = true)}><Plus size={16} />Add assignment</button>
           </div>
-          {#if requestError && !planOpen && !createTaskOpen && !availabilityOpen && !estimatesOpen && !completeOpen && !moveOpen}<p class="error-message" role="alert">{requestError}</p>{/if}
+          {#if pageError}<p class="error-message" role="alert">{pageError}</p>{/if}
         </div>
         <section class="study-unplanned" aria-labelledby="study-unplanned-title">
           <h2 id="study-unplanned-title">Needs study time</h2>
