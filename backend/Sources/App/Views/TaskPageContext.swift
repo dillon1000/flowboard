@@ -302,6 +302,11 @@ struct TaskDetailPageContext: Encodable {
     let hasProperties: Bool
     let reminders: [TaskReminderResponse]
     let notificationsEnabled: Bool
+    let studySessions: [StudySessionPageContext]
+    let hasStudySessions: Bool
+    let remainingStudyMinutes: Int
+    let canPlanStudy: Bool
+    let defaultStudyDate: String
 
     init(
         task: Task,
@@ -316,16 +321,19 @@ struct TaskDetailPageContext: Encodable {
         reminders: [TaskReminder],
         notificationsEnabled: Bool,
         currentUserID: UUID,
+        studySessions: [StudySession],
+        timeZoneIdentifier: String,
         canvasLink: CanvasAssignmentLink? = nil,
         canvasConnection: CanvasConnection? = nil
     ) throws {
-        self.task = try TaskCardContext(
+        let taskContext = try TaskCardContext(
             task: task,
             assignee: task.$assignee.id.flatMap { id in members.first { $0.id == id } },
             board: board,
             canvasLink: canvasLink,
             canvasConnection: canvasConnection
         )
+        self.task = taskContext
         self.boardName = board.name
         self.boardHref = "/app/boards/\(try board.requireID())"
         self.creatorName = creator?.name ?? "Unknown"
@@ -359,6 +367,70 @@ struct TaskDetailPageContext: Encodable {
         self.hasProperties = !(board.propertyDefinitions ?? []).isEmpty
         self.reminders = try reminders.map(TaskReminderResponse.init)
         self.notificationsEnabled = notificationsEnabled
+        let calendar = planningCalendar(timeZoneIdentifier: timeZoneIdentifier)
+        let todayKey = planningDateKey(Date(), calendar: calendar)
+        self.studySessions = try studySessions.map {
+            try StudySessionPageContext(session: $0, task: taskContext, calendar: calendar)
+        }
+        self.hasStudySessions = !studySessions.isEmpty
+        let countedMinutes = studySessions.reduce(0) { total, session in
+            switch session.state {
+            case .completed:
+                total + (session.actualMinutes ?? session.plannedMinutes)
+            case .planned where session.scheduledDate >= todayKey:
+                total + session.plannedMinutes
+            default:
+                total
+            }
+        }
+        self.remainingStudyMinutes = max(0, taskContext.estimatedMinutes - countedMinutes)
+        self.canPlanStudy = taskContext.hasEstimate
+            && self.remainingStudyMinutes >= 5
+            && !board.isCompleted(task.status)
+            && !task.isArchived
+        self.defaultStudyDate = todayKey
+    }
+}
+
+/// Supplies the same study block vocabulary to assignment and course pages.
+/// The API remains the source of truth for state changes and estimate limits.
+struct StudySessionPageContext: Encodable {
+    let id: UUID
+    let taskID: UUID
+    let taskTitle: String
+    let taskHref: String
+    let scheduledDate: String
+    let scheduledDisplay: String
+    let plannedMinutes: Int
+    let plannedDisplay: String
+    let state: String
+    let stateName: String
+    let actualMinutes: Int?
+    let actualDisplay: String
+    let completedAt: Date?
+    let isPlanned: Bool
+    let isCompleted: Bool
+    let isSkipped: Bool
+
+    init(session: StudySession, task: TaskCardContext, calendar: Calendar) throws {
+        self.id = try session.requireID()
+        self.taskID = session.$task.id
+        self.taskTitle = task.title
+        self.taskHref = task.href
+        self.scheduledDate = session.scheduledDate
+        self.scheduledDisplay = planningDate(session.scheduledDate, calendar: calendar).map {
+            planningDateLabel($0, format: "EEE, MMM d", calendar: calendar)
+        } ?? session.scheduledDate
+        self.plannedMinutes = session.plannedMinutes
+        self.plannedDisplay = displayDuration(session.plannedMinutes)
+        self.state = session.state.rawValue
+        self.stateName = session.state.rawValue.capitalized
+        self.actualMinutes = session.actualMinutes
+        self.actualDisplay = session.actualMinutes.map(displayDuration) ?? ""
+        self.completedAt = session.completedAt
+        self.isPlanned = session.state == .planned
+        self.isCompleted = session.state == .completed
+        self.isSkipped = session.state == .skipped
     }
 }
 

@@ -6,6 +6,7 @@
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
+  import StudySessionPanel from '$lib/components/StudySessionPanel.svelte';
   import { deadlineFrom, durationLabel } from '$lib/ui/deadline';
   import { buildGanttScale, ganttPlacement, type GanttPlacement } from '$lib/ui/gantt';
   import { plainSummary } from '$lib/ui/summary';
@@ -426,6 +427,8 @@
           {#if board.canAdmin}<a class="button large" href={`/app/boards/${board.id}/settings`}><Settings size={16} />Course settings</a>{/if}
         </div>
       </header>
+
+      <StudySessionPanel sessions={board.studySessions} variant="course" courseID={board.id} />
 
       <nav class="course-views" aria-label="Course views">
         {#each board.views as view (view.id)}

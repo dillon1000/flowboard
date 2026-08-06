@@ -1,0 +1,250 @@
+/* Contextual study controls use a ruled planning slip: the blue edge marks
+   student-owned time inside course-owned assignment pages. */
+.study-session-panel {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px 18px 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-large);
+  background: color-mix(in srgb, var(--surface) 92%, var(--ds-blue-100));
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
+
+.study-session-panel::before {
+  position: absolute;
+  inset: 10px auto 10px 0;
+  width: 3px;
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  background: var(--ds-blue-600);
+  content: '';
+}
+
+.study-session-panel.course {
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 14px 28px 14px 40px;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: var(--surface-sunken);
+  box-shadow: none;
+}
+
+.study-session-panel.course::before {
+  inset-block: 0;
+}
+
+.study-session-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.study-session-heading > div {
+  min-width: 0;
+}
+
+.study-session-kicker {
+  color: var(--ds-blue-700);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.study-session-heading h2 {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.study-session-heading p {
+  margin: 3px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.study-session-list {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--border);
+}
+
+.study-session-panel.course .study-session-list {
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  max-height: 164px;
+  overflow-y: auto;
+}
+
+.study-session-row {
+  display: grid;
+  grid-template-columns: minmax(145px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+
+.study-session-panel.course .study-session-row {
+  grid-template-columns: minmax(120px, auto) minmax(110px, 1fr) auto;
+}
+
+.study-session-row.history {
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--surface) 78%, var(--surface-sunken));
+}
+
+.study-session-date,
+.study-session-date > span {
+  display: flex;
+  min-width: 0;
+}
+
+.study-session-date {
+  align-items: center;
+  gap: 8px;
+}
+
+.study-session-date > span {
+  flex-direction: column;
+  gap: 1px;
+}
+
+.study-session-date svg {
+  flex: 0 0 auto;
+  color: var(--ds-blue-600);
+}
+
+.study-session-date strong,
+.study-session-assignment {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-session-date small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.study-session-assignment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.study-session-assignment:hover {
+  color: var(--text);
+}
+
+.study-session-state {
+  padding: 3px 7px;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background: var(--surface-sunken);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.study-session-state.planned {
+  color: var(--ds-blue-800);
+  background: var(--ds-blue-100);
+}
+
+.study-session-state.completed {
+  color: var(--ds-green-900);
+  background: var(--ds-green-200);
+}
+
+.study-session-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 4px;
+  padding-top: 7px;
+  border-top: 1px solid var(--border);
+}
+
+.study-session-actions button:not(.icon-button) {
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.study-session-actions button:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.study-session-actions .icon-button {
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+}
+
+.study-session-empty {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-medium);
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.study-session-error {
+  margin: 0;
+}
+
+@media (--viewport-wide) {
+  .study-session-panel.course {
+    padding-inline: 24px;
+  }
+}
+
+@media (--viewport-compact) {
+  .study-session-panel,
+  .study-session-panel.course {
+    padding: 14px 16px;
+  }
+
+  .study-session-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .study-session-heading .button {
+    width: 100%;
+  }
+
+  .study-session-panel.course .study-session-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .study-session-panel.course .study-session-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .study-session-panel.course .study-session-assignment {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
