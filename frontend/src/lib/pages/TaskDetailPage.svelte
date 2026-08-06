@@ -7,6 +7,7 @@
   import Avatar from '$lib/components/Avatar.svelte';
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
+  import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
@@ -748,9 +749,8 @@
         {#if notesEditing}
           <form class="notes-editor" onsubmit={saveNotes}>
             <label class="sr-only" for="task-notes">Assignment notes</label>
-            <textarea class="textarea" id="task-notes" name="description" bind:value={notesDraft} maxlength="5000" placeholder="Instructions, links, submission requirements…"></textarea>
+            <MarkdownEditor id="task-notes" name="description" label="Assignment notes" bind:value={notesDraft} placeholder="Instructions, links, submission requirements…" />
             <div class="notes-editor-footer">
-              <span>Markdown is supported.</span>
               <div>
                 <button class="button small" type="button" onclick={() => (notesEditing = false)}>Cancel</button>
                 <button class="button primary small" type="submit" disabled={pending}>Save notes</button>
@@ -921,7 +921,7 @@
     <form class="dialog wide" onsubmit={saveTask}>
       <div class="dialog-header"><div><h2 id="edit-task-title">{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit assignment'}</h2><p>{detail.task.isCanvasLinked ? 'Canvas manages the academic fields for this assignment.' : 'Update the assignment and its schedule.'}</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body"><div class="form-grid">
-        {#if !detail.task.isCanvasLinked}<div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div>{/if}
+        {#if !detail.task.isCanvasLinked}<div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><MarkdownEditor id="edit-description" name="description" label="Assignment description" value={detail.task.description} /></div>{/if}
         <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={currentStatus} options={statusMenuOptions} ariaLabel="Status" /></div>
         <div class="field"><label for="edit-priority">Priority</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Priority" /></div>
         <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
