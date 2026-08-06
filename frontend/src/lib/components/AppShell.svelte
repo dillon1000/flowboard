@@ -25,6 +25,7 @@
   const activeBoards = $derived(
     context.common.boards.filter((board: BoardNavigationContext) => !board.isArchived)
   );
+  const searchQuery = $derived(context.tasks?.query ?? '');
 
   onMount(() => {
     hydrated = true;
@@ -153,7 +154,7 @@
       </nav>
       <div class="topbar-actions">
         <form class="search-control" method="get" action="/app/tasks" role="search">
-          <Search size={16} /><input bind:this={searchInput} name="q" aria-label="Search assignments" placeholder="Search assignments" /><kbd>⌘ K</kbd>
+          <Search size={16} /><input bind:this={searchInput} name="q" value={searchQuery} aria-label="Search assignments" placeholder="Search assignments" /><kbd>⌘ K</kbd>
         </form>
         <button class="icon-button mobile-search-button" type="button" onclick={openSearch} aria-label="Search assignments"><Search size={16} /></button>
         <ThemeToggle />
@@ -171,7 +172,7 @@
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="mobile-search-title" tabindex="-1" use:dialogLayer={{ close: () => (mobileSearchOpen = false) }}>
     <form class="dialog compact shell-search-dialog" method="get" action="/app/tasks" onsubmit={() => (mobileSearchOpen = false)}>
       <div class="dialog-header"><div><h2 id="mobile-search-title">Search assignments</h2><p>Find work across every course.</p></div><button class="icon-button" type="button" onclick={() => (mobileSearchOpen = false)} aria-label="Close"><X size={16} /></button></div>
-      <div class="dialog-body"><label class="search-control shell-search-field"><Search size={16} /><input name="q" aria-label="Search assignments" placeholder="Title or notes" data-dialog-focus /></label></div>
+      <div class="dialog-body"><label class="search-control shell-search-field"><Search size={16} /><input name="q" value={searchQuery} aria-label="Search assignments" placeholder="Title or notes" data-dialog-focus /></label></div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (mobileSearchOpen = false)}>Cancel</button><button class="button primary" type="submit">Search</button></div>
     </form>
   </div>
