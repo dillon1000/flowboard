@@ -8,6 +8,9 @@ frontend/.playwright-cli/
 frontend/playwright-report/
 frontend/test-results/
 
+extensions/canvas-sync/node_modules/
+extensions/canvas-sync/dist/
+
 backend/.build/
 backend/.swiftpm/
 backend/.env
