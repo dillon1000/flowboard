@@ -41,6 +41,14 @@ struct PatchField<Value: Codable & Sendable>: Codable, Sendable {
     }
 }
 
+extension PatchField.State {
+    /// A supplied null still counts as a requested change for managed-field checks.
+    var isSupplied: Bool {
+        if case .omitted = self { return false }
+        return true
+    }
+}
+
 extension KeyedDecodingContainer {
     /// Swift's synthesized decoder normally treats a missing property wrapper as
     /// an error. This overload supplies the wrapper's omitted state instead.

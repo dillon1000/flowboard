@@ -88,6 +88,12 @@ struct BoardController: RouteCollection {
             .admin
         }
         let board = try await findBoard(req, permission: permission)
+        let canvasLink = try await CanvasCourseLink.query(on: req.db)
+            .filter(\.$board.$id == board.requireID())
+            .first()
+        if canvasLink != nil, input.name.isSupplied {
+            throw Abort(.conflict, reason: "Canvas manages the name of this linked course.")
+        }
         if case let .value(name) = input.name {
             let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard (2...80).contains(name.count) else {
@@ -113,7 +119,15 @@ struct BoardController: RouteCollection {
         } else if case .null = input.isArchived {
             throw Abort(.unprocessableEntity, reason: "Board archive state cannot be null.")
         }
-        try await board.update(on: req.db)
+        try await req.db.transaction { database in
+            try await board.update(on: database)
+            if input.isArchived.isSupplied, let canvasLink {
+                // An explicit local archive choice becomes authoritative until Canvas
+                // reaches the missing-item threshold again.
+                canvasLink.syncArchived = false
+                try await canvasLink.update(on: database)
+            }
+        }
         return try await response(for: board, on: req.db)
     }
 
@@ -124,6 +138,15 @@ struct BoardController: RouteCollection {
         }
         let board = access.board
         let boardID = try board.requireID()
+        let isCanvasLinked = try await CanvasCourseLink.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .first() != nil
+        guard !isCanvasLinked else {
+            throw Abort(
+                .conflict,
+                reason: "Disconnect the Canvas connection before deleting this linked course."
+            )
+        }
         let tasks = try await Task.query(on: req.db)
             .filter(\.$board.$id == boardID)
             .with(\.$attachments)

@@ -165,6 +165,21 @@ struct TaskController: RouteCollection {
         let input = try req.content.decode(PatchTaskRequest.self)
         let task = try await findTask(req)
         let board = try await requiredBoard(for: task, on: req.db)
+        let canvasLink = try await CanvasAssignmentLink.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .first()
+        if canvasLink != nil,
+           input.title.isSupplied
+            || input.description.isSupplied
+            || input.dueAt.isSupplied
+            || input.dueTime.isSupplied
+            || input.gradeEarned.isSupplied
+            || input.gradePossible.isSupplied {
+            throw Abort(
+                .conflict,
+                reason: "Canvas manages the title, description, deadline, score, and points for this assignment."
+            )
+        }
         let actor = try req.auth.require(User.self)
         let actorID = try actor.requireID()
         let previousAssigneeID = task.$assignee.id
@@ -274,7 +289,15 @@ struct TaskController: RouteCollection {
             throw Abort(.unprocessableEntity, reason: "Task status cannot be null.")
         }
 
-        try await task.update(on: req.db)
+        try await req.db.transaction { database in
+            try await task.update(on: database)
+            if input.isArchived.isSupplied, let canvasLink {
+                // An explicit local archive choice remains manual even if the task
+                // was previously archived by missing-item processing.
+                canvasLink.syncArchived = false
+                try await canvasLink.update(on: database)
+            }
+        }
         if let assigneeID = task.$assignee.id,
            assigneeID != previousAssigneeID,
            assigneeID != actorID,
@@ -337,6 +360,15 @@ struct TaskController: RouteCollection {
     func delete(req: Request) async throws -> HTTPStatus {
         let task = try await findTask(req)
         let taskID = try task.requireID()
+        let isCanvasLinked = try await CanvasAssignmentLink.query(on: req.db)
+            .filter(\.$task.$id == taskID)
+            .first() != nil
+        guard !isCanvasLinked else {
+            throw Abort(
+                .conflict,
+                reason: "Disconnect the Canvas connection before deleting this linked assignment."
+            )
+        }
         let attachments = try await TaskAttachment.query(on: req.db)
             .filter(\.$task.$id == taskID)
             .all()
@@ -430,17 +462,20 @@ struct TaskController: RouteCollection {
         return value
     }
 
-    /// Validates the complete score pair. A partial grade is rejected because it
-    /// would make the course total misleading until a later edit fills the gap.
+    /// Points possible can exist before an instructor publishes a score. Canvas
+    /// also permits zero-point work and earned scores above points possible.
     private func validGrade(_ earned: Double?, possible: Double?) throws -> (earned: Double?, possible: Double?) {
-        guard let earned, let possible else {
-            guard earned == nil && possible == nil else {
-                throw Abort(.unprocessableEntity, reason: "Enter both points earned and points possible.")
-            }
-            return (nil, nil)
+        guard earned?.isFinite != false, possible?.isFinite != false else {
+            throw Abort(.unprocessableEntity, reason: "Grade values must be finite.")
         }
-        guard possible > 0, possible <= 100_000, earned >= 0, earned <= possible else {
-            throw Abort(.unprocessableEntity, reason: "Points earned must be between 0 and points possible, up to 100,000.")
+        guard earned == nil || possible != nil else {
+            throw Abort(.unprocessableEntity, reason: "Add points possible before points earned.")
+        }
+        if let possible, !(0...100_000).contains(possible) {
+            throw Abort(.unprocessableEntity, reason: "Points possible must be between 0 and 100,000.")
+        }
+        if let earned, !(0...100_000).contains(earned) {
+            throw Abort(.unprocessableEntity, reason: "Points earned must be between 0 and 100,000.")
         }
         return (earned, possible)
     }
