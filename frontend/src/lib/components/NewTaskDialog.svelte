@@ -81,7 +81,7 @@
           <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
           <div class="field"><label for="new-task-time">Due time</label><TimePicker id="new-task-time" name="dueTime" label="Due time" /></div>
           <div class="field"><label for="new-task-estimate">Time estimate</label><input class="input" id="new-task-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
-          <LabelsField id="new-task-labels" label="Labels" value={board.newTaskLabels} placeholder="Design, Launch" />
+          <LabelsField id="new-task-labels" label="Labels" value={board.newTaskLabels} placeholder="Exam, Reading, Lab" />
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create assignment'}</button></div>
