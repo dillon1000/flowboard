@@ -77,6 +77,7 @@ extension AppPageController {
         tasks: TasksPageContext? = nil,
         taskDetail: TaskDetailPageContext? = nil,
         settings: SettingsPageContext? = nil,
+        availabilitySettings: StudySettingsResponse? = nil,
         apiKeys: APIKeysPageContext? = nil,
         integrations: CanvasIntegrationsPageContext? = nil,
         boardSettings: BoardSettingsPageContext? = nil
@@ -92,6 +93,7 @@ extension AppPageController {
                 tasks: tasks,
                 taskDetail: taskDetail,
                 settings: settings,
+                availabilitySettings: availabilitySettings,
                 apiKeys: apiKeys,
                 integrations: integrations,
                 boardSettings: boardSettings

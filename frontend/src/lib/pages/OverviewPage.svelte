@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { api, messageFor, refreshAll } from '$lib/api';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { scrollFades } from '$lib/actions/scrollFades';
@@ -13,12 +14,10 @@
     OverviewPageContext,
     RepairStudyWeekResponse,
     StudyAssignmentContext,
-    StudyCalendarConflict,
     StudyCourseContext,
     StudyEstimatePreset,
     StudyEstimateInboxItemContext,
     StudyOnboardingStepContext,
-    StudyRecurringCommitment,
     StudySettingsContext,
     StudyDayContext,
     StudyPlanCandidateContext,
@@ -41,28 +40,11 @@
     XIcon as X
   } from 'phosphor-svelte';
 
-  const weekdays = [
-    { key: 'monday', label: 'Mon', index: 1 },
-    { key: 'tuesday', label: 'Tue', index: 2 },
-    { key: 'wednesday', label: 'Wed', index: 3 },
-    { key: 'thursday', label: 'Thu', index: 4 },
-    { key: 'friday', label: 'Fri', index: 5 },
-    { key: 'saturday', label: 'Sat', index: 6 },
-    { key: 'sunday', label: 'Sun', index: 7 }
-  ] as const;
-  const dateOnlyFormatter = new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
-
   let { overview, common } = $props<{ overview: OverviewPageContext; common: CommonPageContext }>();
   const initialOverview = $state.snapshot((() => overview)());
   let createBoardOpen = $state(false);
   let createTaskOpen = $state(false);
   let planOpen = $state(false);
-  let availabilityOpen = $state(false);
   let estimatesOpen = $state(false);
   let completeOpen = $state(false);
   let moveOpen = $state(false);
@@ -73,48 +55,28 @@
   let pageError = $state('');
   let createTaskError = $state('');
   let planError = $state('');
-  let availabilityError = $state('');
   let estimatesError = $state('');
   let completeError = $state('');
   let moveError = $state('');
   const requestError = $derived(
     createTaskOpen ? createTaskError
       : planOpen ? planError
-        : availabilityOpen ? availabilityError
-          : estimatesOpen ? estimatesError
-            : completeOpen ? completeError
-              : moveOpen ? moveError
-                : ''
+        : estimatesOpen ? estimatesError
+          : completeOpen ? completeError
+            : moveOpen ? moveError
+              : ''
   );
   let expandedDays = $state<Record<string, boolean>>({});
   let activeSession = $state<StudyAssignmentContext | null>(null);
   let actualMinutes = $state(30);
   let moveDate = $state('');
 
-  let weekdayCapacityMinutes = $state<Record<string, number>>({ ...initialOverview.studySettings.weekdayCapacityMinutes });
-  let blockedDates = $state<string[]>([...initialOverview.studySettings.blockedDates]);
-  let recurringCommitments = $state<StudyRecurringCommitment[]>(initialOverview.studySettings.recurringCommitments.map((item: StudyRecurringCommitment) => ({ ...item, weekdays: [...item.weekdays] })));
-  let calendarConflicts = $state<StudyCalendarConflict[]>(initialOverview.studySettings.calendarConflicts.map((item: StudyCalendarConflict) => ({ ...item })));
   let estimatePresets = $state<StudyEstimatePreset[]>(initialOverview.studySettings.estimatePresets.map((item: StudyEstimatePreset) => ({ ...item, keywords: [...item.keywords] })));
   let estimateValues = $state<Record<string, number>>(Object.fromEntries(initialOverview.estimationInbox.map((item: StudyEstimateInboxItemContext) => [item.id, item.suggestedMinutes])));
-  let blockedDateDraft = $state('');
-  let commitmentTitle = $state('');
-  let commitmentKind = $state<'class' | 'work'>('class');
-  let commitmentWeekdays = $state<number[]>([]);
-  let commitmentStart = $state('09:00');
-  let commitmentEnd = $state('10:00');
-  let conflictTitle = $state('');
-  let conflictDate = $state('');
-  let conflictStart = $state('09:00');
-  let conflictEnd = $state('10:00');
 
   const courseOptions = $derived<SelectMenuOption[]>(
     overview.courseFilters.map((course: StudyCourseContext) => ({ value: course.id, label: course.name }))
   );
-  const commitmentKindOptions: SelectMenuOption[] = [
-    { value: 'class', label: 'Class' },
-    { value: 'work', label: 'Work' }
-  ];
   const planOptions = $derived<SelectMenuOption[]>(
     overview.planCandidates.map((assignment: StudyPlanCandidateContext) => ({
       value: assignment.id,
@@ -126,7 +88,7 @@
   const todayDateInput = $derived(overview.days.find((day: StudyDayContext) => day.isToday)?.dateInput ?? overview.days[0]?.dateInput ?? '');
   const planRemainingMinutes = $derived(overview.planCandidates.find((candidate: StudyPlanCandidateContext) => candidate.id === planSelection)?.remainingMinutes ?? 1_440);
   const plannedMinutes = $derived(overview.days.reduce((total: number, day: StudyDayContext) => total + day.workloadMinutes, 0));
-  const weeklyCapacity = $derived(Object.values(weekdayCapacityMinutes).reduce((total, minutes) => total + Number(minutes), 0));
+  const weeklyCapacity = $derived(Object.values(overview.studySettings.weekdayCapacityMinutes as Record<string, number>).reduce((total: number, minutes: number) => total + minutes, 0));
   const currentOnboardingStep = $derived(overview.onboarding.steps.find((step: StudyOnboardingStepContext) => step.isCurrent));
   const unplannedPreview = $derived<StudyPlanCandidateContext[]>(overview.planCandidates.slice(0, 3));
   const busiestDay = $derived.by<StudyDayContext | null>(() => {
@@ -143,11 +105,6 @@
     if (!busiestDay) return 'Nothing needs planning this week.';
     return `Your busiest day is ${busiestDay.weekdayLabel} at ${durationLabel(busiestDay.workloadMinutes)} of ${durationLabel(busiestDay.availableMinutes)} available.`;
   });
-
-  function dateLabel(value: string): string {
-    const date = new Date(`${value}T00:00:00Z`);
-    return Number.isNaN(date.getTime()) ? value : dateOnlyFormatter.format(date);
-  }
 
   function toggleDay(dateLabel: string): void {
     const update = () => (expandedDays[dateLabel] = expandedDays[dateLabel] === false);
@@ -208,61 +165,14 @@
     moveOpen = true;
   }
 
-  function addBlockedDate(): void {
-    if (!blockedDateDraft || blockedDates.includes(blockedDateDraft)) return;
-    blockedDates = [...blockedDates, blockedDateDraft].sort();
-    blockedDateDraft = '';
-  }
-
-  function toggleCommitmentWeekday(index: number, checked: boolean): void {
-    commitmentWeekdays = checked
-      ? [...new Set([...commitmentWeekdays, index])].sort()
-      : commitmentWeekdays.filter((value) => value !== index);
-  }
-
-  function addCommitment(): void {
-    if (!commitmentTitle.trim() || commitmentWeekdays.length === 0 || commitmentEnd <= commitmentStart) {
-      availabilityError = 'Add a title, at least one weekday, and an end time after the start time.';
-      return;
-    }
-    recurringCommitments = [...recurringCommitments, {
-      id: crypto.randomUUID(),
-      title: commitmentTitle.trim(),
-      kind: commitmentKind,
-      weekdays: [...commitmentWeekdays],
-      startTime: commitmentStart,
-      endTime: commitmentEnd
-    }];
-    commitmentTitle = '';
-    commitmentWeekdays = [];
-    availabilityError = '';
-  }
-
-  function addConflict(): void {
-    if (!conflictTitle.trim() || !conflictDate || conflictEnd <= conflictStart) {
-      availabilityError = 'Add a conflict date and an end time after the start time.';
-      return;
-    }
-    calendarConflicts = [...calendarConflicts, {
-      id: crypto.randomUUID(),
-      title: conflictTitle.trim(),
-      date: conflictDate,
-      startTime: conflictStart,
-      endTime: conflictEnd
-    }];
-    conflictTitle = '';
-    conflictDate = '';
-    availabilityError = '';
-  }
-
   async function persistSettings(overrides: Partial<Pick<StudySettingsContext, 'timeZoneConfirmed' | 'availabilityConfigured'>> = {}): Promise<void> {
     await api('/api/v1/study-settings', {
       method: 'PUT',
       body: JSON.stringify({
-        weekdayCapacityMinutes: Object.fromEntries(Object.entries(weekdayCapacityMinutes).map(([key, value]) => [key, Number(value)])),
-        blockedDates,
-        recurringCommitments,
-        calendarConflicts,
+        weekdayCapacityMinutes: overview.studySettings.weekdayCapacityMinutes,
+        blockedDates: overview.studySettings.blockedDates,
+        recurringCommitments: overview.studySettings.recurringCommitments,
+        calendarConflicts: overview.studySettings.calendarConflicts,
         estimatePresets: estimatePresets.map((preset) => ({ ...preset, minutes: Number(preset.minutes) })),
         timeZoneConfirmed: overrides.timeZoneConfirmed ?? overview.studySettings.timeZoneConfirmed,
         availabilityConfigured: overrides.availabilityConfigured ?? overview.studySettings.availabilityConfigured
@@ -284,22 +194,6 @@
       showToast(`Time zone set to ${timeZone}`);
     } catch (cause) {
       pageError = messageFor(cause);
-    } finally {
-      pendingCount -= 1;
-    }
-  }
-
-  async function saveAvailability(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    pendingCount += 1;
-    availabilityError = '';
-    try {
-      await persistSettings({ availabilityConfigured: true });
-      availabilityOpen = false;
-      await refreshAll();
-      showToast('Availability saved');
-    } catch (cause) {
-      availabilityError = messageFor(cause);
     } finally {
       pendingCount -= 1;
     }
@@ -515,7 +409,7 @@
   function runOnboardingStep(): void {
     switch (overview.onboarding.nextStepKey) {
       case 'timezone': void confirmTimeZone(); break;
-      case 'availability': availabilityOpen = true; break;
+      case 'availability': void goto('/app/settings/availability'); break;
       case 'estimates': estimatesOpen = true; break;
       case 'plan': void autoPlanWeek(); break;
     }
@@ -539,11 +433,11 @@
         {/each}
       </nav>
       <div class="study-availability-summary">
-        <button type="button" onclick={() => (availabilityOpen = true)}>
+        <a href="/app/settings/availability">
           <span><Clock3 size={14} />Availability</span>
           <strong>{durationLabel(weeklyCapacity)} / week</strong>
-          <small>{recurringCommitments.length} fixed · {blockedDates.length} blocked</small>
-        </button>
+          <small>{overview.studySettings.recurringCommitments.length} fixed · {overview.studySettings.blockedDates.length} blocked</small>
+        </a>
       </div>
     </aside>
 
@@ -667,48 +561,4 @@
 
 {#if estimatesOpen}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="estimate-inbox-title" tabindex="-1" use:dialogLayer={{ close: () => (estimatesOpen = false) }}><form class="dialog study-estimate-dialog" onsubmit={saveEstimates}><div class="dialog-header"><div><h2 id="estimate-inbox-title">Estimate inbox</h2><p>Set every assignment once, then reuse the same defaults next time.</p></div><button class="icon-button" type="button" onclick={() => (estimatesOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body">{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}<section class="study-preset-editor" aria-labelledby="estimate-defaults-title"><h3 id="estimate-defaults-title">Reusable defaults</h3><div>{#each estimatePresets as preset}<label><span>{preset.name}</span><span><input type="number" min="5" max="1440" step="5" bind:value={preset.minutes} /><small>min</small></span></label>{/each}</div></section><div class="study-estimate-list">{#each overview.estimationInbox as item}<article><div><strong>{item.title}</strong><small>{item.courseName} · {item.typeName} · {item.dueDisplay}</small></div><select aria-label={`Default for ${item.title}`} value={item.suggestedPresetID} onchange={(event) => applyPreset(item.id, (event.currentTarget as HTMLSelectElement).value)}><option value="">Custom</option>{#each estimatePresets as preset}<option value={preset.id}>{preset.name}</option>{/each}</select><label><span class="sr-only">Minutes for {item.title}</span><input type="number" min="5" max="1440" step="5" bind:value={estimateValues[item.id]} required /><small>min</small></label></article>{/each}</div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (estimatesOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : `Save ${overview.estimationInbox.length} estimates`}</button></div></form></div>
-{/if}
-
-{#if availabilityOpen}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="availability-title" tabindex="-1" use:dialogLayer={{ close: () => (availabilityOpen = false) }}>
-    <form class="dialog study-availability-dialog" onsubmit={saveAvailability}>
-      <div class="dialog-header"><div><h2 id="availability-title">Your real week</h2><p>Capacity is study time before classes, work, and calendar conflicts.</p></div><button class="icon-button" type="button" onclick={() => (availabilityOpen = false)} aria-label="Close"><X size={16} /></button></div>
-      <div class="dialog-body">
-        {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
-        <section class="study-availability-section">
-          <div class="study-section-heading"><h3>Weekday capacity</h3><span>Minutes</span></div>
-          <div class="study-capacity-grid">{#each weekdays as day}<label><span>{day.label}</span><input type="number" min="0" max="1440" step="15" bind:value={weekdayCapacityMinutes[day.key]} /></label>{/each}</div>
-        </section>
-        <section class="study-availability-section">
-          <div class="study-section-heading"><h3>Blocked dates</h3><span>No study work</span></div>
-          <div class="study-inline-add"><DatePicker id="blocked-date" name="blockedDate" label="Blocked date" bind:value={blockedDateDraft} /><button class="button" type="button" onclick={addBlockedDate}>Block date</button></div>
-          <div class="study-setting-chips">{#each blockedDates as date}<span>{dateLabel(date)}<button type="button" aria-label={`Remove blocked date ${dateLabel(date)}`} onclick={() => (blockedDates = blockedDates.filter((item) => item !== date))}>×</button></span>{/each}</div>
-        </section>
-        <section class="study-availability-section">
-          <div class="study-section-heading"><h3>Classes and work</h3><span>Repeats weekly</span></div>
-          <div class="study-setting-list">{#each recurringCommitments as item}<article><span><strong>{item.title}</strong><small>{item.kind} · {item.startTime}–{item.endTime}</small></span><button type="button" aria-label={`Remove ${item.title}`} onclick={() => (recurringCommitments = recurringCommitments.filter((value) => value.id !== item.id))}>Remove</button></article>{/each}</div>
-          <div class="study-commitment-builder">
-            <input class="input" aria-label="Commitment title" placeholder="Calculus or work shift" bind:value={commitmentTitle} />
-            <SelectMenu id="commitment-kind" name="commitmentKind" bind:value={commitmentKind} options={commitmentKindOptions} ariaLabel="Commitment type" />
-            <TimePicker id="commitment-start" name="commitmentStart" label="Start time" bind:value={commitmentStart} />
-            <TimePicker id="commitment-end" name="commitmentEnd" label="End time" bind:value={commitmentEnd} />
-            <fieldset><legend>Weekdays</legend>{#each weekdays as day}<label><input type="checkbox" checked={commitmentWeekdays.includes(day.index)} onchange={(event) => toggleCommitmentWeekday(day.index, (event.currentTarget as HTMLInputElement).checked)} /><span>{day.label}</span></label>{/each}</fieldset>
-            <button class="button" type="button" onclick={addCommitment}>Add fixed time</button>
-          </div>
-        </section>
-        <section class="study-availability-section">
-          <div class="study-section-heading"><h3>Calendar conflicts</h3><span>One-time events</span></div>
-          <div class="study-setting-list">{#each calendarConflicts as item}<article><span><strong>{item.title}</strong><small>{dateLabel(item.date)} · {item.startTime}–{item.endTime}</small></span><button type="button" aria-label={`Remove ${item.title}`} onclick={() => (calendarConflicts = calendarConflicts.filter((value) => value.id !== item.id))}>Remove</button></article>{/each}</div>
-          <div class="study-conflict-builder">
-            <input class="input" aria-label="Conflict title" placeholder="Appointment" bind:value={conflictTitle} />
-            <DatePicker id="conflict-date" name="conflictDate" label="Conflict date" bind:value={conflictDate} />
-            <TimePicker id="conflict-start" name="conflictStart" label="Conflict start" bind:value={conflictStart} />
-            <TimePicker id="conflict-end" name="conflictEnd" label="Conflict end" bind:value={conflictEnd} />
-            <button class="button" type="button" onclick={addConflict}>Add conflict</button>
-          </div>
-        </section>
-      </div>
-      <div class="dialog-footer"><button class="button" type="button" onclick={() => (availabilityOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save availability'}</button></div>
-    </form>
-  </div>
 {/if}
