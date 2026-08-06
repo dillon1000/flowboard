@@ -273,6 +273,10 @@ extension AppPageController {
         let gridStart = calendar.date(byAdding: .day, value: -(firstWeekday - 1), to: monthStart) ?? monthStart
         let activeMonth = calendar.component(.month, from: monthStart)
         let todayKey = inputDate(Date())
+        let labelFormatter = DateFormatter()
+        labelFormatter.locale = Locale(identifier: "en_US_POSIX")
+        labelFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        labelFormatter.dateFormat = "EEEE, MMMM d, yyyy"
 
         return (0..<42).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: gridStart) else {
@@ -281,6 +285,8 @@ extension AppPageController {
             let key = inputDate(date)
             return CalendarDayContext(
                 day: String(calendar.component(.day, from: date)),
+                dateInput: key,
+                dateLabel: labelFormatter.string(from: date),
                 isMuted: calendar.component(.month, from: date) != activeMonth,
                 isToday: key == todayKey,
                 tasks: tasks.filter { $0.dueInput == key }

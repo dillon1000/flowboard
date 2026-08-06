@@ -346,6 +346,8 @@ export interface TaskColumnContext {
 
 export interface CalendarDayContext {
   day: string;
+  dateInput: string;
+  dateLabel: string;
   isMuted: boolean;
   isToday: boolean;
   tasks: TaskCardContext[];
