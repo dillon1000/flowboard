@@ -53,6 +53,78 @@ struct StudySessionTests {
         #expect(secondPlan.remainingMinutes == 0)
     }
 
+    @Test("Missed plans return to the estimate")
+    func replansMissedWork() throws {
+        let taskID = UUID()
+        let monday = try #require(studySessionDate("2026-08-03"))
+        let result = StudyPlanningService.plan(
+            tasks: [
+                StudyPlanningTask(
+                    id: taskID,
+                    dueDate: "2026-08-03",
+                    estimatedMinutes: 60,
+                    priority: "high"
+                ),
+            ],
+            sessions: [
+                StudyPlanningSession(
+                    taskID: taskID,
+                    scheduledDate: "2026-08-02",
+                    plannedMinutes: 60,
+                    state: .planned,
+                    actualMinutes: nil
+                ),
+            ],
+            dailyLimitMinutes: 120,
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: monday
+        )
+
+        #expect(result.allocations.count == 1)
+        #expect(result.allocations.first?.scheduledDate == "2026-08-03")
+        #expect(result.allocations.first?.plannedMinutes == 60)
+    }
+
+    @Test("Recovery detects missed and overloaded plans")
+    func detectsRecoveryWork() throws {
+        let monday = try #require(studySessionDate("2026-08-03"))
+        let taskID = UUID()
+        let userID = UUID()
+        let missed = StudySession(
+            id: UUID(),
+            taskID: taskID,
+            userID: userID,
+            scheduledDate: "2026-08-02",
+            plannedMinutes: 30
+        )
+        let firstMonday = StudySession(
+            id: UUID(),
+            taskID: taskID,
+            userID: userID,
+            scheduledDate: "2026-08-03",
+            plannedMinutes: 90
+        )
+        let secondMonday = StudySession(
+            id: UUID(),
+            taskID: UUID(),
+            userID: userID,
+            scheduledDate: "2026-08-03",
+            plannedMinutes: 90
+        )
+
+        let analysis = StudyRecoveryService.analyze(
+            sessions: [missed, firstMonday, secondMonday],
+            dueDateByTaskID: [:],
+            availability: StudyAvailability(dailyLimitMinutes: 120),
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: monday
+        )
+
+        #expect(analysis.missedSessionIDs == Set([try missed.requireID()]))
+        #expect(analysis.overloadedDates == ["2026-08-03"])
+        #expect(analysis.overloadedSessionIDs.count == 1)
+    }
+
     @Test("Study session routes manage and automatically plan work")
     func lifecycleAndAutoPlan() async throws {
         try await withApp(configure: configure) { app in

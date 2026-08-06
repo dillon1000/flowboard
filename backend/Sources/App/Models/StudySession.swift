@@ -156,3 +156,12 @@ struct AutoPlanStudySessionsResponse: Content {
     let remainingMinutes: Int
     let unplannedTaskCount: Int
 }
+
+struct RepairStudyWeekResponse: Content {
+    let repairedSessionCount: Int
+    let createdSessionCount: Int
+    let updatedSessionCount: Int
+    let plannedMinutes: Int
+    let remainingMinutes: Int
+    let unplannedTaskCount: Int
+}

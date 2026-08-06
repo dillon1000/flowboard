@@ -166,12 +166,19 @@ struct OverviewPageContext: Encodable {
     let unplannedFocusCount: Int
     let hasUnplannedFocus: Bool
     let studyStreakDays: Int
+    let studySettings: StudySettingsResponse
+    let recovery: StudyRecoveryContext
+    let estimationInbox: [StudyEstimateInboxItemContext]
+    let hasEstimationInbox: Bool
+    let onboarding: StudyOnboardingContext
 
     init(
         tasks: [TaskCardContext],
         courses: [BoardNavigationContext],
         selectedCourseID: UUID?,
         studySessions: [StudySession] = [],
+        settings: StudySettings? = nil,
+        hasCanvasConnection: Bool = false,
         timeZoneIdentifier: String = "UTC",
         referenceDate: Date = Date()
     ) {
@@ -195,6 +202,8 @@ struct OverviewPageContext: Encodable {
         let taskSessions = studySessions.filter { taskByID[$0.$task.id] != nil }
         let activeTaskSessions = taskSessions.filter { activeTaskByID[$0.$task.id] != nil }
         let sessionTaskIDs = Set(activeTaskSessions.map(\.$task.id))
+        let availability = StudyAvailability(settings: settings)
+        let settingsContext = StudySettingsResponse(settings: settings)
 
         self.weekLabel = studyWeekLabel(start: weekStart, calendar: calendar)
         self.courseFilters = activeCourses.map {
@@ -228,6 +237,7 @@ struct OverviewPageContext: Encodable {
                 studySessions: sessionsOnDate,
                 legacyFocusTasks: legacyFocusTasks,
                 courseColors: courseColors,
+                availability: availability,
                 calendar: calendar
             )
         }
@@ -282,6 +292,39 @@ struct OverviewPageContext: Encodable {
             referenceDate: today,
             calendar: calendar
         )
+        self.studySettings = settingsContext
+        let dueDateByTaskID = Dictionary(
+            uniqueKeysWithValues: activeTaskContexts.compactMap { task in
+                task.dueInput.isEmpty ? nil : (task.id, task.dueInput)
+            }
+        )
+        self.recovery = StudyRecoveryContext(
+            analysis: StudyRecoveryService.analyze(
+                sessions: activeTaskSessions,
+                dueDateByTaskID: dueDateByTaskID,
+                availability: availability,
+                timeZoneIdentifier: timeZoneIdentifier,
+                referenceDate: referenceDate
+            )
+        )
+        self.estimationInbox = activeTaskContexts
+            .filter { !$0.hasEstimate }
+            .sorted(by: studyTaskOrder)
+            .map { task in
+                StudyEstimateInboxItemContext(
+                    task: task,
+                    presets: settingsContext.estimatePresets
+                )
+            }
+        self.hasEstimationInbox = !estimationInbox.isEmpty
+        self.onboarding = StudyOnboardingContext(
+            hasCanvasConnection: hasCanvasConnection,
+            timeZoneConfirmed: settingsContext.timeZoneConfirmed,
+            availabilityConfigured: settingsContext.availabilityConfigured,
+            hasAssignments: !activeTaskContexts.isEmpty,
+            hasMissingEstimates: !estimationInbox.isEmpty,
+            hasStudyPlan: activeTaskSessions.contains { $0.state != .skipped }
+        )
     }
 }
 
@@ -328,6 +371,10 @@ struct StudyDayContext: Encodable {
     let unestimatedAssignmentCount: Int
     let workloadLabel: String
     let workloadClass: String
+    let availableMinutes: Int
+    let availableLabel: String
+    let isBlocked: Bool
+    let isOverloaded: Bool
 
     init(
         date: Date,
@@ -336,6 +383,7 @@ struct StudyDayContext: Encodable {
         studySessions: [(session: StudySession, task: TaskCardContext)],
         legacyFocusTasks: [TaskCardContext],
         courseColors: [UUID: String],
+        availability: StudyAvailability,
         calendar: Calendar
     ) {
         self.weekdayLabel = planningDateLabel(date, format: "EEE", calendar: calendar)
@@ -371,6 +419,14 @@ struct StudyDayContext: Encodable {
         self.focusBlockCount = focusBlocks.count
         self.hasFocusBlocks = !focusBlocks.isEmpty
         self.workloadMinutes = focusBlocks.reduce(0) { $0 + $1.estimatedMinutes }
+        self.availableMinutes = availability.availableMinutes(
+            on: date,
+            dateKey: dateInput,
+            calendar: calendar
+        )
+        self.availableLabel = displayDuration(availableMinutes)
+        self.isBlocked = availability.blockedDates.contains(dateInput)
+        self.isOverloaded = workloadMinutes > availableMinutes
         self.unestimatedAssignmentCount = dueTasks.filter { !$0.hasEstimate }.count
         switch workloadMinutes {
         case 0:
@@ -408,6 +464,103 @@ struct StudyPlanCandidateContext: Encodable {
         self.effortLabel = task.estimatedDisplay
         self.remainingMinutes = remainingMinutes
         self.remainingDisplay = displayDuration(remainingMinutes)
+    }
+}
+
+struct StudyRecoveryContext: Encodable {
+    let missedSessionCount: Int
+    let deadlineChangeCount: Int
+    let overloadedDayCount: Int
+    let issueCount: Int
+    let hasIssues: Bool
+    let summary: String
+
+    init(analysis: StudyRecoveryAnalysis) {
+        self.missedSessionCount = analysis.missedSessionIDs.count
+        self.deadlineChangeCount = analysis.deadlineChangedSessionIDs.count
+        self.overloadedDayCount = analysis.overloadedDates.count
+        self.issueCount = analysis.issueCount
+        self.hasIssues = issueCount > 0
+        let parts = [
+            missedSessionCount > 0 ? "\(missedSessionCount) missed" : nil,
+            deadlineChangeCount > 0 ? "\(deadlineChangeCount) after a changed deadline" : nil,
+            overloadedDayCount > 0 ? "\(overloadedDayCount) overloaded" : nil,
+        ].compactMap { $0 }
+        self.summary = parts.isEmpty
+            ? "Your current week still fits."
+            : parts.joined(separator: ", ") + "."
+    }
+}
+
+struct StudyEstimateInboxItemContext: Encodable {
+    let id: UUID
+    let title: String
+    let courseName: String
+    let dueDisplay: String
+    let typeName: String
+    let suggestedMinutes: Int
+    let suggestedPresetID: String
+
+    init(task: TaskCardContext, presets: [StudyEstimatePreset]) {
+        let assignmentType = studyAssignmentType(title: task.title, labels: task.labels)
+        let searchText = ([task.title] + task.labels).joined(separator: " ").lowercased()
+        let preset = presets.first { preset in
+            preset.keywords.contains { searchText.contains($0.lowercased()) }
+        }
+        self.id = task.id
+        self.title = task.title
+        self.courseName = task.boardName
+        self.dueDisplay = task.dueDisplay
+        self.typeName = assignmentType.name
+        self.suggestedMinutes = preset?.minutes ?? 60
+        self.suggestedPresetID = preset?.id ?? ""
+    }
+}
+
+struct StudyOnboardingStepContext: Encodable {
+    let key: String
+    let title: String
+    let description: String
+    let href: String
+    let isComplete: Bool
+    let isCurrent: Bool
+}
+
+struct StudyOnboardingContext: Encodable {
+    let steps: [StudyOnboardingStepContext]
+    let completedStepCount: Int
+    let isVisible: Bool
+    let nextStepKey: String
+
+    init(
+        hasCanvasConnection: Bool,
+        timeZoneConfirmed: Bool,
+        availabilityConfigured: Bool,
+        hasAssignments: Bool,
+        hasMissingEstimates: Bool,
+        hasStudyPlan: Bool
+    ) {
+        let values = [
+            ("canvas", "Connect Canvas", "Bring in courses and deadlines.", "/app/settings/integrations", hasCanvasConnection),
+            ("timezone", "Confirm your time zone", "Keep deadlines and study days local.", "", timeZoneConfirmed),
+            ("availability", "Set your real week", "Add study capacity, classes, work, and blocked dates.", "", availabilityConfigured),
+            ("estimates", "Estimate assignments", "Give every deadline enough study time.", "", hasAssignments && !hasMissingEstimates),
+            ("plan", "Build your first week", "Place estimated work into available time.", "", hasStudyPlan),
+        ]
+        let currentKey = values.first { !$0.4 }?.0 ?? ""
+        self.steps = values.map { value in
+            StudyOnboardingStepContext(
+                key: value.0,
+                title: value.1,
+                description: value.2,
+                href: value.3,
+                isComplete: value.4,
+                isCurrent: value.0 == currentKey
+            )
+        }
+        self.completedStepCount = values.filter { $0.4 }.count
+        self.isVisible = completedStepCount < values.count
+        self.nextStepKey = currentKey
     }
 }
 
