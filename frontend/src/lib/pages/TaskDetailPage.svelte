@@ -3,7 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { AlarmIcon as Alarm, ArchiveIcon as Archive, ArrowLeftIcon as ArrowLeft, BellIcon as Bell, CaretDownIcon as CaretDown, ChatCircleIcon as ChatCircle, CheckCircleIcon as CheckCircle, CheckIcon as Check, DotsThreeIcon as DotsThree, DownloadIcon as Download, PaperPlaneTiltIcon as Send, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, XIcon as X } from 'phosphor-svelte';
+  import { AlarmIcon as Alarm, ArchiveIcon as Archive, ArrowLeftIcon as ArrowLeft, ArrowSquareOutIcon as ArrowSquareOut, BellIcon as Bell, CaretDownIcon as CaretDown, ChatCircleIcon as ChatCircle, CheckCircleIcon as CheckCircle, CheckIcon as Check, DotsThreeIcon as DotsThree, DownloadIcon as Download, PaperPlaneTiltIcon as Send, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
@@ -129,7 +129,7 @@
 
   const unsetDetails = $derived<{ key: string; label: string }[]>([
     ...(detail.task.hasAssignee ? [] : [{ key: 'assigneeID', label: 'Assignee' }]),
-    ...(detail.task.hasGrade ? [] : [{ key: 'grade', label: 'Grade' }]),
+    ...(detail.task.hasGrade || detail.task.hasPointsPossible || detail.task.isCanvasLinked ? [] : [{ key: 'grade', label: 'Grade' }]),
     ...(detail.task.startInput ? [] : [{ key: 'startAt', label: 'Start date' }]),
     ...detail.properties
       .filter((property: TaskPropertyContext) => !property.value)
@@ -254,22 +254,25 @@
     event.preventDefault();
     const data = new FormData(event.currentTarget as HTMLFormElement);
     const assigneeID = String(data.get('assigneeID') ?? '');
+    const body: Record<string, unknown> = {
+      status: String(data.get('status') ?? ''),
+      priority: String(data.get('priority') ?? ''),
+      assigneeID: assigneeID || null,
+      startAt: apiDate(data.get('startAt')),
+      estimatedMinutes: estimateMinutes(data.get('estimatedMinutes')),
+      labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6)
+    };
+    if (!detail.task.isCanvasLinked) Object.assign(body, {
+      title: String(data.get('title') ?? ''),
+      description: String(data.get('description') ?? '') || null,
+      dueAt: apiDate(data.get('dueAt')),
+      dueTime: data.get('dueAt') ? String(data.get('dueTime') ?? '') || null : null,
+      gradeEarned: score(data.get('gradeEarned')),
+      gradePossible: score(data.get('gradePossible'))
+    });
     const saved = await mutate(`/api/v1/tasks/${detail.task.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        title: String(data.get('title') ?? ''),
-        description: String(data.get('description') ?? '') || null,
-        status: String(data.get('status') ?? ''),
-        priority: String(data.get('priority') ?? ''),
-        assigneeID: assigneeID || null,
-        startAt: apiDate(data.get('startAt')),
-        dueAt: apiDate(data.get('dueAt')),
-        dueTime: data.get('dueAt') ? String(data.get('dueTime') ?? '') || null : null,
-        estimatedMinutes: estimateMinutes(data.get('estimatedMinutes')),
-        gradeEarned: score(data.get('gradeEarned')),
-        gradePossible: score(data.get('gradePossible')),
-        labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6)
-      })
+      body: JSON.stringify(body)
     }, 'Task updated');
     if (saved) editOpen = false;
   }
@@ -479,7 +482,7 @@
 
 <!-- One detail row: only rendered when the field carries a value or is being
      edited. Empty fields collect at the foot of the list as "add" buttons. -->
-{#snippet detailRow(key: string, label: string, isSet: boolean, value: Snippet, editor: Snippet)}
+{#snippet detailRow(key: string, label: string, isSet: boolean, value: Snippet, editor: Snippet, editable = true)}
   {#if editingProperty === key}
     <div class="detail-row editing">
       <dt>{label}</dt>
@@ -490,7 +493,7 @@
       <dt>{label}</dt>
       <dd>
         {@render value()}
-        {#if detail.canEdit}
+        {#if detail.canEdit && editable}
           <button class="detail-edit" type="button" onclick={() => (editingProperty = key)} aria-label={`Edit ${label.toLowerCase()}`}><Pencil size={13} /></button>
         {/if}
       </dd>
@@ -556,15 +559,13 @@
             </button>
             {#if detail.canEdit}
               <button class="menu-option" type="button" role="menuitem" onclick={() => { close(); editOpen = true; }}>
-                <Pencil size={15} />Edit task
+                <Pencil size={15} />{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit task'}
               </button>
               <div class="menu-separator"></div>
               <button class="menu-option" type="button" role="menuitem" disabled={pending} onclick={() => { close(); archiveTask(); }}>
                 <Archive size={15} />{detail.task.isArchived ? 'Restore task' : 'Archive task'}
               </button>
-              <button class="menu-option danger" type="button" role="menuitem" onclick={() => { close(); deleteOpen = true; }}>
-                <Trash2 size={15} />Delete task
-              </button>
+              {#if !detail.task.isCanvasLinked}<button class="menu-option danger" type="button" role="menuitem" onclick={() => { close(); deleteOpen = true; }}><Trash2 size={15} />Delete task</button>{/if}
             {/if}
           {/snippet}
         </PopoverMenu>
@@ -574,6 +575,20 @@
 
   {#if requestError && !remindersOpen}<p class="error-message" role="alert">{requestError}</p>{/if}
 
+  {#if detail.task.isCanvasLinked}
+    <section class="canvas-task-source" aria-labelledby="canvas-task-source-title">
+      <div><span class="badge subtle" id="canvas-task-source-title">Synced from Canvas</span><a href={detail.task.canvasURL} target="_blank" rel="noopener">Open assignment <ArrowSquareOut size={13} /></a></div>
+      <dl>
+        <div><dt>Submission</dt><dd>{detail.task.canvasSubmissionState}{#if detail.task.canvasRedoRequested} · Redo requested{/if}</dd></div>
+        <div><dt>Submitted</dt><dd>{detail.task.canvasSubmittedAtDisplay}</dd></div>
+        <div><dt>Late</dt><dd>{detail.task.canvasLate ? 'Yes' : 'No'}</dd></div>
+        <div><dt>Missing</dt><dd>{detail.task.canvasMissing ? 'Yes' : 'No'}</dd></div>
+        <div><dt>Excused</dt><dd>{detail.task.canvasExcused ? 'Yes' : 'No'}</dd></div>
+        <div><dt>Last sync</dt><dd>{detail.task.canvasLastSyncDisplay}</dd></div>
+      </dl>
+    </section>
+  {/if}
+
   <!-- The pace meter is the page's thesis: elapsed run-up behind, finished
        steps in front, so being behind is a shape rather than a number. -->
   <section class="pace" data-state={paceState} aria-labelledby="pace-title">
@@ -581,7 +596,7 @@
     {#if dueAt}
       <div class="pace-ends">
         <span class="pace-start">{detail.task.startInput ? `Started ${detail.task.startDisplay}` : 'Final week'}</span>
-        {#if detail.canEdit}
+        {#if detail.canEdit && !detail.task.isCanvasLinked}
           <button class="pace-due" type="button" onclick={() => (editingProperty = 'dueAt')}>
             <span class="pace-due-label">Due</span>
             <strong>{detail.task.dueDisplay}{#if detail.task.hasDueTime} · {detail.task.dueTimeDisplay}{/if}</strong>
@@ -620,7 +635,7 @@
     {:else}
       <div class="pace-undated">
         <p><strong>No due date yet.</strong> Without one this assignment stays out of your week and semester plans.</p>
-        {#if detail.canEdit}<button class="button" type="button" onclick={() => (editingProperty = 'dueAt')}>Set a due date</button>{/if}
+        {#if detail.canEdit && !detail.task.isCanvasLinked}<button class="button" type="button" onclick={() => (editingProperty = 'dueAt')}>Set a due date</button>{/if}
       </div>
     {/if}
 
@@ -683,7 +698,7 @@
       <section class="task-section" aria-labelledby="notes-title">
         <div class="task-section-head">
           <h2 id="notes-title">Notes</h2>
-          {#if detail.canEdit && !notesEditing}
+          {#if detail.canEdit && !detail.task.isCanvasLinked && !notesEditing}
             <button class="button ghost small" type="button" onclick={editNotes}>{detail.task.hasDescription ? 'Edit' : 'Add notes'}</button>
           {/if}
         </div>
@@ -803,7 +818,7 @@
             {@render inlineActions()}
           </form>
         {/snippet}
-        {@render detailRow('grade', 'Grade', detail.task.hasGrade, gradeValue, gradeEditor)}
+        {@render detailRow('grade', 'Grade', detail.task.hasGrade || detail.task.hasPointsPossible, gradeValue, gradeEditor, !detail.task.isCanvasLinked)}
 
         {#snippet startValue()}<span>{detail.task.startDisplay}</span>{/snippet}
         {#snippet startEditor()}
@@ -861,18 +876,16 @@
 {#if editOpen}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}>
     <form class="dialog wide" onsubmit={saveTask}>
-      <div class="dialog-header"><div><h2 id="edit-task-title">Edit task</h2><p>Update the task and its schedule.</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-header"><div><h2 id="edit-task-title">{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit task'}</h2><p>{detail.task.isCanvasLinked ? 'Canvas manages the academic fields for this assignment.' : 'Update the task and its schedule.'}</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body"><div class="form-grid">
-        <div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div>
-        <div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div>
+        {#if !detail.task.isCanvasLinked}<div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div>{/if}
         <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={detail.task.statusValue} options={statusMenuOptions} ariaLabel="Status" /></div>
         <div class="field"><label for="edit-priority">Severity</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Severity" /></div>
         <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
         <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>
-        <div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div>
-        <div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>
+        {#if !detail.task.isCanvasLinked}<div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div><div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>{/if}
         <div class="field"><label for="edit-estimate">Time estimate</label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes, e.g. 45" /></div>
-        <fieldset class="field wide grade-fields"><legend>Grade</legend><div class="grade-input-grid"><label for="edit-grade-earned"><span>Points earned</span><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></label><label for="edit-grade-possible"><span>Points possible</span><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0.1" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradePossible : ''} placeholder="e.g. 100" /></label></div><span class="field-help">Enter both values to include this grade in the course total.</span></fieldset>
+        {#if !detail.task.isCanvasLinked}<fieldset class="field wide grade-fields"><legend>Grade</legend><div class="grade-input-grid"><label for="edit-grade-earned"><span>Points earned</span><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></label><label for="edit-grade-possible"><span>Points possible</span><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasPointsPossible ? detail.task.gradePossible : ''} placeholder="e.g. 100" /></label></div><span class="field-help">A points value can exist before the assignment receives a score.</span></fieldset>{/if}
         <div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div>
       </div></div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div>

@@ -9,6 +9,7 @@ enum AppPageKind {
     case taskDetail
     case settings
     case apiKeys
+    case integrations
     case boardSettings
 }
 
@@ -26,6 +27,7 @@ struct AppPageContext: Encodable {
     let isSettings: Bool
     let isProfileSettings: Bool
     let isAPIKeys: Bool
+    let isIntegrations: Bool
     let isBoardSettings: Bool
     let overview: OverviewPageContext?
     let semester: SemesterPageContext?
@@ -34,6 +36,7 @@ struct AppPageContext: Encodable {
     let taskDetail: TaskDetailPageContext?
     let settings: SettingsPageContext?
     let apiKeys: APIKeysPageContext?
+    let integrations: CanvasIntegrationsPageContext?
     let boardSettings: BoardSettingsPageContext?
 
     init(
@@ -47,6 +50,7 @@ struct AppPageContext: Encodable {
         taskDetail: TaskDetailPageContext?,
         settings: SettingsPageContext?,
         apiKeys: APIKeysPageContext?,
+        integrations: CanvasIntegrationsPageContext?,
         boardSettings: BoardSettingsPageContext?
     ) {
         self.common = common
@@ -59,9 +63,10 @@ struct AppPageContext: Encodable {
         self.isActiveTasks = pageKind == .tasks
         self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
-        self.isSettings = pageKind == .settings || pageKind == .apiKeys
+        self.isSettings = pageKind == .settings || pageKind == .apiKeys || pageKind == .integrations
         self.isProfileSettings = pageKind == .settings
         self.isAPIKeys = pageKind == .apiKeys
+        self.isIntegrations = pageKind == .integrations
         self.isBoardSettings = pageKind == .boardSettings
         self.overview = overview
         self.semester = semester
@@ -70,6 +75,7 @@ struct AppPageContext: Encodable {
         self.taskDetail = taskDetail
         self.settings = settings
         self.apiKeys = apiKeys
+        self.integrations = integrations
         self.boardSettings = boardSettings
     }
 }
@@ -108,8 +114,16 @@ struct BoardNavigationContext: Encodable {
     let taskCount: Int
     let completedCount: Int
     let isArchived: Bool
+    let isCanvasLinked: Bool
+    let canvasURL: String
+    let canvasGradeDisplay: String
 
-    init(board: Board, firstViewID: UUID?, courseColorClass: String) throws {
+    init(
+        board: Board,
+        firstViewID: UUID?,
+        courseColorClass: String,
+        canvasLink: CanvasCourseLink? = nil
+    ) throws {
         let id = try board.requireID()
         self.id = id
         self.name = board.name
@@ -125,6 +139,9 @@ struct BoardNavigationContext: Encodable {
             !$0.isArchived && board.isCompleted($0.status)
         }.count
         self.isArchived = board.isArchived
+        self.isCanvasLinked = canvasLink != nil
+        self.canvasURL = canvasLink?.canvasCourseURL ?? ""
+        self.canvasGradeDisplay = canvasCourseGradeDisplay(link: canvasLink)
     }
 }
 
@@ -279,11 +296,16 @@ struct StudyCourseContext: Encodable {
         self.href = "/app?course=\(course.id.uuidString)"
         self.colorClass = course.courseColorClass
         self.isSelected = course.id == selectedCourseID
-        let grades = tasks.filter { $0.boardID == course.id && $0.hasGrade }
-        let earned = grades.reduce(0) { $0 + $1.gradeEarned }
-        let possible = grades.reduce(0) { $0 + $1.gradePossible }
-        self.hasGrade = possible > 0
-        self.gradeDisplay = hasGrade ? "\(Int((earned / possible * 100).rounded()))%" : "No grades"
+        if course.isCanvasLinked {
+            self.hasGrade = true
+            self.gradeDisplay = course.canvasGradeDisplay
+        } else {
+            let grades = tasks.filter { $0.boardID == course.id && $0.hasGrade }
+            let earned = grades.reduce(0) { $0 + $1.gradeEarned }
+            let possible = grades.reduce(0) { $0 + $1.gradePossible }
+            self.hasGrade = possible > 0
+            self.gradeDisplay = hasGrade ? "\(Int((earned / possible * 100).rounded()))%" : "No grades"
+        }
     }
 }
 
@@ -567,6 +589,14 @@ struct BoardPageContext: Encodable {
     let completedAssignmentCount: Int
     let undatedAssignmentCount: Int
     let unestimatedAssignmentCount: Int
+    let isCanvasLinked: Bool
+    let canvasURL: String
+    let canvasCourseCode: String
+    let canvasTermName: String
+    let canvasGradeDisplay: String
+    let canvasHasScore: Bool
+    let canvasScorePercent: Double
+    let canvasLastSyncDisplay: String
 
     init(
         board: Board,
@@ -579,7 +609,9 @@ struct BoardPageContext: Encodable {
         previousMonthHref: String,
         nextMonthHref: String,
         todayMonthHref: String,
-        defaultTemplate: TaskTemplate?
+        defaultTemplate: TaskTemplate?,
+        canvasLink: CanvasCourseLink? = nil,
+        canvasConnection: CanvasConnection? = nil
     ) throws {
         self.id = try board.requireID()
         self.name = board.name
@@ -661,7 +693,26 @@ struct BoardPageContext: Encodable {
         }.count
         self.undatedAssignmentCount = tasks.filter { !$0.hasDueDate }.count
         self.unestimatedAssignmentCount = tasks.filter { !$0.hasEstimate }.count
+        self.isCanvasLinked = canvasLink != nil
+        self.canvasURL = canvasLink?.canvasCourseURL ?? ""
+        self.canvasCourseCode = canvasLink?.courseCode ?? ""
+        self.canvasTermName = canvasLink?.termName ?? ""
+        self.canvasGradeDisplay = canvasCourseGradeDisplay(link: canvasLink)
+        self.canvasHasScore = canvasLink?.currentScore != nil
+        self.canvasScorePercent = min(100, max(0, canvasLink?.currentScore ?? 0))
+        self.canvasLastSyncDisplay = canvasConnection?.lastSuccessfulSyncAt.map(displayDate) ?? "Not synced yet"
     }
+}
+
+/// Canvas publishes the authoritative course total. A missing score and grade
+/// means Canvas has hidden the total, so a local points sum would be misleading.
+private func canvasCourseGradeDisplay(link: CanvasCourseLink?) -> String {
+    guard let link else { return "" }
+    let score = link.currentScore.map { "\(displayScore($0))%" }
+    let parts = [score, link.currentGrade]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+    return parts.isEmpty ? "Hidden in Canvas" : parts.joined(separator: " · ")
 }
 
 struct BoardViewTabContext: Encodable {

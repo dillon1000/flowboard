@@ -20,6 +20,11 @@ interface BoardResponse {
   tasks: TaskResponse[];
 }
 
+interface BoardSummaryResponse {
+  id: string;
+  name: string;
+}
+
 interface TapMutationResponse {
   id: string;
   url: string;
@@ -258,6 +263,90 @@ test('moves board cards and completes every core task-detail action', async ({ p
   await page.getByRole('menuitem', { name: /^Follow/ }).click();
   await moreActions.click();
   await expect(page.getByRole('menuitem', { name: /^Unfollow/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('creates, rotates, uses, and disconnects a private Canvas connection', async ({ page }) => {
+  const errors = collectBrowserErrors(page);
+  await register(page.request, 'Canvas');
+
+  await page.goto('/app/settings/integrations');
+  await waitForHydration(page);
+  await page.getByLabel('Canvas origin').fill('https://school.instructure.com');
+  await page.getByRole('button', { name: 'Create connection' }).click();
+  const secret = page.locator('.canvas-secret-section .api-key-secret');
+  await expect(secret).toHaveText(/^fcs_[a-f0-9]{64}$/);
+  const initialKey = (await secret.textContent())?.trim();
+  await expect(page.getByText('school.instructure.com', { exact: false }).first()).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Rotate key' }).click();
+  await expect(secret).not.toHaveText(initialKey ?? '');
+  const rotatedKey = (await secret.textContent())?.trim();
+  expect(rotatedKey).toMatch(/^fcs_[a-f0-9]{64}$/);
+
+  const syncResponse = await page.request.post('/api/v1/integrations/canvas/sync', {
+    headers: { Authorization: `Bearer ${rotatedKey}` },
+    data: {
+      version: 1,
+      snapshotID: `browser-${Date.now()}`,
+      canvasOrigin: 'https://school.instructure.com',
+      capturedAt: new Date().toISOString(),
+      courses: [{
+        id: 'course-browser',
+        name: 'Canvas Browser Course',
+        courseCode: 'CAN-101',
+        termName: 'Fall 2026',
+        htmlURL: 'https://school.instructure.com/courses/101',
+        currentScore: 91.5,
+        currentGrade: 'A-',
+        assignments: [{
+          id: 'assignment-browser',
+          name: 'Canvas managed assignment',
+          descriptionText: 'Academic text from Canvas.',
+          htmlURL: 'https://school.instructure.com/courses/101/assignments/202',
+          dueAt: '2026-09-02T20:30:00Z',
+          pointsPossible: 10,
+          submission: {
+            workflowState: 'submitted',
+            grade: null,
+            score: null,
+            submittedAt: '2026-08-31T15:00:00Z',
+            late: false,
+            missing: false,
+            excused: false,
+            redoRequested: false
+          }
+        }]
+      }]
+    }
+  });
+  expect(syncResponse.status()).toBe(200);
+
+  const boards = await json<BoardSummaryResponse[]>(await page.request.get('/api/v1/boards'));
+  const canvasBoard = boards.find((board) => board.name === 'Canvas Browser Course');
+  expect(canvasBoard).toBeTruthy();
+  await page.goto(`/app/boards/${canvasBoard!.id}`);
+  await expect(page.getByText('Synced from Canvas')).toBeVisible();
+  await expect(page.locator('.course-grade-score')).toContainText('91.5% · A-');
+  await page.getByText('Canvas managed assignment', { exact: true }).first().click();
+  await expect(page.getByRole('heading', { name: 'Canvas managed assignment' })).toBeVisible();
+  await expect(page.locator('.canvas-task-source')).toContainText('Submitted');
+  await expect(page.locator('.canvas-task-source')).toContainText('Last sync');
+  await expect(page.getByText('10 points possible')).toBeVisible();
+
+  await page.getByRole('button', { name: 'More task actions' }).click();
+  await page.getByRole('menuitem', { name: 'Edit planning' }).click();
+  const planningDialog = page.getByRole('dialog', { name: 'Edit planning' });
+  await expect(planningDialog.getByLabel('Title')).toHaveCount(0);
+  await expect(planningDialog.getByLabel('Due date')).toHaveCount(0);
+  await expect(planningDialog.getByText('Points earned')).toHaveCount(0);
+  await planningDialog.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.goto('/app/settings/integrations');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Disconnect' }).click();
+  await expect(page.getByText('No Canvas connection')).toBeVisible();
   expect(errors).toEqual([]);
 });
 

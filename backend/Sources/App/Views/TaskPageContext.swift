@@ -97,6 +97,7 @@ struct TaskCardContext: Encodable {
     let gradePossible: Double
     let gradeDisplay: String
     let hasGrade: Bool
+    let hasPointsPossible: Bool
     let assigneeID: String
     let assigneeName: String
     let hasAssignee: Bool
@@ -110,8 +111,25 @@ struct TaskCardContext: Encodable {
     let statusOptions: [TaskOptionContext]
     let severityOptions: [TaskOptionContext]
     let completionStatuses: String
+    let isCanvasLinked: Bool
+    let canvasURL: String
+    let canvasSubmissionState: String
+    let canvasGradeLabel: String
+    let canvasSubmittedAtDisplay: String
+    let canvasLate: Bool
+    let canvasMissing: Bool
+    let canvasExcused: Bool
+    let canvasRedoRequested: Bool
+    let canvasLastSyncDisplay: String
 
-    init(task: Task, assignee: User?, board: Board? = nil, canEdit: Bool = false) throws {
+    init(
+        task: Task,
+        assignee: User?,
+        board: Board? = nil,
+        canEdit: Bool = false,
+        canvasLink: CanvasAssignmentLink? = nil,
+        canvasConnection: CanvasConnection? = nil
+    ) throws {
         let resolvedBoard = board ?? task.$board.value
         let statusOption = resolvedBoard?.statusOption(for: task.status)
             ?? BoardTaskOption.fallback(id: task.status.rawValue)
@@ -151,9 +169,14 @@ struct TaskCardContext: Encodable {
         self.gradeEarned = task.gradeEarned ?? 0
         self.gradePossible = task.gradePossible ?? 0
         self.hasGrade = task.gradeEarned != nil && task.gradePossible != nil
-        self.gradeDisplay = self.hasGrade
-            ? "\(displayScore(self.gradeEarned)) / \(displayScore(self.gradePossible))"
-            : "Not graded"
+        self.hasPointsPossible = task.gradePossible != nil
+        self.gradeDisplay = if self.hasGrade {
+            "\(displayScore(self.gradeEarned)) / \(displayScore(self.gradePossible))"
+        } else if self.hasPointsPossible {
+            "\(displayScore(self.gradePossible)) points possible"
+        } else {
+            "Not graded"
+        }
         self.assigneeID = assignee?.id?.uuidString ?? ""
         self.assigneeName = assignee?.name ?? "Unassigned"
         self.hasAssignee = assignee != nil
@@ -174,6 +197,18 @@ struct TaskCardContext: Encodable {
             .filter(\.isCompleted)
             .map(\.id)
             .joined(separator: ",")
+        self.isCanvasLinked = canvasLink != nil
+        self.canvasURL = canvasLink?.canvasAssignmentURL ?? ""
+        self.canvasSubmissionState = canvasLink?.submissionState?
+            .replacingOccurrences(of: "_", with: " ")
+            .capitalized ?? "Not submitted"
+        self.canvasGradeLabel = canvasLink?.gradeLabel ?? ""
+        self.canvasSubmittedAtDisplay = canvasLink?.submittedAt.map(displayDate) ?? "Not submitted"
+        self.canvasLate = canvasLink?.isLate ?? false
+        self.canvasMissing = canvasLink?.isMissing ?? false
+        self.canvasExcused = canvasLink?.isExcused ?? false
+        self.canvasRedoRequested = canvasLink?.redoRequested ?? false
+        self.canvasLastSyncDisplay = canvasConnection?.lastSuccessfulSyncAt.map(displayDate) ?? "Not synced yet"
     }
 }
 
@@ -280,12 +315,16 @@ struct TaskDetailPageContext: Encodable {
         followers: [TaskFollower],
         reminders: [TaskReminder],
         notificationsEnabled: Bool,
-        currentUserID: UUID
+        currentUserID: UUID,
+        canvasLink: CanvasAssignmentLink? = nil,
+        canvasConnection: CanvasConnection? = nil
     ) throws {
         self.task = try TaskCardContext(
             task: task,
             assignee: task.$assignee.id.flatMap { id in members.first { $0.id == id } },
-            board: board
+            board: board,
+            canvasLink: canvasLink,
+            canvasConnection: canvasConnection
         )
         self.boardName = board.name
         self.boardHref = "/app/boards/\(try board.requireID())"

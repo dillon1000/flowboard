@@ -10,6 +10,7 @@ struct AppPageController: RouteCollection {
         routes.get("tasks", "archived", use: archivedTasks)
         routes.get("settings", use: settings)
         routes.get("settings", "api-keys", use: apiKeys)
+        routes.get("settings", "integrations", use: integrations)
         routes.get("boards", ":boardID", use: boardDefault)
         routes.get("boards", ":boardID", "views", ":viewID", use: boardView)
         routes.get("boards", ":boardID", "settings", use: boardSettings)
@@ -138,6 +139,25 @@ struct AppPageController: RouteCollection {
         try await renderAPIKeysPage(for: req)
     }
 
+    func integrations(req: Request) async throws -> Response {
+        let common = try await commonContext(for: req)
+        let connections = try await CanvasConnection.query(on: req.db)
+            .filter(\.$user.$id == req.auth.require(User.self).requireID())
+            .sort(\.$createdAt, .descending)
+            .all()
+        let baseURL = apiBaseURL(for: req)
+        let focalpointOrigin = String(baseURL.dropLast("/api/v1".count))
+        return try respond(
+            common: common,
+            pageTitle: "Integrations",
+            pageKind: .integrations,
+            integrations: try CanvasIntegrationsPageContext(
+                connections: connections,
+                focalpointOrigin: focalpointOrigin
+            )
+        )
+    }
+
     /// Returns key management data. A created secret is included only in the
     /// response to the request that created it and is never stored in a session.
     func renderAPIKeysPage(
@@ -223,6 +243,10 @@ struct AppPageController: RouteCollection {
             .filter(\.$board.$id == boardID)
             .filter(\.$isDefault == true)
             .first()
+        let canvasLink = try await CanvasCourseLink.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .with(\.$connection)
+            .first()
         let filteredTasks = apply(activeView.configuration, to: tasks, board: access.board)
         let taskContexts = try await makeTaskContexts(filteredTasks, on: req.db)
         let calendarMonth = requestedCalendarMonth(from: req)
@@ -244,7 +268,9 @@ struct AppPageController: RouteCollection {
                 month: calendarDate(byAddingMonths: 1, to: calendarMonth)
             ),
             todayMonthHref: calendarHref(path: viewPath, month: calendarDate()),
-            defaultTemplate: defaultTemplate
+            defaultTemplate: defaultTemplate,
+            canvasLink: canvasLink,
+            canvasConnection: canvasLink?.connection
         )
 
         return try respond(
@@ -309,6 +335,9 @@ struct AppPageController: RouteCollection {
             try req.auth.require(User.self)
         }
         let firstViewID = try views.first?.requireID()
+        let canvasLink = try await CanvasCourseLink.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .first()
 
         return try respond(
             common: common,
@@ -326,7 +355,8 @@ struct AppPageController: RouteCollection {
                 tapActions: tapActions,
                 tapExecutions: tapExecutions,
                 createdTapURL: createdTapURL,
-                tapError: tapError
+                tapError: tapError,
+                canvasLink: canvasLink
             ),
         )
     }
@@ -370,6 +400,12 @@ struct AppPageController: RouteCollection {
         } else {
             nil
         }
+        let canvasLink = try await CanvasAssignmentLink.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .with(\.$courseLink) { courseLink in
+                courseLink.with(\.$connection)
+            }
+            .first()
         let context = try TaskDetailPageContext(
             task: task,
             board: access.board,
@@ -382,7 +418,9 @@ struct AppPageController: RouteCollection {
             followers: followers,
             reminders: reminders,
             notificationsEnabled: req.application.notificationConfiguration != nil,
-            currentUserID: currentUserID
+            currentUserID: currentUserID,
+            canvasLink: canvasLink,
+            canvasConnection: canvasLink?.courseLink.connection
         )
         return try respond(
             common: common,

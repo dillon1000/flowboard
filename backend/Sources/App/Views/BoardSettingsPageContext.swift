@@ -31,6 +31,7 @@ struct BoardSettingsPageContext: Encodable {
     let hasCreatedTapURL: Bool
     let tapError: String
     let hasTapError: Bool
+    let isCanvasLinked: Bool
 
     init(
         board: Board,
@@ -44,7 +45,8 @@ struct BoardSettingsPageContext: Encodable {
         tapActions: [TapAction],
         tapExecutions: [TapExecution],
         createdTapURL: String?,
-        tapError: String?
+        tapError: String?,
+        canvasLink: CanvasCourseLink? = nil
     ) throws {
         let boardID = try board.requireID()
         self.id = boardID
@@ -87,6 +89,7 @@ struct BoardSettingsPageContext: Encodable {
         self.hasCreatedTapURL = createdTapURL != nil
         self.tapError = tapError ?? ""
         self.hasTapError = tapError != nil
+        self.isCanvasLinked = canvasLink != nil
     }
 }
 

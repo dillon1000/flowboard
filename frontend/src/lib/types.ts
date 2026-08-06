@@ -13,6 +13,9 @@ export interface BoardNavigationContext {
   taskCount: number;
   completedCount: number;
   isArchived: boolean;
+  isCanvasLinked: boolean;
+  canvasURL: string;
+  canvasGradeDisplay: string;
 }
 
 export interface CommonPageContext {
@@ -89,6 +92,7 @@ export interface TaskCardContext {
   gradePossible: number;
   gradeDisplay: string;
   hasGrade: boolean;
+  hasPointsPossible: boolean;
   assigneeID: string;
   assigneeName: string;
   hasAssignee: boolean;
@@ -102,6 +106,16 @@ export interface TaskCardContext {
   statusOptions: TaskOptionContext[];
   severityOptions: TaskOptionContext[];
   completionStatuses: string;
+  isCanvasLinked: boolean;
+  canvasURL: string;
+  canvasSubmissionState: string;
+  canvasGradeLabel: string;
+  canvasSubmittedAtDisplay: string;
+  canvasLate: boolean;
+  canvasMissing: boolean;
+  canvasExcused: boolean;
+  canvasRedoRequested: boolean;
+  canvasLastSyncDisplay: string;
 }
 
 export interface StudyCourseContext {
@@ -304,6 +318,14 @@ export interface BoardPageContext {
   completedAssignmentCount: number;
   undatedAssignmentCount: number;
   unestimatedAssignmentCount: number;
+  isCanvasLinked: boolean;
+  canvasURL: string;
+  canvasCourseCode: string;
+  canvasTermName: string;
+  canvasGradeDisplay: string;
+  canvasHasScore: boolean;
+  canvasScorePercent: number;
+  canvasLastSyncDisplay: string;
 }
 
 export interface TasksPageContext {
@@ -415,6 +437,33 @@ export interface APIKeysPageContext {
   hasCreatedKey: boolean;
   error: string;
   hasError: boolean;
+}
+
+export interface CanvasIntegrationConnectionContext {
+  id: string;
+  canvasOrigin: string;
+  keyPrefix: string;
+  lastSyncDisplay: string;
+  statusName: string;
+  statusDetail: string;
+  hasError: boolean;
+}
+
+export interface CanvasIntegrationsPageContext {
+  connections: CanvasIntegrationConnectionContext[];
+  hasConnections: boolean;
+  focalpointOrigin: string;
+}
+
+export interface CanvasConnectionResponse {
+  id: string;
+  canvasOrigin: string;
+  keyPrefix: string;
+}
+
+export interface CreatedCanvasConnectionResponse {
+  connection: CanvasConnectionResponse;
+  syncKey: string;
 }
 
 export interface BoardSettingsViewContext {
@@ -531,6 +580,7 @@ export interface BoardSettingsPageContext {
   hasCreatedTapURL: boolean;
   tapError: string;
   hasTapError: boolean;
+  isCanvasLinked: boolean;
 }
 
 export interface AppPageContext {
@@ -547,6 +597,7 @@ export interface AppPageContext {
   isSettings: boolean;
   isProfileSettings: boolean;
   isAPIKeys: boolean;
+  isIntegrations: boolean;
   isBoardSettings: boolean;
   overview: OverviewPageContext | null;
   semester: SemesterPageContext | null;
@@ -555,6 +606,7 @@ export interface AppPageContext {
   taskDetail: TaskDetailPageContext | null;
   settings: SettingsPageContext | null;
   apiKeys: APIKeysPageContext | null;
+  integrations: CanvasIntegrationsPageContext | null;
   boardSettings: BoardSettingsPageContext | null;
 }
 

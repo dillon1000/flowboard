@@ -130,10 +130,9 @@
       `/api/v1/boards/${board.id}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({
-          name: String(data.get('name') ?? ''),
-          description: String(data.get('description') ?? '') || null
-        })
+        body: JSON.stringify(board.isCanvasLinked
+          ? { description: String(data.get('description') ?? '') || null }
+          : { name: String(data.get('name') ?? ''), description: String(data.get('description') ?? '') || null })
       },
       'Board saved'
     );
@@ -427,7 +426,7 @@
       <section class="section" id="general">
         <div class="section-heading"><h2>General</h2></div>
         <form class="panel panel-form" onsubmit={saveBoard}>
-          <div class="field"><label for="settings-board-name">Name</label><input class="input" id="settings-board-name" name="name" value={board.name} minlength="2" maxlength="80" required /></div>
+          <div class="field"><label for="settings-board-name">Name</label><input class="input" id="settings-board-name" name="name" value={board.name} minlength="2" maxlength="80" required readonly={board.isCanvasLinked} aria-describedby={board.isCanvasLinked ? 'canvas-board-name-help' : undefined} />{#if board.isCanvasLinked}<span class="field-help" id="canvas-board-name-help">Canvas manages the course name.</span>{/if}</div>
           <div class="field"><label for="settings-board-description">Description</label><textarea class="textarea" id="settings-board-description" name="description" maxlength="500">{board.description}</textarea></div>
           <div class="form-actions"><button class="button primary" type="submit" disabled={pending}>Save board</button></div>
         </form>
@@ -571,7 +570,7 @@
         <div class="panel danger-zone">
           <div class="panel-row"><span class="panel-row-main"><strong>{board.isArchived ? 'Restore board' : 'Archive board'}</strong><span>Archived boards leave the main navigation.</span></span><button class="button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !board.isArchived }) }, board.isArchived ? 'Board restored' : 'Board archived')} disabled={pending}><Archive size={14} />{board.isArchived ? 'Restore' : 'Archive'}</button></div>
           <div class="panel-row"><span class="panel-row-main"><strong>Duplicate board</strong><span>Copy tasks, views, fields, and templates.</span></span><button class="button" type="button" onclick={duplicateBoard} disabled={pending}><Copy size={14} />Duplicate</button></div>
-          {#if board.isOwner}<div class="panel-row"><span class="panel-row-main"><strong>Delete board</strong><span>Permanently remove this board and its tasks.</span></span><button class="button danger" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div>{/if}
+          {#if board.isOwner && !board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Delete board</strong><span>Permanently remove this board and its tasks.</span></span><button class="button danger" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div>{:else if board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Canvas course cannot be deleted</strong><span>Disconnect Canvas in Integrations to turn this into an ordinary local board.</span></span><a class="button small" href="/app/settings/integrations">Open integrations</a></div>{/if}
         </div>
       </section>
     </div>
