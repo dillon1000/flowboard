@@ -33,7 +33,7 @@ public func configure(_ app: Application) async throws {
     let serverVersion = Environment.get("SERVER_VERSION") ?? "0.1.0"
     let corsConfiguration = CORSMiddleware.Configuration(
         allowedOrigin: .any(allowedOrigins),
-        allowedMethods: [.GET, .POST, .PATCH, .DELETE, .OPTIONS],
+        allowedMethods: [.GET, .POST, .PUT, .PATCH, .DELETE, .OPTIONS],
         allowedHeaders: [.accept, .authorization, .contentType, .origin],
         allowCredentials: true,
         exposedHeaders: [
@@ -90,6 +90,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddUserTimeZone())
     app.migrations.add(CreateStudySessions())
     app.migrations.add(AddStudySessionLifecycle())
+    app.migrations.add(CreateStudySettings())
     app.migrations.add(AddPlanningNotificationPreferences())
     app.migrations.add(CreateCalendarFeedCredentials())
     app.migrations.add(CreateCanvasSyncModels())

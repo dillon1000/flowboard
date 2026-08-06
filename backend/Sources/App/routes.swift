@@ -51,6 +51,7 @@ func routes(_ app: Application) throws {
     try protectedAPI.register(collection: TaskController())
     try protectedAPI.register(collection: TaskResourceController())
     try protectedAPI.register(collection: StudySessionController())
+    try protectedAPI.register(collection: StudySettingsController())
     try protectedAPI.register(collection: AttachmentController())
 }
 
