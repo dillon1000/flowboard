@@ -9,6 +9,7 @@ struct AppPageController: RouteCollection {
         routes.get("tasks", use: allTasks)
         routes.get("tasks", "archived", use: archivedTasks)
         routes.get("settings", use: settings)
+        routes.get("settings", "availability", use: availabilitySettings)
         routes.get("settings", "api-keys", use: apiKeys)
         routes.get("settings", "integrations", use: integrations)
         routes.get("boards", ":boardID", use: boardDefault)
@@ -141,6 +142,20 @@ struct AppPageController: RouteCollection {
                 notificationsAvailable: req.application.notificationConfiguration != nil,
                 calendarFeed: CalendarFeedStatusResponse(credential: calendarFeed)
             ),
+        )
+    }
+
+    func availabilitySettings(req: Request) async throws -> Response {
+        let common = try await commonContext(for: req)
+        let userID = try req.auth.require(User.self).requireID()
+        let settings = try await StudySettings.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
+        return try respond(
+            common: common,
+            pageTitle: "Availability",
+            pageKind: .availabilitySettings,
+            availabilitySettings: StudySettingsResponse(settings: settings)
         )
     }
 

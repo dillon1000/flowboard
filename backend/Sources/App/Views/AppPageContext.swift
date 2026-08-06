@@ -8,6 +8,7 @@ enum AppPageKind {
     case archivedTasks
     case taskDetail
     case settings
+    case availabilitySettings
     case apiKeys
     case integrations
     case boardSettings
@@ -26,6 +27,7 @@ struct AppPageContext: Encodable {
     let isTaskDetail: Bool
     let isSettings: Bool
     let isProfileSettings: Bool
+    let isAvailabilitySettings: Bool
     let isAPIKeys: Bool
     let isIntegrations: Bool
     let isBoardSettings: Bool
@@ -35,6 +37,7 @@ struct AppPageContext: Encodable {
     let tasks: TasksPageContext?
     let taskDetail: TaskDetailPageContext?
     let settings: SettingsPageContext?
+    let availabilitySettings: StudySettingsResponse?
     let apiKeys: APIKeysPageContext?
     let integrations: CanvasIntegrationsPageContext?
     let boardSettings: BoardSettingsPageContext?
@@ -49,6 +52,7 @@ struct AppPageContext: Encodable {
         tasks: TasksPageContext?,
         taskDetail: TaskDetailPageContext?,
         settings: SettingsPageContext?,
+        availabilitySettings: StudySettingsResponse?,
         apiKeys: APIKeysPageContext?,
         integrations: CanvasIntegrationsPageContext?,
         boardSettings: BoardSettingsPageContext?
@@ -63,8 +67,9 @@ struct AppPageContext: Encodable {
         self.isActiveTasks = pageKind == .tasks
         self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
-        self.isSettings = pageKind == .settings || pageKind == .apiKeys || pageKind == .integrations
+        self.isSettings = pageKind == .settings || pageKind == .availabilitySettings || pageKind == .apiKeys || pageKind == .integrations
         self.isProfileSettings = pageKind == .settings
+        self.isAvailabilitySettings = pageKind == .availabilitySettings
         self.isAPIKeys = pageKind == .apiKeys
         self.isIntegrations = pageKind == .integrations
         self.isBoardSettings = pageKind == .boardSettings
@@ -74,6 +79,7 @@ struct AppPageContext: Encodable {
         self.tasks = tasks
         self.taskDetail = taskDetail
         self.settings = settings
+        self.availabilitySettings = availabilitySettings
         self.apiKeys = apiKeys
         self.integrations = integrations
         self.boardSettings = boardSettings

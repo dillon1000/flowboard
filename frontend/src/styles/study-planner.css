@@ -1060,7 +1060,7 @@
   border-top: 1px solid var(--border);
 }
 
-.study-availability-summary button {
+.study-availability-summary > :is(button, a) {
   display: grid;
   width: 100%;
   gap: 4px;
@@ -1072,9 +1072,10 @@
   cursor: pointer;
   font: inherit;
   text-align: left;
+  text-decoration: none;
 }
 
-.study-availability-summary button:hover {
+.study-availability-summary > :is(button, a):hover {
   background: var(--surface-hover);
 }
 
@@ -1272,14 +1273,12 @@
   width: min(430px, 100%);
 }
 
-.study-estimate-dialog,
-.study-availability-dialog {
+.study-estimate-dialog {
   width: min(920px, 100%);
   max-height: min(860px, calc(100vh - 48px));
 }
 
-.study-estimate-dialog .dialog-body,
-.study-availability-dialog .dialog-body {
+.study-estimate-dialog .dialog-body {
   display: grid;
   gap: 22px;
   overflow-y: auto;
@@ -1292,7 +1291,7 @@
 }
 
 .study-preset-editor h3,
-.study-section-heading h3 {
+.study-section-heading :is(h2, h3) {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
@@ -1531,6 +1530,33 @@
 
 .study-conflict-builder {
   grid-template-columns: minmax(150px, 1fr) 150px 110px 110px auto;
+}
+
+.availability-settings-form {
+  display: grid;
+  gap: 28px;
+  padding: 22px;
+}
+
+.availability-settings-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.availability-settings-summary strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.availability-settings-actions {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
 
 @media (--viewport-shell) {

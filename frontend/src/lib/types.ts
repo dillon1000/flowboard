@@ -729,6 +729,7 @@ export interface AppPageContext {
   isTaskDetail: boolean;
   isSettings: boolean;
   isProfileSettings: boolean;
+  isAvailabilitySettings: boolean;
   isAPIKeys: boolean;
   isIntegrations: boolean;
   isBoardSettings: boolean;
@@ -738,6 +739,7 @@ export interface AppPageContext {
   tasks: TasksPageContext | null;
   taskDetail: TaskDetailPageContext | null;
   settings: SettingsPageContext | null;
+  availabilitySettings: StudySettingsContext | null;
   apiKeys: APIKeysPageContext | null;
   integrations: CanvasIntegrationsPageContext | null;
   boardSettings: BoardSettingsPageContext | null;

@@ -131,6 +131,16 @@ struct StudyPlannerTests {
             expectContains(response.body.string, #""courseFilters""#)
             expectContains(response.body.string, #""days""#)
             expectContains(response.body.string, #""name":"My board""#)
+
+            let availability = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/workspace/settings/availability",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(availability.status == .ok)
+            expectContains(availability.body.string, #""pageTitle":"Availability""#)
+            expectContains(availability.body.string, #""isAvailabilitySettings":true"#)
+            expectContains(availability.body.string, #""weekdayCapacityMinutes""#)
         }
     }
 

@@ -2,6 +2,7 @@
   import type { AppPageContext } from '$lib/types';
   import AppShell from '$lib/components/AppShell.svelte';
   import APIKeysPage from './APIKeysPage.svelte';
+  import AvailabilitySettingsPage from './AvailabilitySettingsPage.svelte';
   import BoardPage from './BoardPage.svelte';
   import BoardSettingsPage from './BoardSettingsPage.svelte';
   import IntegrationsPage from './IntegrationsPage.svelte';
@@ -32,6 +33,8 @@
     <TaskDetailPage detail={context.taskDetail} currentUserEmail={context.common.userEmail} {descriptionHTML} />
   {:else if context.isProfileSettings && context.settings}
     <SettingsPage common={context.common} settings={context.settings} />
+  {:else if context.isAvailabilitySettings && context.availabilitySettings}
+    <AvailabilitySettingsPage settings={context.availabilitySettings} />
   {:else if context.isAPIKeys && context.apiKeys}
     <APIKeysPage keys={context.apiKeys} />
   {:else if context.isIntegrations && context.integrations}
