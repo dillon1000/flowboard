@@ -19,7 +19,7 @@ func routes(_ app: Application) throws {
         APIIndexResponse(
             name: "Flowboard REST API",
             version: "v1",
-            authentication: "Session cookie or Authorization: Bearer API key",
+            authentication: "Session cookie, fbk_ API key, or route-restricted fcs_ Canvas key",
             apiKeys: "/api/v1/auth/api-keys",
             boards: "/api/v1/boards",
             tasks: "/api/v1/tasks",

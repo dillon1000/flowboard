@@ -22,12 +22,89 @@ user cannot access both return `404`, which prevents disclosure of private IDs.
 | `GET` | `/auth/api-keys` | List API key metadata. |
 | `POST` | `/auth/api-keys` | Create an API key. |
 | `DELETE` | `/auth/api-keys/{apiKeyID}` | Revoke an API key. |
+| `GET` | `/auth/canvas-connections` | List owned Canvas connections. |
+| `POST` | `/auth/canvas-connections` | Create a Canvas connection and one-time sync key. |
+| `POST` | `/auth/canvas-connections/{connectionID}/rotate` | Rotate and return a new one-time sync key. |
+| `DELETE` | `/auth/canvas-connections/{connectionID}` | Disconnect Canvas without deleting imported data. |
 
 API key management needs a browser session. A Bearer key cannot create or revoke
 another key. Create a key with a `name` and an optional future `expiresAt` date.
 The response contains the raw `key` once. Flowboard stores its SHA-256 hash and a
 short identifying prefix, so it cannot show the raw value again. List responses
 include the prefix, creation date, optional expiry date, and last-used date.
+
+Canvas connection management also needs a browser session. Create a connection
+with `canvasOrigin`, which must be an HTTPS origin with no credentials, path,
+query, or fragment. Creation and rotation return the raw `fcs_` sync key once.
+Flowboard stores its SHA-256 hash and visible prefix. Deleting a connection
+deletes its source links and locks, but it retains the imported boards and tasks.
+
+## Canvas integration
+
+The private Canvas extension uses a separate `fcs_` Bearer key. This key can
+call only these routes:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/integrations/canvas/status` | Read the connection origin, key prefix, and last sync state. |
+| `POST` | `/integrations/canvas/sync` | Validate and apply one complete Canvas snapshot. |
+
+An `fcs_` key fails on board, task, account, and API-key routes. A normal `fbk_`
+API key cannot call the Canvas extension routes. The snapshot `canvasOrigin`
+must equal the connection origin.
+
+The sync body uses this version 1 shape:
+
+```json
+{
+  "version": 1,
+  "snapshotID": "one-unique-attempt-id",
+  "canvasOrigin": "https://school.instructure.com",
+  "capturedAt": "2026-08-06T12:00:00Z",
+  "courses": [
+    {
+      "id": "42",
+      "name": "Biology",
+      "courseCode": "BIO-101",
+      "termName": "Fall 2026",
+      "htmlURL": "https://school.instructure.com/courses/42",
+      "currentScore": 93.5,
+      "currentGrade": "A",
+      "assignments": [
+        {
+          "id": "9",
+          "name": "Lab report",
+          "descriptionText": "Submit the final report.",
+          "htmlURL": "https://school.instructure.com/courses/42/assignments/9",
+          "dueAt": "2026-09-01T20:00:00Z",
+          "pointsPossible": 10,
+          "submission": {
+            "workflowState": "submitted",
+            "grade": null,
+            "score": null,
+            "submittedAt": "2026-08-31T18:00:00Z",
+            "late": false,
+            "missing": false,
+            "excused": false,
+            "redoRequested": false
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The route accepts at most 5 MB, 100 courses, and 10,000 assignments. It rejects
+duplicate remote IDs, invalid or cross-origin URLs, invalid dates, non-finite
+scores, and oversized strings before a transaction writes data. A repeated
+`snapshotID` returns success with `duplicate: true` and no writes. A snapshot
+older than the last accepted capture time returns `409 Conflict`.
+
+The response includes `snapshotID`, `duplicate`, `capturedAt`, `syncedAt`, and
+counts for created, updated, archived, completed, and reopened records. The
+server applies one accepted snapshot in one transaction, so a failed or partial
+Canvas read must never call this route.
 
 ## Tap actions
 
@@ -102,6 +179,12 @@ Task list and search routes accept `page`, `per`, `boardID`, `status`,
 `archived=true` is present. PATCH supports `title`, `description`, `status`,
 `priority`, `labels`, `startAt`, `dueAt`, `assigneeID`, `properties`, and
 `isArchived`. Send `null` to clear a nullable field.
+
+For a Canvas-linked task, Canvas manages the title, description, due date, due
+time, earned score, and points possible. PATCH requests for these fields return
+`409 Conflict`. Status, archive state, and local planning fields remain editable.
+Deleting a linked task or course also returns `409 Conflict` until its Canvas
+connection is removed.
 
 Task child resources are available at these paths:
 

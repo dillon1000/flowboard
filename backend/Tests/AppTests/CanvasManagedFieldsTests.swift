@@ -70,7 +70,7 @@ struct CanvasManagedFieldsTests {
             #expect(planning.status == .ok)
             let plannedTask = try #require(try await Task.find(linked.task.requireID(), on: app.db))
             #expect(plannedTask.title == "Canvas assignment")
-            #expect(plannedTask.description == "Canvas description")
+            #expect(plannedTask.$description.value == "Canvas description")
             #expect(plannedTask.status == .inProgress)
             #expect(plannedTask.priority == .urgent)
             #expect(plannedTask.labels == ["study"])

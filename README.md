@@ -105,6 +105,7 @@ dependencies, and generated output.
   comments, followers, checklists, and protected attachments
 - Board templates, duplication, archive, JSON import and export, and task search
 - Board sharing with Viewer, Commenter, Editor, and Admin roles
+- Private Canvas course and assignment import through a restricted Chrome extension
 - NFC Tap actions with scoped bearer links, use limits, cooldowns, expiration,
   rotation, and idempotent execution
 - Light and dark themes, keyboard access, reduced motion, and responsive layouts
@@ -122,6 +123,11 @@ pnpm test
 cd ../backend
 swift build
 swift test
+
+cd ../extensions/canvas-sync
+pnpm check
+pnpm test
+pnpm build
 ```
 
 The Swift Testing framework must be present in the selected Apple toolchain. If
@@ -175,6 +181,11 @@ cd backend
 swift run App --env production migrate --yes
 ```
 
+The Canvas release adds the `canvas_connections`, `canvas_course_links`, and
+`canvas_assignment_links` tables. A production rollout must finish this
+migration command before the updated Vapor or SvelteKit server starts. The
+links retain imported boards and tasks when a connection is removed.
+
 ## Routes
 
 SvelteKit owns these browser surfaces:
@@ -191,6 +202,8 @@ examples.
 
 - `POST /auth/register`, `POST /auth/login`, and `POST /auth/logout`
 - `GET /auth/me` and `PATCH /auth/me`
+- Session-only Canvas connection management under `/auth/canvas-connections`
+- Restricted Canvas extension routes under `/integrations/canvas`
 - Board, member, view, workflow, field, template, Tap, import, and export routes
   under `/boards`
 - Task, move, comment, checklist, follower, and attachment routes under `/tasks`

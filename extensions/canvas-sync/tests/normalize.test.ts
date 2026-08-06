@@ -56,9 +56,11 @@ describe('Canvas normalization', () => {
   it('maps complete and reopened submission states', () => {
     const submitted = normalizeCanvasSubmission({ workflow_state: 'submitted' });
     const excused = normalizeCanvasSubmission({ workflow_state: 'unsubmitted', excused: true });
+    const excusedState = normalizeCanvasSubmission({ workflow_state: 'excused' });
     const reassigned = normalizeCanvasSubmission({ workflow_state: 'unsubmitted', redo_request: true });
     expect(canvasSubmissionIsComplete(submitted)).toBe(true);
     expect(canvasSubmissionIsComplete(excused)).toBe(true);
+    expect(canvasSubmissionIsComplete(excusedState)).toBe(true);
     expect(canvasSubmissionIsComplete(reassigned)).toBe(false);
   });
 });
