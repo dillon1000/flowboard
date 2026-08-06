@@ -23,4 +23,21 @@ describe('server renderMarkdown', () => {
       'href="https://example.com/guide"'
     );
   });
+
+  it('renders tables, images, rules, headings, and deleted text', () => {
+    const result = renderMarkdown(
+      '| Day | Topic |\n| --- | --- |\n| Mon | Algebra |\n\n' +
+        '![Course diagram](https://example.com/diagram.png)\n\n---\n\n#### Notes\n\n~~Canceled~~'
+    );
+
+    expect(result).toContain('<table>');
+    expect(result).toContain('<th>Day</th>');
+    expect(result).toContain('<td>Algebra</td>');
+    expect(result).toContain(
+      '<img src="https://example.com/diagram.png" alt="Course diagram" />'
+    );
+    expect(result).toContain('<hr />');
+    expect(result).toContain('<h4>Notes</h4>');
+    expect(result).toContain('<del>Canceled</del>');
+  });
 });
