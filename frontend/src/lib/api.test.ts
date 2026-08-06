@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api } from './api';
+import { api, messageFor } from './api';
 
 vi.mock('$app/navigation', () => ({
   goto: vi.fn().mockResolvedValue(undefined),
@@ -31,5 +31,10 @@ describe('client api', () => {
     expect(goto).toHaveBeenCalledWith(
       '/login?returnTo=%2Fapp%2Ftasks%2Fassignment-1%3Fpanel%3Dnotes%23editor'
     );
+  });
+
+  it('formats an error without reporting it through another live region', () => {
+    expect(messageFor(new Error('Save failed'))).toBe('Save failed');
+    expect(messageFor(null)).toBe('The request failed.');
   });
 });
