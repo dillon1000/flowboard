@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focalpoint Canvas Sync</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main>
+      <header><span class="mark">F</span><div><h1>Canvas Sync</h1><p>Private, read-only import</p></div></header>
+      <form id="configuration-form">
+        <label>Canvas origin<input id="canvas-origin" type="url" placeholder="https://school.instructure.com" required /></label>
+        <label>Focalpoint origin<input id="focalpoint-origin" type="url" placeholder="https://focalpoint.example" required /></label>
+        <label>Canvas sync key<input id="sync-key" type="password" placeholder="fcs_…" autocomplete="off" required /></label>
+        <button id="save-button" type="submit">Save configuration</button>
+      </form>
+      <section class="actions">
+        <button id="sync-button" type="button">Sync now</button>
+        <p id="status" role="status">Configure the extension to begin.</p>
+      </section>
+      <p id="error" role="alert" hidden></p>
+      <footer>The extension never reads your Canvas password or cookie value.</footer>
+    </main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

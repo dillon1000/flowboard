@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Focalpoint Canvas Sync",
+  "version": "0.1.0",
+  "description": "Privately import read-only Canvas course and assignment data into Focalpoint.",
+  "permissions": ["storage", "scripting"],
+  "optional_host_permissions": ["https://*/*"],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Focalpoint Canvas Sync"
+  }
+}
