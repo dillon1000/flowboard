@@ -203,6 +203,45 @@ Attachment uploads use multipart field `file` and accept at most 10 MB. Use
 `GET /attachments/{attachmentID}/preview` for an inline preview of a supported
 image, audio, video, or PDF file.
 
+## Study planning
+
+Study sessions belong to the signed-in user. A session has a `planned`,
+`completed`, or `skipped` state. Completed sessions also contain
+`actualMinutes` and `completedAt`. Only planned sessions can move, complete, or
+skip.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/tasks/{taskID}/study-sessions` | List the current user's sessions for an assignment. |
+| `POST` | `/tasks/{taskID}/study-sessions` | Add a planned session. |
+| `PATCH` | `/study-sessions/{sessionID}` | Move a planned session or change its length. |
+| `POST` | `/study-sessions/{sessionID}/complete` | Complete a session with `actualMinutes`. |
+| `POST` | `/study-sessions/{sessionID}/skip` | Skip a session and return its work to the planning queue. |
+| `DELETE` | `/study-sessions/{sessionID}` | Delete a session. |
+| `POST` | `/study-sessions/plan` | Plan available work from assignment estimates and saved availability. |
+| `POST` | `/study-sessions/repair` | Skip missed, late, or overloaded blocks and replan the returned work. |
+
+`POST /study-sessions/plan` accepts optional `courseID` and
+`dailyLimitMinutes` values. The daily limit remains available for old clients.
+If it is absent, the planner uses the saved weekday capacity and subtracts
+classes, work shifts, calendar conflicts, and blocked dates. Missed and skipped
+sessions do not consume an assignment estimate, so the next plan includes that
+work again.
+
+The planning inputs and estimation inbox use these routes:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/study-settings` | Read availability, estimate defaults, and onboarding state. |
+| `PUT` | `/study-settings` | Replace availability, estimate defaults, and onboarding state. |
+| `POST` | `/study-settings/estimates` | Save estimates for 1 to 200 assignments in one transaction. |
+
+Weekday capacity is a map with keys `1` through `7`, where `1` is Sunday.
+Recurring commitments accept `class` or `work` as their kind, a weekday list,
+and `HH:mm` start and end times. Calendar conflicts use one `YYYY-MM-DD` date
+and the same time format. Estimate defaults contain a stable ID, a name, a
+minute value, and keywords that can match assignment titles.
+
 ## Example
 
 ```sh
