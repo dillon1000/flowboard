@@ -174,7 +174,12 @@ test('moves board cards and completes every core task-detail action', async ({ p
   const board = await defaultBoard(page.request);
   const firstTask = await createTask(page.request, board.id, 'First browser task');
   const secondTask = await createTask(page.request, board.id, 'Second browser task');
-  const detailTask = await createTask(page.request, board.id, 'Task detail browser audit');
+  const detailTask = await createTask(
+    page.request,
+    board.id,
+    'Task detail browser audit',
+    'Unique task detail preview.'
+  );
 
   await page.goto(`/app/boards/${board.id}`);
   await waitForHydration(page);
@@ -194,7 +199,7 @@ test('moves board cards and completes every core task-detail action', async ({ p
 
   const detailCard = backlog.locator(`[data-task-id="${detailTask.id}"]`);
   await detailCard.hover();
-  await expect(page.locator('.task-preview')).toContainText('Task detail browser audit');
+  await expect(page.locator('.task-preview')).toContainText('Unique task detail preview.');
   await detailCard.click();
   await expect(page).toHaveURL(new RegExp(`${detailTask.browserPath}$`));
 

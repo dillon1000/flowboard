@@ -149,20 +149,21 @@ struct CanvasSyncTests {
                     .with(\.$task)
                     .first()
             )
-            #expect(assignmentLink.task.title == "Lab report")
-            #expect(assignmentLink.task.description == "Write the report.")
-            #expect(assignmentLink.task.dueTime == "20:30")
-            #expect(assignmentLink.task.gradePossible == 0)
-            #expect(assignmentLink.task.status == .done)
+            let importedTask = try #require(assignmentLink.$task.value)
+            #expect(importedTask.title == "Lab report")
+            #expect(importedTask.$description.value == "Write the report.")
+            #expect(importedTask.dueTime == "20:30")
+            #expect(importedTask.gradePossible == 0)
+            #expect(importedTask.status == .done)
             #expect(assignmentLink.statusBeforeCanvasCompletion == "backlog")
             #expect(assignmentLink.canvasControlsCompletion)
             #expect(
-                ISO8601DateFormatter().string(from: try #require(assignmentLink.task.dueAt))
+                ISO8601DateFormatter().string(from: try #require(importedTask.dueAt))
                     == "2026-08-31T00:00:00Z"
             )
 
-            assignmentLink.task.estimatedMinutes = 90
-            try await assignmentLink.task.update(on: app.db)
+            importedTask.estimatedMinutes = 90
+            try await importedTask.update(on: app.db)
             let duplicateResponse = try await sendCanvasSnapshot(
                 snapshot,
                 key: connection.syncKey,
@@ -172,7 +173,7 @@ struct CanvasSyncTests {
             #expect(duplicate.duplicate)
             #expect(duplicate.counts.coursesUpdated == 0)
             #expect(
-                try await Task.find(assignmentLink.task.requireID(), on: app.db)?.estimatedMinutes == 90
+                try await Task.find(importedTask.requireID(), on: app.db)?.estimatedMinutes == 90
             )
 
             let stale = try canvasSnapshot(
@@ -262,9 +263,10 @@ struct CanvasSyncTests {
             #expect(try await Task.find(task.requireID(), on: app.db)?.status == .backlog)
 
             for (index, state) in ["graded", "pending_review"].enumerated() {
+                let completeMinute = 3 + index * 2
                 let completed = try canvasSnapshot(
                     snapshotID: "workflow-complete-\(index)",
-                    capturedAt: "2026-08-06T12:0\(index + 3):00Z",
+                    capturedAt: "2026-08-06T12:0\(completeMinute):00Z",
                     submission: CanvasSubmissionSnapshot(
                         workflowState: state,
                         grade: "10",
@@ -281,7 +283,7 @@ struct CanvasSyncTests {
 
                 let reassigned = try canvasSnapshot(
                     snapshotID: "workflow-redo-\(index)",
-                    capturedAt: "2026-08-06T12:0\(index + 5):00Z",
+                    capturedAt: "2026-08-06T12:0\(completeMinute + 1):00Z",
                     submission: CanvasSubmissionSnapshot(
                         workflowState: state,
                         grade: nil,

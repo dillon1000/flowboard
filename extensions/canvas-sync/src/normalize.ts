@@ -105,7 +105,7 @@ export function normalizeCanvasSubmission(value: unknown): CanvasSubmissionSnaps
 
 export function canvasSubmissionIsComplete(submission: CanvasSubmissionSnapshot | null): boolean {
   if (!submission) return false;
-  return submission.excused || ['submitted', 'graded', 'pending_review'].includes(submission.workflowState ?? '');
+  return submission.excused || ['submitted', 'graded', 'pending_review', 'excused'].includes(submission.workflowState ?? '');
 }
 
 export function normalizeCanvasAssignment(value: unknown, canvasOrigin: string): CanvasAssignmentSnapshot {
