@@ -76,9 +76,10 @@
     if (open && !root.contains(event.target as Node)) hideMenu();
   }
 
-  function handleWindowKeydown(event: KeyboardEvent): void {
+  function handleMenuKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape' && open) {
       event.preventDefault();
+      event.stopPropagation();
       hideMenu(true);
     }
   }
@@ -101,9 +102,10 @@
   }
 </script>
 
-<svelte:window onclick={handleOutsideClick} onkeydown={handleWindowKeydown} />
+<svelte:window onclick={handleOutsideClick} />
 
-<div class="menu" bind:this={root}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="menu" bind:this={root} onkeydown={handleMenuKeydown}>
   <input type="hidden" {name} {value} />
   <button
     bind:this={trigger}
