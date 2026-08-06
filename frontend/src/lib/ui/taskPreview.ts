@@ -89,13 +89,16 @@ export function taskPreview(node: HTMLElement, initialTask: TaskPreviewData) {
     hasShownPreview = true;
   }
 
-  function showSoon(): void {
+  function showSoon(event: PointerEvent): void {
+    if (event.pointerType === 'touch' || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     clearTimeout(showTimer);
     showTimer = setTimeout(() => show(true), hasShownPreview ? 40 : 140);
   }
 
   function showFromFocus(): void {
-    show(false);
+    // A tap can focus a link before navigation. Only keyboard-visible focus
+    // opens the preview, which keeps touch navigation free of preview flashes.
+    if (node.matches(':focus-visible')) show(false);
   }
 
   function hide(): void {

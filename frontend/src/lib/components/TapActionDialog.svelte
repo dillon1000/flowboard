@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { BoardSettingsPageContext, TapActionContext, TapTaskOptionContext, TaskOptionContext } from '$lib/types';
   import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
@@ -73,7 +72,7 @@
       );
       if (result.url) onprovision(result.url);
       open = false;
-      await invalidateAll();
+      await refreshAll();
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { APIKeysPageContext, CreatedAPIKeyResponse } from '$lib/types';
   import { CheckIcon as Check, CopyIcon as Copy, KeyIcon as KeyRound, PlusIcon as Plus } from 'phosphor-svelte';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
@@ -26,7 +25,7 @@
       });
       createdKeyOverride = created.key;
       form.reset();
-      await invalidateAll();
+      await refreshAll();
       showToast('API key created');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -41,7 +40,7 @@
     requestError = '';
     try {
       await api(`/api/v1/auth/api-keys/${keyID}`, { method: 'DELETE' });
-      await invalidateAll();
+      await refreshAll();
       showToast('API key revoked');
     } catch (cause) {
       requestError = messageFor(cause);

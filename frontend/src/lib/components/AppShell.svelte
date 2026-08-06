@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { navigating } from '$app/state';
   import type { AppPageContext, BoardNavigationContext } from '$lib/types';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
-  import { ArchiveIcon as Archive, CalendarBlankIcon as SemesterCalendar, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings } from 'phosphor-svelte';
+  import { ArchiveIcon as Archive, CalendarBlankIcon as SemesterCalendar, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, KeyboardIcon as Keyboard, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings, XIcon as X } from 'phosphor-svelte';
+  import { dialogLayer } from '$lib/actions/dialogLayer';
+  import { activityCount } from '$lib/ui/progress';
   import Avatar from './Avatar.svelte';
   import BuildSignature from './BuildSignature.svelte';
   import CreateBoardDialog from './CreateBoardDialog.svelte';
@@ -13,9 +16,12 @@
   let { context, children } = $props<{ context: AppPageContext; children: Snippet }>();
   let createBoardOpen = $state(false);
   let sidebarOpen = $state(false);
+  let mobileSearchOpen = $state(false);
+  let shortcutsOpen = $state(false);
   let collapsed = $state(false);
   let hydrated = $state(false);
   let searchInput: HTMLInputElement;
+  const shellBusy = $derived(Boolean(navigating.to) || $activityCount > 0);
   const activeBoards = $derived(
     context.common.boards.filter((board: BoardNavigationContext) => !board.isArchived)
   );
@@ -56,15 +62,24 @@
     }
     if (event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      searchInput?.focus();
+      openSearch();
+    }
+    if (event.key === '/') {
+      event.preventDefault();
+      shortcutsOpen = true;
     }
   }
 
+  function openSearch(): void {
+    if (searchInput?.offsetParent) searchInput.focus();
+    else mobileSearchOpen = true;
+  }
 </script>
 
 <svelte:window onkeydown={handleShortcut} />
 
 <div class:study-overview-page={context.isOverview} class="app-shell" data-hydrated={hydrated ? 'true' : undefined}>
+  <div class="route-progress" data-active={shellBusy ? 'true' : undefined} role="progressbar" aria-label="Loading" aria-hidden={!shellBusy}></div>
   <aside class="sidebar" data-open={sidebarOpen ? 'true' : undefined}>
     <div class="brand-row">
       <a class="brand" href="/app" aria-label="Flowboard home">
@@ -108,6 +123,9 @@
     <div class="sidebar-spacer"></div>
     <BuildSignature />
     <nav class="settings-nav">
+      <button class="nav-link nav-button" type="button" onclick={() => { sidebarOpen = false; shortcutsOpen = true; }} title="Keyboard shortcuts">
+        <Keyboard size={16} /><span>Keyboard shortcuts</span><small>⌘ /</small>
+      </button>
       <a class:active={context.isSettings} class="nav-link" href="/app/settings" aria-current={context.isSettings ? 'page' : undefined} title="Settings">
         <Settings size={16} /><span>Settings</span>
       </a>
@@ -136,6 +154,7 @@
         <form class="search-control" method="get" action="/app/tasks" role="search">
           <Search size={16} /><input bind:this={searchInput} name="q" aria-label="Search tasks" placeholder="Search tasks" /><kbd>⌘ K</kbd>
         </form>
+        <button class="icon-button mobile-search-button" type="button" onclick={openSearch} aria-label="Search assignments"><Search size={16} /></button>
         <ThemeToggle />
       </div>
     </header>
@@ -146,3 +165,28 @@
 <CreateBoardDialog bind:open={createBoardOpen} />
 <TaskPreview />
 <Toast />
+
+{#if mobileSearchOpen}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="mobile-search-title" tabindex="-1" use:dialogLayer={{ close: () => (mobileSearchOpen = false) }}>
+    <form class="dialog compact shell-search-dialog" method="get" action="/app/tasks" onsubmit={() => (mobileSearchOpen = false)}>
+      <div class="dialog-header"><div><h2 id="mobile-search-title">Search assignments</h2><p>Find work across every course.</p></div><button class="icon-button" type="button" onclick={() => (mobileSearchOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body"><label class="search-control shell-search-field"><Search size={16} /><input name="q" aria-label="Search assignments" placeholder="Title or notes" data-dialog-focus /></label></div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (mobileSearchOpen = false)}>Cancel</button><button class="button primary" type="submit">Search</button></div>
+    </form>
+  </div>
+{/if}
+
+{#if shortcutsOpen}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1" use:dialogLayer={{ close: () => (shortcutsOpen = false) }}>
+    <div class="dialog compact shortcut-dialog">
+      <div class="dialog-header"><div><h2 id="shortcuts-title">Keyboard shortcuts</h2><p>Move through your study plan without reaching for the pointer.</p></div><button class="icon-button" type="button" onclick={() => (shortcutsOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body shortcut-list">
+        <div><span>Search assignments</span><kbd>⌘ / Ctrl + K</kbd></div>
+        <div><span>Toggle navigation</span><kbd>⌘ / Ctrl + B</kbd></div>
+        <div><span>Show this reference</span><kbd>⌘ / Ctrl + /</kbd></div>
+        <div><span>Close a menu or dialog</span><kbd>Esc</kbd></div>
+      </div>
+      <div class="dialog-footer"><button class="button primary" type="button" onclick={() => (shortcutsOpen = false)} data-dialog-focus>Done</button></div>
+    </div>
+  </div>
+{/if}
