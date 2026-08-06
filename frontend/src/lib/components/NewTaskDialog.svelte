@@ -5,6 +5,7 @@
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
   import DatePicker from './DatePicker.svelte';
+  import LabelsField from './LabelsField.svelte';
   import TimePicker from './TimePicker.svelte';
   import SelectMenu, { type SelectMenuOption } from './SelectMenu.svelte';
 
@@ -43,7 +44,7 @@
           description: String(data.get('description') ?? '') || null,
           status: String(data.get('status') ?? board.newTaskStatus),
           priority: String(data.get('priority') ?? board.newTaskPriority),
-          labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6),
+          labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean),
           startAt: apiDate(data.get('startAt')),
           dueAt: apiDate(data.get('dueAt')),
           dueTime: data.get('dueAt') ? String(data.get('dueTime') ?? '') || null : null,
@@ -80,7 +81,7 @@
           <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
           <div class="field"><label for="new-task-time">Due time</label><TimePicker id="new-task-time" name="dueTime" label="Due time" /></div>
           <div class="field"><label for="new-task-estimate">Time estimate</label><input class="input" id="new-task-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
-          <div class="field wide"><label for="new-task-labels">Labels</label><input class="input" id="new-task-labels" name="labels" value={board.newTaskLabels} maxlength="500" placeholder="Design, Launch" /></div>
+          <LabelsField id="new-task-labels" label="Labels" value={board.newTaskLabels} placeholder="Design, Launch" />
         </div>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create assignment'}</button></div>

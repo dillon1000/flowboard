@@ -8,6 +8,7 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
+  import LabelsField from '$lib/components/LabelsField.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
@@ -289,7 +290,7 @@
       assigneeID: assigneeID || null,
       startAt: apiDate(data.get('startAt')),
       estimatedMinutes: estimateMinutes(data.get('estimatedMinutes')),
-      labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean).slice(0, 6)
+      labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean)
     };
     if (!detail.task.isCanvasLinked) Object.assign(body, {
       title: String(data.get('title') ?? ''),
@@ -931,7 +932,7 @@
         {#if !detail.task.isCanvasLinked}<div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div><div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>{/if}
         <div class="field"><label for="edit-estimate">Time estimate</label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes, e.g. 45" /></div>
         {#if !detail.task.isCanvasLinked}<fieldset class="field wide grade-fields"><legend>Grade</legend><div class="grade-input-grid"><label for="edit-grade-earned"><span>Points earned</span><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></label><label for="edit-grade-possible"><span>Points possible</span><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasPointsPossible ? detail.task.gradePossible : ''} placeholder="e.g. 100" /></label></div><span class="field-help">A points value can exist before the assignment receives a score.</span></fieldset>{/if}
-        <div class="field wide"><label for="edit-labels">Labels</label><input class="input" id="edit-labels" name="labels" value={detail.task.labelsJoined} maxlength="500" /></div>
+        <LabelsField id="edit-labels" label="Labels" value={detail.task.labelsJoined} />
       </div></div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div>
     </form>
