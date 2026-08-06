@@ -1,4 +1,4 @@
-import { invalidateAll } from '$app/navigation';
+import { goto, invalidateAll } from '$app/navigation';
 import { beginActivity } from '$lib/ui/progress';
 import { showToast } from '$lib/ui/toast';
 
@@ -22,6 +22,10 @@ export async function api<T = void>(path: string, init: RequestInit = {}): Promi
 
   try {
     const response = await fetch(path, { ...init, headers });
+    if (response.status === 401) {
+      const returnTo = `${location.pathname}${location.search}${location.hash}`;
+      await goto(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+    }
     if (!response.ok) throw new APIError(await errorMessage(response), response.status);
     if (response.status === 204 || response.headers.get('content-length') === '0') {
       return undefined as T;
