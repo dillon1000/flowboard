@@ -30,14 +30,21 @@ struct AppPageController: RouteCollection {
             .all()
         let taskContexts = try await makeTaskContexts(tasks, on: req.db)
         let taskIDs = taskContexts.map(\.id)
+        let userID = try req.auth.require(User.self).requireID()
         let studySessions = if taskIDs.isEmpty {
             [StudySession]()
         } else {
             try await StudySession.query(on: req.db)
-                .filter(\.$user.$id == req.auth.require(User.self).requireID())
+                .filter(\.$user.$id == userID)
                 .filter(\.$task.$id ~~ taskIDs)
                 .all()
         }
+        let settings = try await StudySettings.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
+        let hasCanvasConnection = try await CanvasConnection.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first() != nil
 
         return try respond(
             common: common,
@@ -48,6 +55,8 @@ struct AppPageController: RouteCollection {
                 courses: common.boards,
                 selectedCourseID: selectedCourseID,
                 studySessions: studySessions,
+                settings: settings,
+                hasCanvasConnection: hasCanvasConnection,
                 timeZoneIdentifier: common.userTimeZone
             ),
         )

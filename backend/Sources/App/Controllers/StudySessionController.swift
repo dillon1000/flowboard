@@ -12,6 +12,7 @@ struct StudySessionController: RouteCollection {
 
         let sessions = routes.grouped("study-sessions")
         sessions.post("plan", use: autoPlan)
+        sessions.post("repair", use: repair)
         sessions.post(":sessionID", "complete", use: complete)
         sessions.post(":sessionID", "skip", use: skip)
         sessions.patch(":sessionID", use: update)
@@ -216,37 +217,24 @@ struct StudySessionController: RouteCollection {
                 actualMinutes: nil
             )
         }
+        let settings = try await StudySettings.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
+        let availability = input.dailyLimitMinutes.map(StudyAvailability.init(dailyLimitMinutes:))
+            ?? StudyAvailability(settings: settings)
         let result = StudyPlanningService.plan(
             tasks: planningTasks,
             sessions: planningSessions,
-            dailyLimitMinutes: input.dailyLimitMinutes ?? 240,
+            availability: availability,
             timeZoneIdentifier: user.timeZoneIdentifier
         )
 
         let (createdSessionCount, updatedSessionCount) = try await req.db.transaction { database in
-            var createdCount = 0
-            var updatedCount = 0
-            for allocation in result.allocations {
-                if let existing = try await StudySession.query(on: database)
-                    .filter(\.$task.$id == allocation.taskID)
-                    .filter(\.$user.$id == userID)
-                    .filter(\.$scheduledDate == allocation.scheduledDate)
-                    .first()
-                {
-                    existing.plannedMinutes += allocation.plannedMinutes
-                    try await existing.update(on: database)
-                    updatedCount += 1
-                } else {
-                    try await StudySession(
-                        taskID: allocation.taskID,
-                        userID: userID,
-                        scheduledDate: allocation.scheduledDate,
-                        plannedMinutes: allocation.plannedMinutes
-                    ).create(on: database)
-                    createdCount += 1
-                }
-            }
-            return (createdCount, updatedCount)
+            try await persist(
+                allocations: result.allocations,
+                userID: userID,
+                on: database
+            )
         }
         return AutoPlanStudySessionsResponse(
             createdSessionCount: createdSessionCount,
@@ -255,6 +243,132 @@ struct StudySessionController: RouteCollection {
             remainingMinutes: result.remainingMinutes,
             unplannedTaskCount: result.unplannedTaskCount
         )
+    }
+
+    /// Returns missed, invalid, and overloaded plans to the queue, then runs the
+    /// allocator once with the student's current availability.
+    func repair(req: Request) async throws -> RepairStudyWeekResponse {
+        let user = try req.auth.require(User.self)
+        let userID = try user.requireID()
+        let boardIDs = try await BoardAccessService.boardIDs(for: userID, on: req.db)
+        let allTasks = try await Task.query(on: req.db)
+            .filter(\.$board.$id ~~ boardIDs)
+            .filter(\.$isArchived == false)
+            .with(\.$board)
+            .all()
+            .filter { !$0.board.isCompleted($0.status) }
+        let taskIDs = try allTasks.map { try $0.requireID() }
+        let sessions = taskIDs.isEmpty ? [] : try await StudySession.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .filter(\.$task.$id ~~ taskIDs)
+            .all()
+        let settings = try await StudySettings.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
+        let availability = StudyAvailability(settings: settings)
+        let dueDateByTaskID = Dictionary(
+            uniqueKeysWithValues: allTasks.compactMap { task -> (UUID, String)? in
+                guard let taskID = task.id, let dueAt = task.dueAt else { return nil }
+                return (taskID, inputDate(dueAt))
+            }
+        )
+        let analysis = StudyRecoveryService.analyze(
+            sessions: sessions,
+            dueDateByTaskID: dueDateByTaskID,
+            availability: availability,
+            timeZoneIdentifier: user.timeZoneIdentifier
+        )
+        let affectedSessions = sessions.filter { session in
+            session.id.map(analysis.affectedSessionIDs.contains) ?? false
+        }
+        for session in affectedSessions {
+            session.state = .skipped
+            session.actualMinutes = nil
+            session.completedAt = nil
+        }
+        if !analysis.affectedSessionIDs.isEmpty {
+            try await req.db.transaction { database in
+                for session in affectedSessions {
+                    try await session.update(on: database)
+                }
+            }
+        }
+
+        let planningTasks = allTasks.compactMap { task -> StudyPlanningTask? in
+            guard let taskID = task.id, let estimatedMinutes = task.estimatedMinutes else { return nil }
+            return StudyPlanningTask(
+                id: taskID,
+                dueDate: task.dueAt.map(inputDate) ?? "9999-12-31",
+                estimatedMinutes: estimatedMinutes,
+                priority: task.priorityValue
+            )
+        }
+        let planningSessions = sessions.map {
+            StudyPlanningSession(
+                taskID: $0.$task.id,
+                scheduledDate: $0.scheduledDate,
+                plannedMinutes: $0.plannedMinutes,
+                state: $0.state,
+                actualMinutes: $0.actualMinutes
+            )
+        }
+        let result = StudyPlanningService.plan(
+            tasks: planningTasks,
+            sessions: planningSessions,
+            availability: availability,
+            timeZoneIdentifier: user.timeZoneIdentifier
+        )
+        let (createdCount, updatedCount) = try await req.db.transaction { database in
+            try await persist(allocations: result.allocations, userID: userID, on: database)
+        }
+        return RepairStudyWeekResponse(
+            repairedSessionCount: analysis.affectedSessionIDs.count,
+            createdSessionCount: createdCount,
+            updatedSessionCount: updatedCount,
+            plannedMinutes: result.allocations.reduce(0) { $0 + $1.plannedMinutes },
+            remainingMinutes: result.remainingMinutes,
+            unplannedTaskCount: result.unplannedTaskCount
+        )
+    }
+
+    /// Reuses skipped rows because the task-user-date key is unique. Completed
+    /// rows remain immutable evidence and are never converted back into plans.
+    private func persist(
+        allocations: [StudySessionAllocation],
+        userID: UUID,
+        on database: any Database
+    ) async throws -> (created: Int, updated: Int) {
+        var createdCount = 0
+        var updatedCount = 0
+        for allocation in allocations {
+            if let existing = try await StudySession.query(on: database)
+                .filter(\.$task.$id == allocation.taskID)
+                .filter(\.$user.$id == userID)
+                .filter(\.$scheduledDate == allocation.scheduledDate)
+                .first()
+            {
+                guard existing.state != .completed else { continue }
+                if existing.state == .skipped {
+                    existing.plannedMinutes = allocation.plannedMinutes
+                    existing.state = .planned
+                    existing.actualMinutes = nil
+                    existing.completedAt = nil
+                } else {
+                    existing.plannedMinutes += allocation.plannedMinutes
+                }
+                try await existing.update(on: database)
+                updatedCount += 1
+            } else {
+                try await StudySession(
+                    taskID: allocation.taskID,
+                    userID: userID,
+                    scheduledDate: allocation.scheduledDate,
+                    plannedMinutes: allocation.plannedMinutes
+                ).create(on: database)
+                createdCount += 1
+            }
+        }
+        return (createdCount, updatedCount)
     }
 
     private func requiredTask(_ req: Request) async throws -> Task {
