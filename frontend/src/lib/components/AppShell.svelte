@@ -20,6 +20,7 @@
   let shortcutsOpen = $state(false);
   let collapsed = $state(false);
   let hydrated = $state(false);
+  let shortcutModifier = $state('Ctrl');
   let searchInput: HTMLInputElement;
   const shellBusy = $derived(Boolean(navigating.to) || $activityCount > 0);
   const activeBoards = $derived(
@@ -29,6 +30,7 @@
 
   onMount(() => {
     hydrated = true;
+    shortcutModifier = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent) ? '⌘' : 'Ctrl';
     collapsed = document.documentElement.dataset.sidebar === 'collapsed';
     const syncSidebar = (event: StorageEvent): void => {
       if (event.key !== 'flowboard-sidebar') return;
@@ -126,7 +128,7 @@
     <BuildSignature />
     <nav class="settings-nav">
       <button class="nav-link nav-button" type="button" onclick={() => { sidebarOpen = false; shortcutsOpen = true; }} title="Keyboard shortcuts">
-        <Keyboard size={16} /><span>Keyboard shortcuts</span><small>⌘ /</small>
+        <Keyboard size={16} /><span>Keyboard shortcuts</span><small>{shortcutModifier} /</small>
       </button>
       <a class:active={context.isSettings} class="nav-link" href="/app/settings" aria-current={context.isSettings ? 'page' : undefined} title="Settings">
         <Settings size={16} /><span>Settings</span>
@@ -142,7 +144,7 @@
 
   <main class="workspace">
     <header class="topbar">
-      <button class="icon-button menu-button" type="button" onclick={toggleSidebar} title="Toggle sidebar (⌘B)">
+      <button class="icon-button menu-button" type="button" onclick={toggleSidebar} title={`Toggle sidebar (${shortcutModifier} B)`}>
         <PanelLeft size={16} /><span class="sr-only">Toggle sidebar</span>
       </button>
       <nav class="breadcrumbs" aria-label="Breadcrumb">
@@ -154,7 +156,7 @@
       </nav>
       <div class="topbar-actions">
         <form class="search-control" method="get" action="/app/tasks" role="search">
-          <Search size={16} /><input bind:this={searchInput} name="q" value={searchQuery} aria-label="Search assignments" placeholder="Search assignments" /><kbd>⌘ K</kbd>
+          <Search size={16} /><input bind:this={searchInput} name="q" value={searchQuery} aria-label="Search assignments" placeholder="Search assignments" /><kbd>{shortcutModifier} K</kbd>
         </form>
         <button class="icon-button mobile-search-button" type="button" onclick={openSearch} aria-label="Search assignments"><Search size={16} /></button>
         <ThemeToggle />
@@ -183,9 +185,9 @@
     <div class="dialog compact shortcut-dialog">
       <div class="dialog-header"><div><h2 id="shortcuts-title">Keyboard shortcuts</h2><p>Move through your study plan without reaching for the pointer.</p></div><button class="icon-button" type="button" onclick={() => (shortcutsOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body shortcut-list">
-        <div><span>Search assignments</span><kbd>⌘ / Ctrl + K</kbd></div>
-        <div><span>Toggle navigation</span><kbd>⌘ / Ctrl + B</kbd></div>
-        <div><span>Show this reference</span><kbd>⌘ / Ctrl + /</kbd></div>
+        <div><span>Search assignments</span><kbd>{shortcutModifier} K</kbd></div>
+        <div><span>Toggle navigation</span><kbd>{shortcutModifier} B</kbd></div>
+        <div><span>Show this reference</span><kbd>{shortcutModifier} /</kbd></div>
         <div><span>Close a menu or dialog</span><kbd>Esc</kbd></div>
       </div>
       <div class="dialog-footer"><button class="button primary" type="button" onclick={() => (shortcutsOpen = false)} data-dialog-focus>Done</button></div>
