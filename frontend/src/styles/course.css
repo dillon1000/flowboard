@@ -272,6 +272,21 @@
   white-space: nowrap;
 }
 
+.canvas-source-link {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.canvas-source-link:hover {
+  color: var(--text);
+}
+
 .course-actions {
   display: flex;
   flex: 0 0 auto;

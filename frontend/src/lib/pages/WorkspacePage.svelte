@@ -4,6 +4,7 @@
   import APIKeysPage from './APIKeysPage.svelte';
   import BoardPage from './BoardPage.svelte';
   import BoardSettingsPage from './BoardSettingsPage.svelte';
+  import IntegrationsPage from './IntegrationsPage.svelte';
   import OverviewPage from './OverviewPage.svelte';
   import SemesterPage from './SemesterPage.svelte';
   import SettingsPage from './SettingsPage.svelte';
@@ -33,6 +34,8 @@
     <SettingsPage common={context.common} settings={context.settings} />
   {:else if context.isAPIKeys && context.apiKeys}
     <APIKeysPage keys={context.apiKeys} />
+  {:else if context.isIntegrations && context.integrations}
+    <IntegrationsPage integrations={context.integrations} />
   {:else if context.isBoardSettings && context.boardSettings}
     <BoardSettingsPage board={context.boardSettings} />
   {:else}

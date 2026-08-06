@@ -108,6 +108,45 @@
   line-height: 1.55;
 }
 
+.canvas-use-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-medium);
+  color: var(--text-secondary);
+  background: var(--surface-sunken);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.canvas-connection-row {
+  align-items: flex-start;
+}
+
+.canvas-connection-row code {
+  font-family: 'Geist Mono Variable', monospace;
+}
+
+.canvas-connection-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.canvas-status-error {
+  color: var(--danger-text, var(--ds-red-700));
+}
+
+.canvas-install-steps ol {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 .api-key-row code,
 .api-key-docs code {
   font-family: 'Geist Mono Variable', monospace;

@@ -55,6 +55,7 @@
       {task.priorityName}
     </span>
   {/if}
+  {#if task.isCanvasLinked}<span class="lane-source">Canvas</span>{/if}
   <h3>{task.title}</h3>
   {#if summary}<p>{summary}</p>{/if}
   {#if task.hasLabels}
@@ -68,7 +69,7 @@
     <span class:missing={!task.hasEstimate} class="measure-effort">
       {task.hasEstimate ? task.estimatedDisplay : 'No estimate'}
     </span>
-    {#if task.hasGrade}<span class="measure-grade" title={`Scored ${task.gradeDisplay}`}>{task.gradeDisplay}</span>{/if}
+    {#if task.hasGrade || task.hasPointsPossible}<span class="measure-grade" title={task.hasGrade ? `Scored ${task.gradeDisplay}` : task.gradeDisplay}>{task.gradeDisplay}</span>{/if}
     <span class="measure-counts">
       {#if task.commentCount}<span title={`${task.commentCount} comments`}><MessageSquare size={12} />{task.commentCount}</span>{/if}
       {#if task.checklistCount}<span title="Checklist"><CheckSquare size={12} />{task.completedChecklistCount}/{task.checklistCount}</span>{/if}

@@ -3,7 +3,7 @@
   import { api, messageFor } from '$lib/api';
   import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext, TaskOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
-  import { ArrowRightIcon as ArrowRight, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, ChartBarHorizontalIcon as GanttChart, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
+  import { ArrowRightIcon as ArrowRight, ArrowSquareOutIcon as ArrowSquareOut, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, ChartBarHorizontalIcon as GanttChart, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
@@ -306,7 +306,13 @@
     <aside class="course-panel" aria-label="Course standing">
       <section class="course-grade" aria-labelledby="course-grade-title">
         <h2 id="course-grade-title">Grade</h2>
-        {#if pointsPossible > 0}
+        {#if board.isCanvasLinked}
+          <strong class:empty={!board.canvasHasScore} class="course-grade-score">{board.canvasGradeDisplay}</strong>
+          <span class="course-grade-track" aria-hidden="true">
+            {#if board.canvasHasScore}<span class="course-grade-fill" style={`width: ${board.canvasScorePercent}%`}></span>{/if}
+          </span>
+          <span class="course-grade-detail">Published overall grade from Canvas · Last sync {board.canvasLastSyncDisplay}</span>
+        {:else if pointsPossible > 0}
           <strong class="course-grade-score">{gradePercent}<small>%</small></strong>
           <span class="course-grade-track" aria-hidden="true">
             <span class="course-grade-fill" style={`width: ${Math.min(gradePercent, 100)}%`}></span>
@@ -355,6 +361,7 @@
       <header class="course-header">
         <div class="course-title">
           <h1 id="course-title">{board.name}</h1>
+          {#if board.isCanvasLinked}<a class="canvas-source-link" href={board.canvasURL} target="_blank" rel="noopener"><span class="badge subtle">Synced from Canvas</span>{#if board.canvasCourseCode}<span>{board.canvasCourseCode}</span>{/if}{#if board.canvasTermName}<span>· {board.canvasTermName}</span>{/if}<ArrowSquareOut size={13} /></a>{/if}
           <p>{board.description || (board.canAdmin ? 'Add a course description in Course settings.' : 'Keep assignments, notes, and course material together.')}</p>
         </div>
         <div class="course-actions">

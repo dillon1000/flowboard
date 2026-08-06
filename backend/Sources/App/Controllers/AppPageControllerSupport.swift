@@ -14,6 +14,12 @@ extension AppPageController {
             .with(\.$tasks)
             .sort(\.$createdAt, .ascending)
             .all()
+        let canvasLinks = boardIDs.isEmpty ? [] : try await CanvasCourseLink.query(on: req.db)
+            .filter(\.$board.$id ~~ boardIDs)
+            .all()
+        let canvasLinksByBoardID = Dictionary(
+            uniqueKeysWithValues: canvasLinks.map { ($0.$board.id, $0) }
+        )
 
         // Course colors follow creation order so the same course keeps its visual
         // identity across the sidebar, weekly agenda, and workload list.
@@ -35,7 +41,8 @@ extension AppPageController {
                 try BoardNavigationContext(
                     board: board,
                     firstViewID: firstView?.requireID(),
-                    courseColorClass: courseColorClasses[index % courseColorClasses.count]
+                    courseColorClass: courseColorClasses[index % courseColorClasses.count],
+                    canvasLink: canvasLinksByBoardID[boardID]
                 )
             )
         }
@@ -62,6 +69,7 @@ extension AppPageController {
         taskDetail: TaskDetailPageContext? = nil,
         settings: SettingsPageContext? = nil,
         apiKeys: APIKeysPageContext? = nil,
+        integrations: CanvasIntegrationsPageContext? = nil,
         boardSettings: BoardSettingsPageContext? = nil
     ) throws -> Response {
         try jsonResponse(
@@ -76,6 +84,7 @@ extension AppPageController {
                 taskDetail: taskDetail,
                 settings: settings,
                 apiKeys: apiKeys,
+                integrations: integrations,
                 boardSettings: boardSettings
             )
         )
@@ -145,6 +154,16 @@ extension AppPageController {
     ) async throws -> [TaskCardContext] {
         var result: [TaskCardContext] = []
         var editPermissions: [UUID: Bool] = [:]
+        let taskIDs = try tasks.map { try $0.requireID() }
+        let canvasLinks = taskIDs.isEmpty ? [] : try await CanvasAssignmentLink.query(on: database)
+            .filter(\.$task.$id ~~ taskIDs)
+            .with(\.$courseLink) { courseLink in
+                courseLink.with(\.$connection)
+            }
+            .all()
+        let canvasLinksByTaskID = Dictionary(
+            uniqueKeysWithValues: canvasLinks.map { ($0.$task.id, $0) }
+        )
         for task in tasks {
             let assignee: User? = if let assigneeID = task.$assignee.id {
                 try await User.find(assigneeID, on: database)
@@ -166,12 +185,15 @@ extension AppPageController {
                 false
             }
             editPermissions[task.$board.id] = canEdit
+            let canvasLink = canvasLinksByTaskID[try task.requireID()]
             result.append(
                 try TaskCardContext(
                     task: task,
                     assignee: assignee,
                     board: task.$board.value,
-                    canEdit: canEdit
+                    canEdit: canEdit,
+                    canvasLink: canvasLink,
+                    canvasConnection: canvasLink?.courseLink.connection
                 )
             )
         }
