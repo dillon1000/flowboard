@@ -91,6 +91,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateStudySessions())
     app.migrations.add(AddPlanningNotificationPreferences())
     app.migrations.add(CreateCalendarFeedCredentials())
+    app.migrations.add(CreateCanvasSyncModels())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {
