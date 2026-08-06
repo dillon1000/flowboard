@@ -1079,7 +1079,7 @@
    Responsive course views
    ========================================================================== */
 
-@media (width <= 820px) {
+@media (--viewport-shell) {
   /* Below the sidebar breakpoint the document scrolls again, so the lanes grow
      with their content instead of scrolling inside a fixed frame. */
   .stage-board {
@@ -1101,7 +1101,7 @@
   }
 }
 
-@media (width <= 600px) {
+@media (--viewport-compact) {
   .stage-board {
     grid-auto-columns: 84vw;
   }

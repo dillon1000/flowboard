@@ -2,14 +2,14 @@
    Responsive
    ========================================================================== */
 
-@media (width <= 1200px) {
+@media (--viewport-wide) {
   .overview-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 32px;
   }
 }
 
-@media (width <= 900px) {
+@media (--viewport-navigation) {
   .settings-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 28px;
@@ -44,7 +44,7 @@
   }
 }
 
-@media (width <= 820px) {
+@media (--viewport-shell) {
   /* Below the sidebar breakpoint the frame is dropped and the document
      scrolls again, so every page grows with its content. */
   .app-shell {
@@ -150,12 +150,7 @@
   }
 }
 
-@media (width <= 600px) {
-  .search-control,
-  .topbar .theme-button {
-    display: none;
-  }
-
+@media (--viewport-compact) {
   .page-header {
     display: grid;
     gap: 16px;
@@ -219,7 +214,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   *,
   *::before,
   *::after {

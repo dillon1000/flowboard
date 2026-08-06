@@ -1,0 +1,11 @@
+/* Named viewport boundaries keep every page on the same responsive rhythm.
+   PostCSS resolves these custom media tokens at build time for broad support. */
+@custom-media --viewport-wide (width <= 1380px);
+@custom-media --viewport-content (width <= 1120px);
+@custom-media --viewport-navigation (width <= 900px);
+@custom-media --viewport-shell (width <= 820px);
+@custom-media --above-viewport-shell (width > 820px);
+@custom-media --viewport-compact (width <= 640px);
+@custom-media --viewport-phone (width <= 520px);
+@custom-media --can-hover (hover: hover) and (pointer: fine);
+@custom-media --reduced-motion (prefers-reduced-motion: reduce);

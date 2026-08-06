@@ -642,7 +642,7 @@ a.course-gap:hover {
    Responsive course
    ========================================================================== */
 
-@media (width <= 1380px) {
+@media (--viewport-wide) {
   .course-workspace {
     grid-template-columns: 240px minmax(0, 1fr);
   }
@@ -665,7 +665,7 @@ a.course-gap:hover {
   }
 }
 
-@media (width <= 1120px) {
+@media (--viewport-content) {
   .course-title h1 {
     font-size: 26px;
   }
@@ -675,7 +675,7 @@ a.course-gap:hover {
   }
 }
 
-@media (width <= 900px) {
+@media (--viewport-navigation) {
   /* The panel folds up into a strip: the grade and the counts stay, the stage
      census goes, because the board below already shows the same columns. */
   .course-workspace {
@@ -717,7 +717,7 @@ a.course-gap:hover {
   }
 }
 
-@media (width <= 820px) {
+@media (--viewport-shell) {
   /* Below the sidebar breakpoint the app frame is dropped and the document
      scrolls again, so the course must grow with its content. */
   .course-page {
@@ -738,7 +738,7 @@ a.course-gap:hover {
   }
 }
 
-@media (width <= 640px) {
+@media (--viewport-compact) {
   .course-panel {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;

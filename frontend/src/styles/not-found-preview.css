@@ -200,7 +200,7 @@
   font-weight: 600;
 }
 
-@media (width <= 760px) {
+@media (--viewport-shell) {
   .not-found-page {
     overflow: auto;
   }
@@ -356,7 +356,7 @@
   font-size: 10px;
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   .task-preview {
     transform: none;
     transition-property: opacity;

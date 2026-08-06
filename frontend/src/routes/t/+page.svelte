@@ -230,6 +230,8 @@
   .check-field input { width: 16px; min-height: 16px; }
   .tap-card button { display: inline-flex; height: 40px; align-items: center; justify-content: center; margin-top: 24px; padding: 0 16px; border: 0; border-radius: 6px; color: var(--surface); background: var(--text); cursor: pointer; font: inherit; font-weight: 500; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (width <= 480px) { .tap-header { padding: 0 16px; } main { align-items: start; padding: min(18vh, 112px) 20px 64px; } .form-grid { grid-template-columns: 1fr; } .field.wide { grid-column: auto; } }
+  /* Component styles compile apart from the shared stylesheet. Keep these two
+     values equal to --viewport-phone and --reduced-motion in breakpoints.css. */
+  @media (width <= 520px) { .tap-header { padding: 0 16px; } main { align-items: start; padding: min(18vh, 112px) 20px 64px; } .form-grid { grid-template-columns: 1fr; } .field.wide { grid-column: auto; } }
   @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 1.4s; } }
 </style>
