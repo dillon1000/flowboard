@@ -21,7 +21,7 @@
 
 <AppShell {context}>
   {#if context.isOverview && context.overview}
-    <OverviewPage overview={context.overview} />
+    <OverviewPage overview={context.overview} common={context.common} />
   {:else if context.isSemester && context.semester}
     <SemesterPage semester={context.semester} />
   {:else if context.isTasks && context.tasks}
