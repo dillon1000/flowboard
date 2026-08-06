@@ -1,9 +1,15 @@
 <script lang="ts">
   import { hideTaskPreview, taskPreviewState } from '$lib/ui/taskPreview';
   import { ArrowRightIcon as ArrowRight, NotePencilIcon as Note, UserCircleIcon as User } from 'phosphor-svelte';
+
+  function handleKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape' || !$taskPreviewState) return;
+    event.preventDefault();
+    hideTaskPreview();
+  }
 </script>
 
-<svelte:window onscroll={() => hideTaskPreview()} onresize={() => hideTaskPreview()} />
+<svelte:window onscroll={() => hideTaskPreview()} onresize={() => hideTaskPreview()} onkeydown={handleKeydown} />
 
 {#if $taskPreviewState}
   {@const preview = $taskPreviewState}

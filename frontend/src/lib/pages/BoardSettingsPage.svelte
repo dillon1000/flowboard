@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { dialogLayer } from '$lib/actions/dialogLayer';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import Avatar from '$lib/components/Avatar.svelte';
   import TapActionDialog from '$lib/components/TapActionDialog.svelte';
   import WorkflowColorField from '$lib/components/WorkflowColorField.svelte';
@@ -112,7 +112,7 @@
     requestError = '';
     try {
       await api(path, init);
-      await invalidateAll();
+      await refreshAll();
       if (successMessage) showToast(successMessage);
       return true;
     } catch (cause) {
@@ -321,7 +321,7 @@
         { method: 'POST' }
       );
       provisionTap(result.url);
-      await invalidateAll();
+      await refreshAll();
       showToast('Tap link rotated');
     } catch (cause) {
       requestError = messageFor(cause);

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { BoardResponse } from '$lib/types';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
@@ -26,7 +26,7 @@
       });
       form.reset();
       open = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Course added');
       await goto(`/app/boards/${board.id}`);
     } catch (cause) {

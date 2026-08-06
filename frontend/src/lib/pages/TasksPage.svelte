@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { TasksPageContext } from '$lib/types';
   import { ArchiveIcon as Archive, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock, MagnifyingGlassIcon as Search } from 'phosphor-svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
@@ -13,7 +12,7 @@
     requestError = '';
     try {
       await api(`/api/v1/tasks/${taskID}`, { method: 'PATCH', body: JSON.stringify({ isArchived: false }) });
-      await invalidateAll();
+      await refreshAll();
       showToast('Assignment restored');
     } catch (cause) {
       requestError = messageFor(cause);

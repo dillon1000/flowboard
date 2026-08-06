@@ -151,6 +151,14 @@
 }
 
 @media (--viewport-compact) {
+  .topbar .search-control {
+    display: none;
+  }
+
+  .topbar .mobile-search-button {
+    display: grid;
+  }
+
   .page-header {
     display: grid;
     gap: 16px;
@@ -207,9 +215,10 @@
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
-  .toast {
+  .toast-stack {
     right: 12px;
     left: 12px;
+    width: auto;
     bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
@@ -225,6 +234,12 @@
   }
 
   .board-card:hover {
+    transform: none;
+  }
+
+  .route-progress[data-active='true']::before {
+    width: 100%;
+    animation: none;
     transform: none;
   }
 }

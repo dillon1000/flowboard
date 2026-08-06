@@ -1,3 +1,7 @@
+import { invalidateAll } from '$app/navigation';
+import { beginActivity } from '$lib/ui/progress';
+import { showToast } from '$lib/ui/toast';
+
 export class APIError extends Error {
   constructor(
     message: string,
@@ -10,21 +14,39 @@ export class APIError extends Error {
 
 /** Sends a same-origin API request and returns the typed JSON body when present. */
 export async function api<T = void>(path: string, init: RequestInit = {}): Promise<T> {
+  const finishActivity = beginActivity();
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData) && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
 
-  const response = await fetch(path, { ...init, headers });
-  if (!response.ok) throw new APIError(await errorMessage(response), response.status);
-  if (response.status === 204 || response.headers.get('content-length') === '0') {
-    return undefined as T;
+  try {
+    const response = await fetch(path, { ...init, headers });
+    if (!response.ok) throw new APIError(await errorMessage(response), response.status);
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return undefined as T;
+    }
+    return (await response.json()) as T;
+  } finally {
+    finishActivity();
   }
-  return (await response.json()) as T;
 }
 
+/** Refetches page data while the application progress line stays visible. */
+export async function refreshAll(): Promise<void> {
+  const finishActivity = beginActivity();
+  try {
+    await invalidateAll();
+  } finally {
+    finishActivity();
+  }
+}
+
+/** Returns a useful inline error and also puts it in the persistent status stack. */
 export function messageFor(error: unknown): string {
-  return error instanceof Error ? error.message : 'The request failed.';
+  const message = error instanceof Error ? error.message : 'The request failed.';
+  showToast(message, { tone: 'error', duration: 6000 });
+  return message;
 }
 
 async function errorMessage(response: Response): Promise<string> {

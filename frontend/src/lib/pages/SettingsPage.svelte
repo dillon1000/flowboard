@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { goto } from '$app/navigation';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { CommonPageContext, CreatedCalendarFeedResponse, SettingsPageContext } from '$lib/types';
   import { CheckIcon as Check, CopyIcon as Copy, SignOutIcon as LogOut } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -29,7 +29,7 @@
     try {
       await api('/api/v1/auth/me', { method: 'PATCH', body: JSON.stringify({ name, timeZone }) });
       profileSaved = true;
-      await invalidateAll();
+      await refreshAll();
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -54,7 +54,7 @@
         })
       });
       planningSaved = true;
-      await invalidateAll();
+      await refreshAll();
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -71,7 +71,7 @@
       const created = await api<CreatedCalendarFeedResponse>('/api/v1/auth/calendar-feed', { method: 'POST' });
       calendarFeedURL = `${window.location.origin}/api/v1/calendar-feed/${created.token}/calendar.ics`;
       calendarCopied = false;
-      await invalidateAll();
+      await refreshAll();
       showToast(wasEnabled ? 'Calendar link rotated' : 'Calendar link created');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -87,7 +87,7 @@
     try {
       await api('/api/v1/auth/calendar-feed', { method: 'DELETE' });
       calendarFeedURL = '';
-      await invalidateAll();
+      await refreshAll();
       showToast('Calendar feed disabled');
     } catch (cause) {
       requestError = messageFor(cause);

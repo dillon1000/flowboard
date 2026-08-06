@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { goto } from '$app/navigation';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { AlarmIcon as Alarm, ArchiveIcon as Archive, ArrowLeftIcon as ArrowLeft, ArrowSquareOutIcon as ArrowSquareOut, BellIcon as Bell, CaretDownIcon as CaretDown, ChatCircleIcon as ChatCircle, CheckCircleIcon as CheckCircle, CheckIcon as Check, DotsThreeIcon as DotsThree, DownloadIcon as Download, PaperPlaneTiltIcon as Send, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, XIcon as X } from 'phosphor-svelte';
@@ -33,6 +33,7 @@
   let reminderTime = $state('09:00');
   let pending = $state(false);
   let requestError = $state('');
+  let selectedStatus = $state('');
   let commentBody = $state('');
   let selectedFileName = $state('No file chosen');
   let checklist = $state<ChecklistContext[]>([]);
@@ -64,7 +65,11 @@
   const completionOption = $derived(
     detail.task.statusOptions.find((option: TaskOptionContext) => option.isCompleted)
   );
-  const isComplete = $derived(Boolean(completionOption?.isSelected));
+  const currentStatus = $derived(selectedStatus || detail.task.statusValue);
+  const selectedStatusOption = $derived(
+    detail.task.statusOptions.find((option: TaskOptionContext) => option.value === currentStatus)
+  );
+  const isComplete = $derived(Boolean(selectedStatusOption?.isCompleted));
   const commentDraftKey = $derived(`flowboard-comment-draft:${detail.task.id}`);
 
   const dueAt = $derived.by<Date | null>(() => {
@@ -140,6 +145,10 @@
     checklist = detail.checklist.map((item: ChecklistContext) => ({ ...item }));
   });
 
+  $effect(() => {
+    selectedStatus = detail.task.statusValue;
+  });
+
   onMount(() => {
     commentBody = sessionStorage.getItem(commentDraftKey) ?? '';
     now = Date.now();
@@ -179,7 +188,7 @@
     requestError = '';
     try {
       await api(path, init);
-      await invalidateAll();
+      await refreshAll();
       if (successMessage) showToast(successMessage);
       return true;
     } catch (cause) {
@@ -194,8 +203,23 @@
     const didComplete = detail.task.statusOptions.some(
       (option: TaskOptionContext) => option.value === status && option.isCompleted
     );
-    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ status }) }, 'Task status updated') && didComplete) {
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
+    const priorStatus = currentStatus;
+    selectedStatus = status;
+    pending = true;
+    requestError = '';
+    try {
+      await api(`/api/v1/tasks/${detail.task.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+      if (didComplete) confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
+      showToast('Assignment status updated');
+      await refreshAll();
+    } catch (cause) {
+      selectedStatus = priorStatus;
+      requestError = messageFor(cause);
+    } finally {
+      pending = false;
     }
   }
 
@@ -358,7 +382,7 @@
         method: 'PATCH',
         body: JSON.stringify({ isCompleted: !isCompleted })
       });
-      await invalidateAll();
+      await refreshAll();
       showToast(item.isCompleted ? 'Step completed' : 'Step reopened');
     } catch (cause) {
       item.isCompleted = isCompleted;
@@ -418,7 +442,7 @@
       await uploadForm(`/api/v1/tasks/${detail.task.id}/attachments`, new FormData(form));
       form.reset();
       selectedFileName = 'No file chosen';
-      await invalidateAll();
+      await refreshAll();
       showToast('File uploaded');
     } catch (cause) {
       uploadError = messageFor(cause);
@@ -518,7 +542,7 @@
           <PopoverMenu panelLabel="Change task status" panelRole="listbox" align="right">
             {#snippet trigger(control)}
               <button class="task-status-trigger" type="button" disabled={pending} aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
-                <span class={`badge status ${detail.task.statusColorClass}`} style={detail.task.statusColorStyle}>{detail.task.statusName}</span>
+                <span class={`badge status ${selectedStatusOption?.colorClass ?? detail.task.statusColorClass}`} style={selectedStatusOption?.colorStyle ?? detail.task.statusColorStyle}>{selectedStatusOption?.name ?? detail.task.statusName}</span>
                 <CaretDown size={13} />
               </button>
             {/snippet}
@@ -528,8 +552,8 @@
                   class="menu-option"
                   type="button"
                   role="option"
-                  aria-selected={option.value === detail.task.statusValue}
-                  onclick={() => { close(); if (option.value !== detail.task.statusValue) changeStatus(option.value); }}
+                  aria-selected={option.value === currentStatus}
+                  onclick={() => { close(); if (option.value !== currentStatus) changeStatus(option.value); }}
                 >
                   <span class={`badge status ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
                 </button>
@@ -879,7 +903,7 @@
       <div class="dialog-header"><div><h2 id="edit-task-title">{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit task'}</h2><p>{detail.task.isCanvasLinked ? 'Canvas manages the academic fields for this assignment.' : 'Update the task and its schedule.'}</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body"><div class="form-grid">
         {#if !detail.task.isCanvasLinked}<div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div>{/if}
-        <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={detail.task.statusValue} options={statusMenuOptions} ariaLabel="Status" /></div>
+        <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={currentStatus} options={statusMenuOptions} ariaLabel="Status" /></div>
         <div class="field"><label for="edit-priority">Severity</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Severity" /></div>
         <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
         <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>

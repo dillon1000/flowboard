@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
   import type { CanvasIntegrationsPageContext, CreatedCanvasConnectionResponse } from '$lib/types';
   import { CheckIcon as Check, CopyIcon as Copy, PlugsConnectedIcon as PlugsConnected, PlusIcon as Plus } from 'phosphor-svelte';
@@ -27,7 +26,7 @@
       createdSecret = created.syncKey;
       createdOrigin = created.connection.canvasOrigin;
       form.reset();
-      await invalidateAll();
+      await refreshAll();
       showToast('Canvas connection created');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -44,7 +43,7 @@
       const created = await api<CreatedCanvasConnectionResponse>(`/api/v1/auth/canvas-connections/${connectionID}/rotate`, { method: 'POST' });
       createdSecret = created.syncKey;
       createdOrigin = canvasOrigin;
-      await invalidateAll();
+      await refreshAll();
       showToast('Canvas sync key rotated');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -61,7 +60,7 @@
       await api(`/api/v1/auth/canvas-connections/${connectionID}`, { method: 'DELETE' });
       createdSecret = '';
       createdOrigin = '';
-      await invalidateAll();
+      await refreshAll();
       showToast('Canvas disconnected');
     } catch (cause) {
       requestError = messageFor(cause);

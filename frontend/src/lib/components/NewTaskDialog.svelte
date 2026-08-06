@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { BoardPageContext, TaskOptionContext, TaskResponse } from '$lib/types';
   import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
@@ -53,7 +52,7 @@
       });
       form.reset();
       open = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Task created');
     } catch (cause) {
       requestError = messageFor(cause);

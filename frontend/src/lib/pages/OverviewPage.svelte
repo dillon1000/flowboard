@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { scrollFades } from '$lib/actions/scrollFades';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
@@ -259,7 +258,7 @@
         body: JSON.stringify({ name: common.userName, timeZone })
       });
       await persistSettings({ timeZoneConfirmed: true });
-      await invalidateAll();
+      await refreshAll();
       showToast(`Time zone set to ${timeZone}`);
     } catch (cause) {
       requestError = messageFor(cause);
@@ -275,7 +274,7 @@
     try {
       await persistSettings({ availabilityConfigured: true });
       availabilityOpen = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Availability saved');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -304,7 +303,7 @@
         body: JSON.stringify({ estimates, estimatePresets })
       });
       estimatesOpen = false;
-      await invalidateAll();
+      await refreshAll();
       showToast(`${estimates.length} ${estimates.length === 1 ? 'estimate' : 'estimates'} saved`);
     } catch (cause) {
       requestError = messageFor(cause);
@@ -335,7 +334,7 @@
       });
       form.reset();
       createTaskOpen = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Assignment added');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -356,7 +355,7 @@
     try {
       await api(`/api/v1/tasks/${taskID}/study-sessions`, { method: 'POST', body: JSON.stringify({ scheduledDate: focusDate, plannedMinutes: planned }) });
       planOpen = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Study session added');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -373,7 +372,7 @@
         method: 'POST',
         body: JSON.stringify({ courseID: selectedCourseID })
       });
-      await invalidateAll();
+      await refreshAll();
       if (result.plannedMinutes === 0) showToast('The available work is already planned');
       else if (result.remainingMinutes > 0) showToast(`Planned ${durationLabel(result.plannedMinutes)}; ${durationLabel(result.remainingMinutes)} still needs room`);
       else showToast(`Planned ${durationLabel(result.plannedMinutes)} across the week`);
@@ -389,7 +388,7 @@
     requestError = '';
     try {
       const result = await api<RepairStudyWeekResponse>('/api/v1/study-sessions/repair', { method: 'POST' });
-      await invalidateAll();
+      await refreshAll();
       showToast(result.remainingMinutes > 0
         ? `Repaired ${result.repairedSessionCount} blocks; ${durationLabel(result.remainingMinutes)} still needs room`
         : `Repaired ${result.repairedSessionCount} ${result.repairedSessionCount === 1 ? 'block' : 'blocks'}`);
@@ -408,7 +407,7 @@
     try {
       await api(`/api/v1/study-sessions/${activeSession.studySessionID}/complete`, { method: 'POST', body: JSON.stringify({ actualMinutes: Number(actualMinutes) }) });
       completeOpen = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Study session completed');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -425,7 +424,7 @@
     try {
       await api(`/api/v1/study-sessions/${activeSession.studySessionID}`, { method: 'PATCH', body: JSON.stringify({ scheduledDate: moveDate }) });
       moveOpen = false;
-      await invalidateAll();
+      await refreshAll();
       showToast('Study session moved');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -439,7 +438,7 @@
     requestError = '';
     try {
       await api(`/api/v1/study-sessions/${sessionID}/skip`, { method: 'POST' });
-      await invalidateAll();
+      await refreshAll();
       showToast('Study session skipped');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -453,7 +452,7 @@
     requestError = '';
     try {
       await api(`/api/v1/study-sessions/${sessionID}`, { method: 'DELETE' });
-      await invalidateAll();
+      await refreshAll();
       showToast('Study session removed');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -584,7 +583,7 @@
                 </div>
               {/if}
             </div>
-            <button class="study-day-toggle" type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}. ${loadLabel(day)}.`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-toggle-icons" aria-hidden="true"><Minus class="collapse-icon" size={13} /><Plus class="expand-icon" size={13} /></span></button>
+            <button class="study-day-toggle" type="button" aria-expanded={expandedDays[day.dateLabel] !== false} aria-label={`${expandedDays[day.dateLabel] !== false ? 'Collapse' : 'Expand'} ${day.weekdayLabel}. ${loadLabel(day)}.`} onclick={() => toggleDay(day.dateLabel)}><span class="study-day-toggle-label">{expandedDays[day.dateLabel] !== false ? 'Hide day' : 'Show day'}</span><span class="study-day-toggle-icons" aria-hidden="true"><Minus class="collapse-icon" size={13} /><Plus class="expand-icon" size={13} /></span></button>
           </section>
         {/each}
       </div>
