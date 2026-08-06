@@ -1,10 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { api, messageFor, refreshAll } from '$lib/api';
-  import type { ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
+  import type { AttachmentContext, ChecklistContext, MemberOptionContext, TaskDetailPageContext, TaskOptionContext, TaskPropertyContext, TaskPropertyOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { AlarmIcon as Alarm, ArchiveIcon as Archive, ArrowLeftIcon as ArrowLeft, ArrowSquareOutIcon as ArrowSquareOut, BellIcon as Bell, CaretDownIcon as CaretDown, ChatCircleIcon as ChatCircle, CheckCircleIcon as CheckCircle, CheckIcon as Check, DotsThreeIcon as DotsThree, DownloadIcon as Download, PaperPlaneTiltIcon as Send, PaperclipIcon as Paperclip, PencilSimpleIcon as Pencil, PlusIcon as Plus, TrashIcon as Trash2, UploadIcon as Upload, XIcon as X } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import TimePicker from '$lib/components/TimePicker.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
@@ -44,6 +45,7 @@
   let notesEditing = $state(false);
   let notesDraft = $state('');
   let editingProperty = $state('');
+  let deletingAttachment = $state<AttachmentContext | null>(null);
   // The meter compares elapsed time against finished steps, so it depends on the
   // reader's clock. The server cannot know it: `now` stays null through the
   // server render and the meter fills in once the browser takes over.
@@ -457,6 +459,11 @@
     uploadError = file && file.size > maxAttachmentBytes ? 'Choose a file that is 10 MB or smaller.' : '';
   }
 
+  function deleteAttachment(): Promise<boolean> {
+    if (!deletingAttachment) return Promise.resolve(false);
+    return mutate(`/api/v1/attachments/${deletingAttachment.id}`, { method: 'DELETE' }, 'File deleted');
+  }
+
   /** Uploads one attachment and reports browser upload progress. */
   function uploadForm(path: string, data: FormData): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -755,7 +762,7 @@
             {#each detail.attachments as attachment (attachment.id)}
               <div class="attachment">
                 {#if attachment.isImage}<a class="attachment-media attachment-image" href={attachment.previewHref} target="_blank" rel="noopener"><img src={attachment.previewHref} alt="" loading="lazy" /></a>{:else if attachment.isAudio}<div class="attachment-media attachment-audio"><audio controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`}></audio></div>{:else if attachment.isVideo}<div class="attachment-media attachment-video"><!-- svelte-ignore a11y_media_has_caption --><video controls preload="metadata" src={attachment.previewHref} aria-label={`Preview ${attachment.fileName}`} playsinline></video></div>{:else}<span class="attachment-file-icon"><Paperclip size={20} /></span>{/if}
-                <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={attachment.href}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => confirm('Delete this file?') && mutate(`/api/v1/attachments/${attachment.id}`, { method: 'DELETE' }, 'File deleted')}><Trash2 size={13} />Delete</button>{/if}</span></div>
+                <div class="attachment-details"><span class="attachment-copy"><strong title={attachment.fileName}>{attachment.fileName}</strong><small>{attachment.sizeDisplay}</small></span><span class="attachment-actions"><a class="button ghost small" href={attachment.href}><Download size={13} />Download</a>{#if detail.canEdit}<button class="button ghost small attachment-delete" type="button" onclick={() => (deletingAttachment = attachment)}><Trash2 size={13} />Delete</button>{/if}</span></div>
               </div>
             {/each}
           </div>
@@ -951,5 +958,7 @@
     </div>
   </div>
 {/if}
+
+<ConfirmDialog open={Boolean(deletingAttachment)} title={`Delete ${deletingAttachment?.fileName ?? 'this file'}?`} description="This file will be removed from the assignment." confirmLabel="Delete file" pendingLabel="Deleting…" oncancel={() => (deletingAttachment = null)} onconfirm={deleteAttachment} />
 
 {#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-task-title">Delete this assignment?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteTask} disabled={pending}>Delete assignment</button></div></div></div>{/if}
