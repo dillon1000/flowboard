@@ -11,6 +11,8 @@ struct StudyPlanningSession: Sendable {
     let taskID: UUID
     let scheduledDate: String
     let plannedMinutes: Int
+    let state: StudySessionState
+    let actualMinutes: Int?
 }
 
 struct StudySessionAllocation: Sendable {
@@ -27,8 +29,8 @@ struct StudyPlanningResult: Sendable {
 
 enum StudyPlanningService {
     /// Splits remaining task estimates across the current week without exceeding
-    /// the user's daily limit. Existing sessions consume both the task
-    /// estimate and daily capacity, which makes repeated requests idempotent.
+    /// the user's daily limit. Completed work and active plans consume the task
+    /// estimate. A past plan does not, because that work still needs a new time.
     static func plan(
         tasks: [StudyPlanningTask],
         sessions: [StudyPlanningSession],
@@ -49,8 +51,16 @@ enum StudyPlanningService {
         while cursor <= weekEnd {
             let key = planningDateKey(cursor, calendar: calendar)
             let existingMinutes = sessions
-                .filter { $0.scheduledDate == key }
-                .reduce(0) { $0 + $1.plannedMinutes }
+                .filter { session in
+                    session.scheduledDate == key
+                        && session.state != .skipped
+                        && (session.state == .completed || session.scheduledDate >= todayKey)
+                }
+                .reduce(0) { total, session in
+                    total + (session.state == .completed
+                        ? session.actualMinutes ?? session.plannedMinutes
+                        : session.plannedMinutes)
+                }
             availableMinutesByDate[key] = max(0, dailyLimitMinutes - existingMinutes)
             guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
             cursor = next
@@ -58,7 +68,16 @@ enum StudyPlanningService {
 
         let plannedMinutesByTask = Dictionary(grouping: sessions, by: \.taskID)
             .mapValues { taskSessions in
-                taskSessions.reduce(0) { $0 + $1.plannedMinutes }
+                taskSessions.reduce(0) { total, session in
+                    switch session.state {
+                    case .completed:
+                        total + (session.actualMinutes ?? session.plannedMinutes)
+                    case .planned where session.scheduledDate >= todayKey:
+                        total + session.plannedMinutes
+                    default:
+                        total
+                    }
+                }
             }
         let priorityOrder = ["urgent": 0, "high": 1, "medium": 2, "low": 3]
         let orderedTasks = tasks.sorted { left, right in

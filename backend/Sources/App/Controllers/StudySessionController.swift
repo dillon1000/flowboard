@@ -12,6 +12,8 @@ struct StudySessionController: RouteCollection {
 
         let sessions = routes.grouped("study-sessions")
         sessions.post("plan", use: autoPlan)
+        sessions.post(":sessionID", "complete", use: complete)
+        sessions.post(":sessionID", "skip", use: skip)
         sessions.patch(":sessionID", use: update)
         sessions.delete(":sessionID", use: delete)
     }
@@ -36,7 +38,7 @@ struct StudySessionController: RouteCollection {
         try await validateTotal(
             input.plannedMinutes,
             task: task,
-            userID: user.requireID(),
+            user: user,
             excluding: nil,
             on: req.db
         )
@@ -66,6 +68,9 @@ struct StudySessionController: RouteCollection {
             permission: .view,
             on: req.db
         )
+        guard session.state == .planned else {
+            throw Abort(.conflict, reason: "Only a planned study session can move or change length.")
+        }
         if let scheduledDate = input.scheduledDate {
             session.scheduledDate = try validateDate(scheduledDate, user: user, task: task)
         }
@@ -78,7 +83,7 @@ struct StudySessionController: RouteCollection {
         try await validateTotal(
             session.plannedMinutes,
             task: task,
-            userID: try user.requireID(),
+            user: user,
             excluding: session.requireID(),
             on: req.db
         )
@@ -87,6 +92,40 @@ struct StudySessionController: RouteCollection {
         } catch {
             throw Abort(.conflict, reason: "This assignment already has work planned on that date.")
         }
+        return try StudySessionResponse(session: session)
+    }
+
+    /// Records the time the student actually studied. Completion is final for
+    /// this block, which prevents a retry from changing the student's history.
+    func complete(req: Request) async throws -> StudySessionResponse {
+        try CompleteStudySessionRequest.validate(content: req)
+        let input = try req.content.decode(CompleteStudySessionRequest.self)
+        let userID = try req.auth.require(User.self).requireID()
+        let session = try await requiredSession(req, userID: userID)
+        try await requireTaskAccess(for: session, userID: userID, on: req.db)
+        guard session.state == .planned else {
+            throw Abort(.conflict, reason: "Only a planned study session can be completed.")
+        }
+        session.state = .completed
+        session.actualMinutes = input.actualMinutes
+        session.completedAt = Date()
+        try await session.update(on: req.db)
+        return try StudySessionResponse(session: session)
+    }
+
+    /// Keeps a skipped block as planning history while returning its work to the
+    /// assignment estimate for the next plan or repair.
+    func skip(req: Request) async throws -> StudySessionResponse {
+        let userID = try req.auth.require(User.self).requireID()
+        let session = try await requiredSession(req, userID: userID)
+        try await requireTaskAccess(for: session, userID: userID, on: req.db)
+        guard session.state == .planned else {
+            throw Abort(.conflict, reason: "Only a planned study session can be skipped.")
+        }
+        session.state = .skipped
+        session.actualMinutes = nil
+        session.completedAt = nil
+        try await session.update(on: req.db)
         return try StudySessionResponse(session: session)
     }
 
@@ -154,7 +193,9 @@ struct StudySessionController: RouteCollection {
             StudyPlanningSession(
                 taskID: $0.$task.id,
                 scheduledDate: $0.scheduledDate,
-                plannedMinutes: $0.plannedMinutes
+                plannedMinutes: $0.plannedMinutes,
+                state: $0.state,
+                actualMinutes: $0.actualMinutes
             )
         } + allTasks.compactMap { task -> StudyPlanningSession? in
             guard
@@ -170,13 +211,15 @@ struct StudySessionController: RouteCollection {
             return StudyPlanningSession(
                 taskID: taskID,
                 scheduledDate: inputDate(startAt),
-                plannedMinutes: estimatedMinutes
+                plannedMinutes: estimatedMinutes,
+                state: .planned,
+                actualMinutes: nil
             )
         }
         let result = StudyPlanningService.plan(
             tasks: planningTasks,
             sessions: planningSessions,
-            dailyLimitMinutes: input.dailyLimitMinutes,
+            dailyLimitMinutes: input.dailyLimitMinutes ?? 240,
             timeZoneIdentifier: user.timeZoneIdentifier
         )
 
@@ -243,6 +286,20 @@ struct StudySessionController: RouteCollection {
         return session
     }
 
+    private func requireTaskAccess(
+        for session: StudySession,
+        userID: UUID,
+        on database: any Database
+    ) async throws {
+        let task = try await session.$task.get(on: database)
+        _ = try await BoardAccessService.require(
+            boardID: task.$board.id,
+            userID: userID,
+            permission: .view,
+            on: database
+        )
+    }
+
     private func validateDate(_ value: String, user: User, task: Task) throws -> String {
         let calendar = planningCalendar(timeZoneIdentifier: user.timeZoneIdentifier)
         guard
@@ -265,7 +322,7 @@ struct StudySessionController: RouteCollection {
     private func validateTotal(
         _ plannedMinutes: Int,
         task: Task,
-        userID: UUID,
+        user: User,
         excluding sessionID: UUID?,
         on database: any Database
     ) async throws {
@@ -273,13 +330,27 @@ struct StudySessionController: RouteCollection {
             throw Abort(.unprocessableEntity, reason: "Add a time estimate before planning work.")
         }
         let taskID = try task.requireID()
+        let userID = try user.requireID()
+        let todayKey = planningDateKey(
+            Date(),
+            calendar: planningCalendar(timeZoneIdentifier: user.timeZoneIdentifier)
+        )
         var query = StudySession.query(on: database)
             .filter(\.$task.$id == taskID)
             .filter(\.$user.$id == userID)
         if let sessionID {
             query = query.filter(\.$id != sessionID)
         }
-        let existingMinutes = try await query.all().reduce(0) { $0 + $1.plannedMinutes }
+        let existingMinutes = try await query.all().reduce(0) { total, session in
+            switch session.state {
+            case .completed:
+                total + (session.actualMinutes ?? session.plannedMinutes)
+            case .planned where session.scheduledDate >= todayKey:
+                total + session.plannedMinutes
+            default:
+                total
+            }
+        }
         guard existingMinutes + plannedMinutes <= estimate else {
             throw Abort(.unprocessableEntity, reason: "Planned work cannot exceed the task estimate.")
         }

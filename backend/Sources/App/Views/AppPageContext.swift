@@ -251,8 +251,13 @@ struct OverviewPageContext: Encodable {
         self.hasUnscheduledAssignments = unscheduledAssignmentCount > 0
         self.unestimatedAssignmentCount = days.reduce(0) { $0 + $1.unestimatedAssignmentCount }
         self.hasUnestimatedAssignments = unestimatedAssignmentCount > 0
+        let todayKey = planningDateKey(today, calendar: calendar)
         let plannedMinutesByTask = Dictionary(grouping: activeTaskSessions, by: \.$task.id)
-        .mapValues { sessions in sessions.reduce(0) { $0 + $1.plannedMinutes } }
+            .mapValues { sessions in
+                sessions.reduce(0) { total, session in
+                    total + studySessionCountedMinutes(session, todayKey: todayKey)
+                }
+            }
         self.planCandidates = activeTaskContexts
             .sorted(by: studyTaskOrder)
             .compactMap { task in
@@ -270,10 +275,9 @@ struct OverviewPageContext: Encodable {
         self.hasPlanCandidates = !planCandidates.isEmpty
         self.unplannedFocusCount = planCandidates.count
         self.hasUnplannedFocus = unplannedFocusCount > 0
-        self.studyStreakDays = studyPlanningStreakDays(
-            plannedDates: Set(
-                taskSessions.map(\.scheduledDate)
-                    + taskContexts.map(\.startInput).filter { !$0.isEmpty }
+        self.studyStreakDays = studyCompletionStreakDays(
+            completedDates: Set(
+                taskSessions.filter { $0.state == .completed }.map(\.scheduledDate)
             ),
             referenceDate: today,
             calendar: calendar
@@ -351,7 +355,10 @@ struct StudyDayContext: Encodable {
                 task: value.task,
                 courseColorClass: courseColors[value.task.boardID] ?? "course-blue",
                 plannedMinutes: value.session.plannedMinutes,
-                studySessionID: value.session.id
+                studySessionID: value.session.id,
+                sessionState: value.session.state,
+                actualMinutes: value.session.actualMinutes,
+                completedAt: value.session.completedAt
             )
         }
         let legacyBlocks = legacyFocusTasks.map {
@@ -428,12 +435,19 @@ struct StudyAssignmentContext: Encodable {
     let description: String
     let studySessionID: String
     let hasStudySession: Bool
+    let sessionState: String
+    let actualMinutes: Int?
+    let completedAt: Date?
+    let isPlannedSession: Bool
 
     init(
         task: TaskCardContext,
         courseColorClass: String,
         plannedMinutes: Int? = nil,
-        studySessionID: UUID? = nil
+        studySessionID: UUID? = nil,
+        sessionState: StudySessionState = .planned,
+        actualMinutes: Int? = nil,
+        completedAt: Date? = nil
     ) {
         let assignmentType = studyAssignmentType(title: task.title, labels: task.labels)
         self.href = task.href
@@ -443,8 +457,17 @@ struct StudyAssignmentContext: Encodable {
         self.dueTime = task.dueTimeDisplay
         self.typeName = assignmentType.name
         self.typeIcon = assignmentType.icon
-        self.estimatedMinutes = plannedMinutes ?? task.estimatedMinutes
-        self.effortLabel = plannedMinutes.map(displayDuration) ?? task.estimatedDisplay
+        let sessionMinutes = if studySessionID == nil {
+            plannedMinutes
+        } else if sessionState == .skipped {
+            0
+        } else if sessionState == .completed {
+            actualMinutes ?? plannedMinutes
+        } else {
+            plannedMinutes
+        }
+        self.estimatedMinutes = sessionMinutes ?? task.estimatedMinutes
+        self.effortLabel = sessionMinutes.map(displayDuration) ?? task.estimatedDisplay
         self.hasEstimate = plannedMinutes != nil || task.hasEstimate
         self.statusName = task.statusName
         self.statusValue = task.statusValue
@@ -459,6 +482,10 @@ struct StudyAssignmentContext: Encodable {
         self.description = task.description
         self.studySessionID = studySessionID?.uuidString ?? ""
         self.hasStudySession = studySessionID != nil
+        self.sessionState = studySessionID == nil ? "" : sessionState.rawValue
+        self.actualMinutes = actualMinutes
+        self.completedAt = completedAt
+        self.isPlannedSession = studySessionID != nil && sessionState == .planned
     }
 }
 
@@ -506,20 +533,19 @@ private func studyTaskIsCompleted(_ task: TaskCardContext) -> Bool {
     task.completionStatuses.split(separator: ",").contains(Substring(task.statusValue))
 }
 
-/// Counts consecutive planned study days ending today, or yesterday when the
-/// user has not planned today's work yet. Empty and future dates do not extend
-/// the streak, and completed tasks remain valid evidence of past study plans.
-private func studyPlanningStreakDays(
-    plannedDates: Set<String>,
+/// Counts consecutive completed study days ending today, or yesterday when the
+/// student has not completed today's work yet. Plans and skips never add credit.
+private func studyCompletionStreakDays(
+    completedDates: Set<String>,
     referenceDate: Date,
     calendar: Calendar
 ) -> Int {
     let today = calendar.startOfDay(for: referenceDate)
     let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-    var cursor = plannedDates.contains(planningDateKey(today, calendar: calendar)) ? today : yesterday
+    var cursor = completedDates.contains(planningDateKey(today, calendar: calendar)) ? today : yesterday
     var streak = 0
 
-    while plannedDates.contains(planningDateKey(cursor, calendar: calendar)) {
+    while completedDates.contains(planningDateKey(cursor, calendar: calendar)) {
         streak += 1
         guard let previousDay = calendar.date(byAdding: .day, value: -1, to: cursor) else {
             break
@@ -528,6 +554,19 @@ private func studyPlanningStreakDays(
     }
 
     return streak
+}
+
+/// Completed minutes and current plans reduce the remaining estimate. Past plans
+/// and skipped blocks contribute zero, so missed work returns to the plan queue.
+private func studySessionCountedMinutes(_ session: StudySession, todayKey: String) -> Int {
+    switch session.state {
+    case .completed:
+        session.actualMinutes ?? session.plannedMinutes
+    case .planned where session.scheduledDate >= todayKey:
+        session.plannedMinutes
+    default:
+        0
+    }
 }
 
 private func studyAssignmentType(title: String, labels: [String]) -> (name: String, icon: String) {

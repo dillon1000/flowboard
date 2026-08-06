@@ -89,6 +89,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddTaskGradeFields())
     app.migrations.add(AddUserTimeZone())
     app.migrations.add(CreateStudySessions())
+    app.migrations.add(AddStudySessionLifecycle())
     app.migrations.add(AddPlanningNotificationPreferences())
     app.migrations.add(CreateCalendarFeedCredentials())
     app.migrations.add(CreateCanvasSyncModels())

@@ -80,7 +80,7 @@ struct StudyPlannerTests {
         #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 3)
         #expect(planner.planCandidates.first?.remainingMinutes == 120)
         #expect(planner.unscheduledAssignmentCount == 1)
-        #expect(planner.studyStreakDays == 1)
+        #expect(planner.studyStreakDays == 0)
     }
 
     @Test("Local dates do not advance at the UTC boundary")
