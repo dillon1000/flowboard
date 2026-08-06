@@ -789,6 +789,7 @@ struct BoardPageContext: Encodable {
     let canvasHasScore: Bool
     let canvasScorePercent: Double
     let canvasLastSyncDisplay: String
+    let studySessions: [StudySessionPageContext]
 
     init(
         board: Board,
@@ -802,6 +803,9 @@ struct BoardPageContext: Encodable {
         nextMonthHref: String,
         todayMonthHref: String,
         defaultTemplate: TaskTemplate?,
+        studySessions: [StudySession],
+        studyTasks: [TaskCardContext],
+        timeZoneIdentifier: String,
         canvasLink: CanvasCourseLink? = nil,
         canvasConnection: CanvasConnection? = nil
     ) throws {
@@ -893,6 +897,15 @@ struct BoardPageContext: Encodable {
         self.canvasHasScore = canvasLink?.currentScore != nil
         self.canvasScorePercent = min(100, max(0, canvasLink?.currentScore ?? 0))
         self.canvasLastSyncDisplay = canvasConnection?.lastSuccessfulSyncAt.map(displayDate) ?? "Not synced yet"
+        let taskByID = Dictionary(uniqueKeysWithValues: studyTasks.map { ($0.id, $0) })
+        let calendar = planningCalendar(timeZoneIdentifier: timeZoneIdentifier)
+        self.studySessions = try studySessions
+            .filter { $0.state == .planned }
+            .sorted { $0.scheduledDate < $1.scheduledDate }
+            .compactMap { session in
+                guard let task = taskByID[session.$task.id] else { return nil }
+                return try StudySessionPageContext(session: session, task: task, calendar: calendar)
+            }
     }
 }
 

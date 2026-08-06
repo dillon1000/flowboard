@@ -412,6 +412,26 @@ export interface BoardPageContext {
   canvasHasScore: boolean;
   canvasScorePercent: number;
   canvasLastSyncDisplay: string;
+  studySessions: StudySessionContext[];
+}
+
+export interface StudySessionContext {
+  id: string;
+  taskID: string;
+  taskTitle: string;
+  taskHref: string;
+  scheduledDate: string;
+  scheduledDisplay: string;
+  plannedMinutes: number;
+  plannedDisplay: string;
+  state: 'planned' | 'completed' | 'skipped';
+  stateName: string;
+  actualMinutes: number | null;
+  actualDisplay: string;
+  completedAt: string | null;
+  isPlanned: boolean;
+  isCompleted: boolean;
+  isSkipped: boolean;
 }
 
 export interface TasksPageContext {
@@ -504,6 +524,11 @@ export interface TaskDetailPageContext {
   hasProperties: boolean;
   reminders: TaskReminderContext[];
   notificationsEnabled: boolean;
+  studySessions: StudySessionContext[];
+  hasStudySessions: boolean;
+  remainingStudyMinutes: number;
+  canPlanStudy: boolean;
+  defaultStudyDate: string;
 }
 
 export interface APIKeyPageItemContext {

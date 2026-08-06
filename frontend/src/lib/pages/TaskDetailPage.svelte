@@ -10,6 +10,7 @@
   import TimePicker from '$lib/components/TimePicker.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
+  import StudySessionPanel from '$lib/components/StudySessionPanel.svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { onMount, type Snippet } from 'svelte';
   import { showToast } from '$lib/ui/toast';
@@ -686,6 +687,17 @@
 
   <div class="split-layout">
     <div class="task-main">
+      <StudySessionPanel
+        sessions={detail.studySessions}
+        variant="task"
+        taskID={detail.task.id}
+        remainingMinutes={detail.remainingStudyMinutes}
+        canPlan={detail.canPlanStudy}
+        hasEstimate={detail.task.hasEstimate}
+        defaultDate={detail.defaultStudyDate}
+        dueDate={detail.task.dueInput}
+      />
+
       <section class="task-section" aria-labelledby="steps-title">
         <div class="task-section-head">
           <h2 id="steps-title">Steps</h2>

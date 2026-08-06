@@ -10,7 +10,9 @@
     placeholder = 'Choose a date',
     required = false,
     disabled = false,
-    initialFocus = false
+    initialFocus = false,
+    minDate = '',
+    maxDate = ''
   } = $props<{
     id: string;
     name: string;
@@ -20,6 +22,8 @@
     required?: boolean;
     disabled?: boolean;
     initialFocus?: boolean;
+    minDate?: string;
+    maxDate?: string;
   }>();
 
   let input: HTMLInputElement;
@@ -36,6 +40,8 @@
         altFormat: 'M j, Y',
         dateFormat: 'Y-m-d',
         defaultDate: value || undefined,
+        minDate: minDate || undefined,
+        maxDate: maxDate || undefined,
         disableMobile: true,
         monthSelectorType: 'static',
         nextArrow: '<span aria-hidden="true">→</span>',
