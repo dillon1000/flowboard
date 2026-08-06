@@ -50,6 +50,7 @@
   }
 
   function handleShortcut(event: KeyboardEvent): void {
+    if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
     if (event.key === 'Escape' && document.activeElement === searchInput) {
       searchInput.value = '';
       searchInput.blur();
