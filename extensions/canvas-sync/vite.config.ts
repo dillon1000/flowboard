@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   publicDir: 'public',
   build: {
+    // Chrome cannot reuse popup preloads across extension execution worlds.
+    modulePreload: false,
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
