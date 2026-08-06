@@ -35,9 +35,7 @@
 
   // Priority only earns space on a card when it is raised above the ordinary:
   // the stage rail and the countdown are what a lane is scanned for.
-  const isUrgent = $derived(
-    /priority-high|priority-urgent|workflow-orange|workflow-red/.test(task.priorityColorClass)
-  );
+  const isUrgent = $derived(task.priorityValue === 'high' || task.priorityValue === 'urgent');
 </script>
 
 <div
