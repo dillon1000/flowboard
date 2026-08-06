@@ -34,7 +34,8 @@
   let remindersOpen = $state(false);
   let reminderDate = $state('');
   let reminderTime = $state('09:00');
-  let pending = $state(false);
+  let pendingCount = $state(0);
+  const pending = $derived(pendingCount > 0);
   let requestError = $state('');
   let selectedStatus = $state('');
   let commentBody = $state('');
@@ -188,7 +189,7 @@
   }
 
   async function mutate(path: string, init: RequestInit, successMessage = ''): Promise<boolean> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(path, init);
@@ -199,7 +200,7 @@
       requestError = messageFor(cause);
       return false;
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -209,7 +210,7 @@
     );
     const priorStatus = currentStatus;
     selectedStatus = status;
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/tasks/${detail.task.id}`, {
@@ -223,7 +224,7 @@
       selectedStatus = priorStatus;
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -500,7 +501,7 @@
   }
 
   async function deleteTask(): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/tasks/${detail.task.id}`, { method: 'DELETE' });
@@ -508,7 +509,8 @@
       await goto(detail.boardHref, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
-      pending = false;
+    } finally {
+      pendingCount -= 1;
     }
   }
 </script>

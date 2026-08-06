@@ -43,7 +43,8 @@
   const standardNFCTagBytes = 504;
 
   let { board } = $props<{ board: BoardSettingsPageContext }>();
-  let pending = $state(false);
+  let pendingCount = $state(0);
+  const pending = $derived(pendingCount > 0);
   let requestError = $state('');
   let tapOpen = $state(false);
   let editingTap = $state<TapActionContext | null>(null);
@@ -141,7 +142,7 @@
   }
 
   async function mutate(path: string, init: RequestInit, successMessage = ''): Promise<boolean> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(path, init);
@@ -152,7 +153,7 @@
       requestError = messageFor(cause);
       return false;
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -375,7 +376,7 @@
   }
 
   async function useTemplate(templateID: string): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const task = await api<TaskResponse>(
@@ -386,7 +387,8 @@
       await goto(task.browserPath, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
-      pending = false;
+    } finally {
+      pendingCount -= 1;
     }
   }
 
@@ -397,7 +399,7 @@
   }
 
   async function rotateTap(actionID: string): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const result = await api<{ url: string }>(
@@ -410,7 +412,7 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -426,7 +428,7 @@
   }
 
   async function duplicateBoard(): Promise<boolean> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const copy = await api<BoardResponse>(`/api/v1/boards/${board.id}/duplicate`, { method: 'POST' });
@@ -435,8 +437,9 @@
       return true;
     } catch (cause) {
       requestError = messageFor(cause);
-      pending = false;
       return false;
+    } finally {
+      pendingCount -= 1;
     }
   }
 

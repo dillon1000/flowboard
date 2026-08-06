@@ -59,7 +59,8 @@
   let moveOpen = $state(false);
   let planSelection = $state('');
   let planMinutes = $state(60);
-  let pending = $state(false);
+  let pendingCount = $state(0);
+  const pending = $derived(pendingCount > 0);
   let requestError = $state('');
   let expandedDays = $state<Record<string, boolean>>({});
   let activeSession = $state<StudyAssignmentContext | null>(null);
@@ -249,7 +250,7 @@
   }
 
   async function confirmTimeZone(): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -263,13 +264,13 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function saveAvailability(event: SubmitEvent): Promise<void> {
     event.preventDefault();
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await persistSettings({ availabilityConfigured: true });
@@ -279,7 +280,7 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -295,7 +296,7 @@
       requestError = 'Set every estimate between 5 and 1440 minutes.';
       return;
     }
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api('/api/v1/study-settings/estimates', {
@@ -308,7 +309,7 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -317,7 +318,7 @@
     const form = event.currentTarget as HTMLFormElement;
     const data = new FormData(form);
     const dueDate = String(data.get('dueAt') ?? '');
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api<TaskResponse>('/api/v1/tasks', {
@@ -339,7 +340,7 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -350,7 +351,7 @@
     const focusDate = String(data.get('focusDate') ?? '');
     const planned = Number(data.get('plannedMinutes'));
     if (!taskID || !focusDate) return;
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/tasks/${taskID}/study-sessions`, { method: 'POST', body: JSON.stringify({ scheduledDate: focusDate, plannedMinutes: planned }) });
@@ -360,12 +361,12 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function autoPlanWeek(): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const result = await api<AutoPlanStudySessionsResponse>('/api/v1/study-sessions/plan', {
@@ -379,12 +380,12 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function repairWeek(): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const result = await api<RepairStudyWeekResponse>('/api/v1/study-sessions/repair', { method: 'POST' });
@@ -395,14 +396,14 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function completeSession(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     if (!activeSession) return;
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/study-sessions/${activeSession.studySessionID}/complete`, { method: 'POST', body: JSON.stringify({ actualMinutes: Number(actualMinutes) }) });
@@ -412,14 +413,14 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function moveSession(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     if (!activeSession || !moveDate) return;
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/study-sessions/${activeSession.studySessionID}`, { method: 'PATCH', body: JSON.stringify({ scheduledDate: moveDate }) });
@@ -429,12 +430,12 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function skipSession(sessionID: string): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/study-sessions/${sessionID}/skip`, { method: 'POST' });
@@ -443,12 +444,12 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
   async function deleteStudySession(sessionID: string): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(`/api/v1/study-sessions/${sessionID}`, { method: 'DELETE' });
@@ -457,7 +458,7 @@
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
