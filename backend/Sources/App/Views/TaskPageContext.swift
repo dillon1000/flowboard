@@ -241,6 +241,8 @@ func displayDuration(_ minutes: Int) -> String {
 
 struct CalendarDayContext: Encodable {
     let day: String
+    let dateInput: String
+    let dateLabel: String
     let isMuted: Bool
     let isToday: Bool
     let tasks: [TaskCardContext]

@@ -14,7 +14,8 @@
   import { showToast } from '$lib/ui/toast';
 
   type DueFilter = 'any' | 'overdue' | 'week' | 'undated';
-  type SortField = 'board' | 'due' | 'title' | 'severity' | 'effort' | 'grade';
+  type SortField = 'board' | 'due' | 'title' | 'status' | 'severity' | 'effort' | 'grade';
+  type GanttScale = 'week' | 'month' | 'term';
   interface ScheduledGanttRow {
     task: TaskCardContext;
     placement: GanttPlacement;
@@ -38,6 +39,7 @@
   let dueFilter = $state<DueFilter>('any');
   let sortField = $state<SortField>('board');
   let sortAscending = $state(true);
+  let ganttScaleName = $state<GanttScale>('month');
 
   const dueFilters: { value: DueFilter; name: string }[] = [
     { value: 'any', name: 'Any time' },
@@ -50,6 +52,7 @@
     { value: 'board', name: 'Manual order' },
     { value: 'due', name: 'Due date' },
     { value: 'title', name: 'Title' },
+    { value: 'status', name: 'Stage' },
     { value: 'severity', name: 'Priority' },
     { value: 'effort', name: 'Effort' },
     { value: 'grade', name: 'Score' }
@@ -60,6 +63,7 @@
     year: 'numeric',
     timeZone: 'UTC'
   });
+  const ganttDayWidths: Record<GanttScale, number> = { week: 28, month: 14, term: 4 };
 
   $effect(() => {
     columns = cloneColumns(board.columns);
@@ -96,6 +100,9 @@
   const severityOrder = $derived(
     new Map<string, number>(board.severityOptions.map((option: TaskOptionContext, index: number) => [option.value, index]))
   );
+  const statusOrder = $derived(
+    new Map<string, number>(board.statusOptions.map((option: TaskOptionContext, index: number) => [option.value, index]))
+  );
   const sortName = $derived(sortFields.find((option) => option.value === sortField)?.name ?? 'Manual order');
   const dueName = $derived(dueFilters.find((option) => option.value === dueFilter)?.name ?? 'Any time');
 
@@ -119,6 +126,10 @@
   const visibleDays = $derived(
     board.calendarDays.map((day: CalendarDayContext) => ({ ...day, tasks: day.tasks.filter(matches) }))
   );
+  const calendarTaskCount = $derived(
+    visibleDays.reduce((total: number, day: CalendarDayContext) => total + day.tasks.length, 0)
+  );
+  const ganttDayWidth = $derived(ganttDayWidths[ganttScaleName]);
   const ganttScale = $derived(buildGanttScale(board.tasks));
   const ganttRows = $derived.by((): { scheduled: ScheduledGanttRow[]; unscheduled: TaskCardContext[] } => {
     const scheduled: ScheduledGanttRow[] = [];
@@ -153,6 +164,7 @@
   /** The measure being sorted on, or null when the assignment does not carry it. */
   function measure(task: TaskCardContext): number | null {
     if (sortField === 'due') return task.hasDueDate ? deadlineFrom(task.dueInput).days : null;
+    if (sortField === 'status') return statusOrder.get(task.statusValue) ?? null;
     if (sortField === 'severity') return severityOrder.get(task.priorityValue) ?? null;
     if (sortField === 'effort') return task.hasEstimate ? task.estimatedMinutes : null;
     if (sortField === 'grade') return task.hasGrade && task.gradePossible > 0 ? task.gradeEarned / task.gradePossible : null;
@@ -172,6 +184,20 @@
 
   function toggleValue(values: string[], value: string): string[] {
     return values.includes(value) ? values.filter((kept) => kept !== value) : [...values, value];
+  }
+
+  /** A repeated click reverses the selected table column. */
+  function sortByColumn(field: Exclude<SortField, 'board'>): void {
+    if (sortField === field) sortAscending = !sortAscending;
+    else {
+      sortField = field;
+      sortAscending = true;
+    }
+  }
+
+  function ariaSort(field: Exclude<SortField, 'board'>): 'ascending' | 'descending' | 'none' {
+    if (sortField !== field) return 'none';
+    return sortAscending ? 'ascending' : 'descending';
   }
 
   function clearControls(): void {
@@ -625,12 +651,12 @@
             <table class="ledger">
               <thead>
                 <tr>
-                  <th>Assignment</th>
-                  <th>Stage</th>
-                  <th>Priority</th>
-                  <th class="numeric">Effort</th>
-                  <th class="numeric">Due</th>
-                  <th class="numeric">Score</th>
+                  <th scope="col" aria-sort={ariaSort('title')}><button class="table-sort" type="button" onclick={() => sortByColumn('title')}>Assignment<span aria-hidden="true">{sortField === 'title' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th scope="col" aria-sort={ariaSort('status')}><button class="table-sort" type="button" onclick={() => sortByColumn('status')}>Stage<span aria-hidden="true">{sortField === 'status' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th scope="col" aria-sort={ariaSort('severity')}><button class="table-sort" type="button" onclick={() => sortByColumn('severity')}>Priority<span aria-hidden="true">{sortField === 'severity' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th class="numeric" scope="col" aria-sort={ariaSort('effort')}><button class="table-sort end" type="button" onclick={() => sortByColumn('effort')}>Effort<span aria-hidden="true">{sortField === 'effort' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th class="numeric" scope="col" aria-sort={ariaSort('due')}><button class="table-sort end" type="button" onclick={() => sortByColumn('due')}>Due<span aria-hidden="true">{sortField === 'due' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th class="numeric" scope="col" aria-sort={ariaSort('grade')}><button class="table-sort end" type="button" onclick={() => sortByColumn('grade')}>Score<span aria-hidden="true">{sortField === 'grade' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
                 </tr>
               </thead>
               <tbody>
@@ -666,50 +692,73 @@
               </div>
               <a class="button small" href={board.todayMonthHref}>Today</a>
             </header>
-            <div class="month-sheet">
-              <div class="month-weekdays">
-                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            {#if calendarTaskCount}
+              <div class="month-sheet">
+                <div class="month-weekdays" aria-hidden="true">
+                  <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                </div>
+                <div class="month-grid">
+                  {#each visibleDays as day (day.dateInput)}
+                    {@const minutes = dayMinutes(day)}
+                    <div
+                      class:muted={day.isMuted}
+                      class:today={day.isToday}
+                      class="month-day"
+                      role="group"
+                      aria-label={`${day.dateLabel}, ${day.tasks.length} ${day.tasks.length === 1 ? 'assignment' : 'assignments'}`}
+                    >
+                      <span class="month-day-head">
+                        <time class="month-day-date" datetime={day.dateInput}>{day.day}</time>
+                        {#if minutes > 0}<span class="month-day-load" title={`${durationLabel(minutes)} of estimated work due`}>{durationLabel(minutes)}</span>{/if}
+                      </span>
+                      {#each day.tasks.slice(0, 3) as task (task.id)}
+                        <a
+                          class={`month-task stage-tint ${task.statusColorClass}`}
+                          style={task.statusColorStyle}
+                          href={task.href}
+                          use:taskPreview={previewFromTask(task)}
+                        >{task.title}</a>
+                      {/each}
+                      {#if day.tasks.length > 3}<span class="month-more">+{day.tasks.length - 3} more</span>{/if}
+                    </div>
+                  {/each}
+                </div>
               </div>
-              <div class="month-grid">
-                {#each visibleDays as day}
-                  {@const minutes = dayMinutes(day)}
-                  <div class:muted={day.isMuted} class:today={day.isToday} class="month-day">
-                    <span class="month-day-head">
-                      <span class="month-day-date">{day.day}</span>
-                      {#if minutes > 0}<span class="month-day-load" title={`${durationLabel(minutes)} of estimated work due`}>{durationLabel(minutes)}</span>{/if}
-                    </span>
-                    {#each day.tasks as task}
-                      <a
-                        class={`month-task stage-tint ${task.statusColorClass}`}
-                        style={task.statusColorStyle}
-                        href={task.href}
-                        use:taskPreview={previewFromTask(task)}
-                      >{task.title}</a>
-                    {/each}
-                  </div>
-                {/each}
+            {:else}
+              <div class="course-empty calendar-empty">
+                <span>{board.calendarMonthLabel}</span>
+                <h2>{isFiltered ? 'No deadlines match these filters' : 'No deadlines this month'}</h2>
+                <p>{isFiltered ? 'Widen the filters above to see more of this course.' : 'Use the month controls to check another month, or add a due date to an assignment.'}</p>
+                {#if isFiltered}<button class="button small" type="button" onclick={clearControls}><X size={13} />Reset filters</button>{/if}
               </div>
-            </div>
+            {/if}
           </section>
         {:else if board.activeView.isGantt}
           {#if visibleTasks.length}
-            <section class="gantt" aria-labelledby="gantt-title">
+            <section class="gantt" aria-labelledby="gantt-title" style={`--gantt-day-width: ${ganttDayWidth}px; --gantt-week-width: ${ganttDayWidth * 7}px`}>
               <header class="gantt-summary">
                 <div>
                   <span>Course timeline</span>
                   <h2 id="gantt-title">{ganttRangeDate(ganttScale.startInput)} – {ganttRangeDate(ganttScale.endInput)}</h2>
                 </div>
-                <p>
-                  {ganttRows.scheduled.length} scheduled
-                  {#if ganttRows.unscheduled.length} · {ganttRows.unscheduled.length} need dates{/if}
-                </p>
+                <div class="gantt-summary-actions">
+                  <p>
+                    {ganttRows.scheduled.length} scheduled
+                    {#if ganttRows.unscheduled.length} · {ganttRows.unscheduled.length} need dates{/if}
+                  </p>
+                  <div class="gantt-scale" role="group" aria-label="Timeline scale">
+                    <button type="button" aria-pressed={ganttScaleName === 'week'} onclick={() => (ganttScaleName = 'week')}>Week</button>
+                    <button type="button" aria-pressed={ganttScaleName === 'month'} onclick={() => (ganttScaleName = 'month')}>Month</button>
+                    <button type="button" aria-pressed={ganttScaleName === 'term'} onclick={() => (ganttScaleName = 'term')}>Term</button>
+                  </div>
+                </div>
               </header>
 
               <!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard users need to scroll the timeline) -->
               <div class="gantt-scroll" role="region" tabindex="0" aria-label="Course timeline. Scroll horizontally to see more dates.">
                 <div
                   class="gantt-sheet"
-                  style={`--gantt-days: ${ganttScale.dayCount}; --gantt-timeline-width: ${ganttScale.dayCount * 28}px`}
+                  style={`--gantt-days: ${ganttScale.dayCount}; --gantt-timeline-width: ${ganttScale.dayCount * ganttDayWidth}px`}
                 >
                   <div class="gantt-months" aria-hidden="true">
                     <span class="gantt-axis-label">Assignment</span>

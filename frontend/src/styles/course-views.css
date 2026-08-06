@@ -693,6 +693,17 @@
   background: var(--surface-hover);
 }
 
+.month-more {
+  padding: 3px 6px;
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.calendar-empty {
+  min-height: 320px;
+}
+
 /* ==========================================================================
    Gantt — the ruled planning sheet
 
@@ -742,6 +753,42 @@
   font-family: 'Geist Mono Variable', ui-monospace, monospace;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+
+.gantt-summary-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.gantt-scale {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-small);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-border);
+}
+
+.gantt-scale button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: calc(var(--radius-small) - 1px);
+  color: var(--text-tertiary);
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.gantt-scale button[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.gantt-scale button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .gantt-scroll {
@@ -1159,5 +1206,11 @@
     align-items: start;
     flex-direction: column;
     gap: 5px;
+  }
+
+  .gantt-summary-actions {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
   }
 }
