@@ -47,6 +47,12 @@
     { key: 'saturday', label: 'Sat', index: 6 },
     { key: 'sunday', label: 'Sun', index: 7 }
   ] as const;
+  const dateOnlyFormatter = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
 
   let { overview, common } = $props<{ overview: OverviewPageContext; common: CommonPageContext }>();
   const initialOverview = $state.snapshot((() => overview)());
@@ -102,6 +108,10 @@
   const courseOptions = $derived<SelectMenuOption[]>(
     overview.courseFilters.map((course: StudyCourseContext) => ({ value: course.id, label: course.name }))
   );
+  const commitmentKindOptions: SelectMenuOption[] = [
+    { value: 'class', label: 'Class' },
+    { value: 'work', label: 'Work' }
+  ];
   const planOptions = $derived<SelectMenuOption[]>(
     overview.planCandidates.map((assignment: StudyPlanCandidateContext) => ({
       value: assignment.id,
@@ -137,6 +147,11 @@
     const hours = Math.floor(minutes / 60);
     const remainder = minutes % 60;
     return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
+  }
+
+  function dateLabel(value: string): string {
+    const date = new Date(`${value}T00:00:00Z`);
+    return Number.isNaN(date.getTime()) ? value : dateOnlyFormatter.format(date);
   }
 
   function estimateMinutes(value: FormDataEntryValue | null): number | null {
@@ -636,5 +651,45 @@
 {/if}
 
 {#if availabilityOpen}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="availability-title" tabindex="-1" use:dialogLayer={{ close: () => (availabilityOpen = false) }}><form class="dialog study-availability-dialog" onsubmit={saveAvailability}><div class="dialog-header"><div><h2 id="availability-title">Your real week</h2><p>Capacity is study time before classes, work, and calendar conflicts.</p></div><button class="icon-button" type="button" onclick={() => (availabilityOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body">{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}<section class="study-availability-section"><div class="study-section-heading"><h3>Weekday capacity</h3><span>Minutes</span></div><div class="study-capacity-grid">{#each weekdays as day}<label><span>{day.label}</span><input type="number" min="0" max="1440" step="15" bind:value={weekdayCapacityMinutes[day.key]} /></label>{/each}</div></section><section class="study-availability-section"><div class="study-section-heading"><h3>Blocked dates</h3><span>No study work</span></div><div class="study-inline-add"><input class="input" type="date" bind:value={blockedDateDraft} /><button class="button" type="button" onclick={addBlockedDate}>Block date</button></div><div class="study-setting-chips">{#each blockedDates as date}<span>{date}<button type="button" aria-label={`Remove blocked date ${date}`} onclick={() => (blockedDates = blockedDates.filter((item) => item !== date))}>×</button></span>{/each}</div></section><section class="study-availability-section"><div class="study-section-heading"><h3>Classes and work</h3><span>Repeats weekly</span></div><div class="study-setting-list">{#each recurringCommitments as item}<article><span><strong>{item.title}</strong><small>{item.kind} · {item.startTime}–{item.endTime}</small></span><button type="button" aria-label={`Remove ${item.title}`} onclick={() => (recurringCommitments = recurringCommitments.filter((value) => value.id !== item.id))}>Remove</button></article>{/each}</div><div class="study-commitment-builder"><input class="input" aria-label="Commitment title" placeholder="Calculus or work shift" bind:value={commitmentTitle} /><select class="input" aria-label="Commitment type" bind:value={commitmentKind}><option value="class">Class</option><option value="work">Work</option></select><input class="input" aria-label="Start time" type="time" bind:value={commitmentStart} /><input class="input" aria-label="End time" type="time" bind:value={commitmentEnd} /><fieldset><legend>Weekdays</legend>{#each weekdays as day}<label><input type="checkbox" checked={commitmentWeekdays.includes(day.index)} onchange={(event) => toggleCommitmentWeekday(day.index, (event.currentTarget as HTMLInputElement).checked)} /><span>{day.label}</span></label>{/each}</fieldset><button class="button" type="button" onclick={addCommitment}>Add fixed time</button></div></section><section class="study-availability-section"><div class="study-section-heading"><h3>Calendar conflicts</h3><span>One-time events</span></div><div class="study-setting-list">{#each calendarConflicts as item}<article><span><strong>{item.title}</strong><small>{item.date} · {item.startTime}–{item.endTime}</small></span><button type="button" aria-label={`Remove ${item.title}`} onclick={() => (calendarConflicts = calendarConflicts.filter((value) => value.id !== item.id))}>Remove</button></article>{/each}</div><div class="study-conflict-builder"><input class="input" aria-label="Conflict title" placeholder="Appointment" bind:value={conflictTitle} /><input class="input" aria-label="Conflict date" type="date" bind:value={conflictDate} /><input class="input" aria-label="Conflict start" type="time" bind:value={conflictStart} /><input class="input" aria-label="Conflict end" type="time" bind:value={conflictEnd} /><button class="button" type="button" onclick={addConflict}>Add conflict</button></div></section></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (availabilityOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save availability'}</button></div></form></div>
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="availability-title" tabindex="-1" use:dialogLayer={{ close: () => (availabilityOpen = false) }}>
+    <form class="dialog study-availability-dialog" onsubmit={saveAvailability}>
+      <div class="dialog-header"><div><h2 id="availability-title">Your real week</h2><p>Capacity is study time before classes, work, and calendar conflicts.</p></div><button class="icon-button" type="button" onclick={() => (availabilityOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body">
+        {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
+        <section class="study-availability-section">
+          <div class="study-section-heading"><h3>Weekday capacity</h3><span>Minutes</span></div>
+          <div class="study-capacity-grid">{#each weekdays as day}<label><span>{day.label}</span><input type="number" min="0" max="1440" step="15" bind:value={weekdayCapacityMinutes[day.key]} /></label>{/each}</div>
+        </section>
+        <section class="study-availability-section">
+          <div class="study-section-heading"><h3>Blocked dates</h3><span>No study work</span></div>
+          <div class="study-inline-add"><DatePicker id="blocked-date" name="blockedDate" label="Blocked date" bind:value={blockedDateDraft} /><button class="button" type="button" onclick={addBlockedDate}>Block date</button></div>
+          <div class="study-setting-chips">{#each blockedDates as date}<span>{dateLabel(date)}<button type="button" aria-label={`Remove blocked date ${dateLabel(date)}`} onclick={() => (blockedDates = blockedDates.filter((item) => item !== date))}>×</button></span>{/each}</div>
+        </section>
+        <section class="study-availability-section">
+          <div class="study-section-heading"><h3>Classes and work</h3><span>Repeats weekly</span></div>
+          <div class="study-setting-list">{#each recurringCommitments as item}<article><span><strong>{item.title}</strong><small>{item.kind} · {item.startTime}–{item.endTime}</small></span><button type="button" aria-label={`Remove ${item.title}`} onclick={() => (recurringCommitments = recurringCommitments.filter((value) => value.id !== item.id))}>Remove</button></article>{/each}</div>
+          <div class="study-commitment-builder">
+            <input class="input" aria-label="Commitment title" placeholder="Calculus or work shift" bind:value={commitmentTitle} />
+            <SelectMenu id="commitment-kind" name="commitmentKind" bind:value={commitmentKind} options={commitmentKindOptions} ariaLabel="Commitment type" />
+            <TimePicker id="commitment-start" name="commitmentStart" label="Start time" bind:value={commitmentStart} />
+            <TimePicker id="commitment-end" name="commitmentEnd" label="End time" bind:value={commitmentEnd} />
+            <fieldset><legend>Weekdays</legend>{#each weekdays as day}<label><input type="checkbox" checked={commitmentWeekdays.includes(day.index)} onchange={(event) => toggleCommitmentWeekday(day.index, (event.currentTarget as HTMLInputElement).checked)} /><span>{day.label}</span></label>{/each}</fieldset>
+            <button class="button" type="button" onclick={addCommitment}>Add fixed time</button>
+          </div>
+        </section>
+        <section class="study-availability-section">
+          <div class="study-section-heading"><h3>Calendar conflicts</h3><span>One-time events</span></div>
+          <div class="study-setting-list">{#each calendarConflicts as item}<article><span><strong>{item.title}</strong><small>{dateLabel(item.date)} · {item.startTime}–{item.endTime}</small></span><button type="button" aria-label={`Remove ${item.title}`} onclick={() => (calendarConflicts = calendarConflicts.filter((value) => value.id !== item.id))}>Remove</button></article>{/each}</div>
+          <div class="study-conflict-builder">
+            <input class="input" aria-label="Conflict title" placeholder="Appointment" bind:value={conflictTitle} />
+            <DatePicker id="conflict-date" name="conflictDate" label="Conflict date" bind:value={conflictDate} />
+            <TimePicker id="conflict-start" name="conflictStart" label="Conflict start" bind:value={conflictStart} />
+            <TimePicker id="conflict-end" name="conflictEnd" label="Conflict end" bind:value={conflictEnd} />
+            <button class="button" type="button" onclick={addConflict}>Add conflict</button>
+          </div>
+        </section>
+      </div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (availabilityOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save availability'}</button></div>
+    </form>
+  </div>
 {/if}

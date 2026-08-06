@@ -5,7 +5,7 @@
   let {
     id,
     name,
-    value = '',
+    value = $bindable(''),
     label,
     placeholder = 'YYYY-MM-DD',
     required = false,
@@ -42,6 +42,9 @@
         defaultDate: value || undefined,
         minDate: minDate || undefined,
         maxDate: maxDate || undefined,
+        onChange: (_dates, dateValue) => {
+          value = dateValue;
+        },
         disableMobile: true,
         monthSelectorType: 'static',
         nextArrow: '<span aria-hidden="true">→</span>',
