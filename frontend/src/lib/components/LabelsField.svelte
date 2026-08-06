@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { parseLabels } from '$lib/ui/formValues';
+
   let {
     id,
     value = $bindable(''),
@@ -12,9 +14,7 @@
   }>();
 
   let input = $state<HTMLInputElement>();
-  const labelCount = $derived(
-    value.split(',').map((item: string) => item.trim()).filter(Boolean).length
-  );
+  const labelCount = $derived(parseLabels(value).length);
 
   $effect(() => {
     input?.setCustomValidity(labelCount > 6 ? 'Use no more than six labels.' : '');

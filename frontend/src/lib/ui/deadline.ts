@@ -61,8 +61,8 @@ export function deadlineFrom(dueInput: string): Deadline {
 
 /** Minutes of estimated work, printed the way the backend prints an estimate. */
 export function durationLabel(minutes: number): string {
-  if (minutes <= 0) return '—';
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes <= 0) return '0m';
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
   return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
