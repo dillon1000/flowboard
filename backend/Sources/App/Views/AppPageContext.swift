@@ -89,6 +89,25 @@ struct CommonPageContext: Encodable {
     let planningEmailHour: Int
     let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
+    let searchAssignments: [SearchAssignmentContext]
+}
+
+/// Carries only the assignment fields needed by the global finder. Keeping this
+/// payload small lets every page offer the same results without another request.
+struct SearchAssignmentContext: Encodable {
+    let id: UUID
+    let title: String
+    let courseName: String
+    let href: String
+    let searchText: String
+
+    init(task: Task, courseName: String) throws {
+        self.id = try task.requireID()
+        self.title = task.title
+        self.courseName = courseName
+        self.href = task.browserPath
+        self.searchText = ([task.description ?? ""] + task.labels).joined(separator: " ")
+    }
 }
 
 /// Supplies one image-or-initials choice wherever a user identity appears.

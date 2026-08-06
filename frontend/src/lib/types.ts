@@ -18,6 +18,14 @@ export interface BoardNavigationContext {
   canvasGradeDisplay: string;
 }
 
+export interface SearchAssignmentContext {
+  id: string;
+  title: string;
+  courseName: string;
+  href: string;
+  searchText: string;
+}
+
 export interface CommonPageContext {
   userName: string;
   userEmail: string;
@@ -27,6 +35,7 @@ export interface CommonPageContext {
   planningEmailHour: number;
   userAvatar: AvatarContext;
   boards: BoardNavigationContext[];
+  searchAssignments: SearchAssignmentContext[];
 }
 
 export interface CalendarFeedStatusResponse {
