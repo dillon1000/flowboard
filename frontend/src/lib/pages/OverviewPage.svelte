@@ -455,13 +455,26 @@
     }
   }
 
-  async function skipSession(sessionID: string): Promise<void> {
+  async function skipSession(assignment: StudyAssignmentContext): Promise<void> {
     pendingCount += 1;
     pageError = '';
     try {
-      await api(`/api/v1/study-sessions/${sessionID}/skip`, { method: 'POST' });
+      await api(`/api/v1/study-sessions/${assignment.studySessionID}/skip`, { method: 'POST' });
       await refreshAll();
-      showToast('Study session skipped');
+      showToast('Study session skipped', {
+        action: {
+          label: 'Undo',
+          onclick: async () => {
+            try {
+              await api(`/api/v1/study-sessions/${assignment.studySessionID}/restore`, { method: 'POST' });
+              await refreshAll();
+              showToast('Study session restored');
+            } catch (cause) {
+              pageError = messageFor(cause);
+            }
+          }
+        }
+      });
     } catch (cause) {
       pageError = messageFor(cause);
     } finally {
@@ -469,13 +482,29 @@
     }
   }
 
-  async function deleteStudySession(sessionID: string): Promise<void> {
+  async function deleteStudySession(assignment: StudyAssignmentContext): Promise<void> {
     pendingCount += 1;
     pageError = '';
     try {
-      await api(`/api/v1/study-sessions/${sessionID}`, { method: 'DELETE' });
+      await api(`/api/v1/study-sessions/${assignment.studySessionID}`, { method: 'DELETE' });
       await refreshAll();
-      showToast('Study session removed');
+      showToast('Study session removed', {
+        action: {
+          label: 'Undo',
+          onclick: async () => {
+            try {
+              await api(`/api/v1/tasks/${assignment.taskID}/study-sessions`, {
+                method: 'POST',
+                body: JSON.stringify({ scheduledDate: assignment.scheduledDate, plannedMinutes: assignment.estimatedMinutes })
+              });
+              await refreshAll();
+              showToast('Study session restored');
+            } catch (cause) {
+              pageError = messageFor(cause);
+            }
+          }
+        }
+      });
     } catch (cause) {
       pageError = messageFor(cause);
     } finally {
@@ -594,9 +623,9 @@
                         <span class:completed={assignment.sessionState === 'completed'} class:skipped={assignment.sessionState === 'skipped'} class="study-focus-item">
                           <a class="study-focus-chip" href={assignment.href} use:taskPreview={previewFromAssignment(assignment)}><span class={`study-focus-dot ${assignment.courseColorClass}`} aria-hidden="true"></span><strong>{assignment.title}</strong><small>{assignment.effortLabel}</small>{#if assignment.sessionState === 'completed'}<em>Done</em>{:else if assignment.sessionState === 'skipped'}<em>Skipped</em>{/if}</a>
                           {#if day.isToday && assignment.isPlannedSession}
-                            <span class="study-focus-actions"><button type="button" disabled={pending} onclick={() => openComplete(assignment)}>Done</button><button type="button" disabled={pending} onclick={() => openMove(assignment)}>Move</button><button type="button" disabled={pending} onclick={() => skipSession(assignment.studySessionID)}>Skip</button></span>
+                            <span class="study-focus-actions"><button type="button" disabled={pending} onclick={() => openComplete(assignment)}>Done</button><button type="button" disabled={pending} onclick={() => openMove(assignment)}>Move</button><button type="button" disabled={pending} onclick={() => skipSession(assignment)}>Skip</button></span>
                           {:else if assignment.hasStudySession && assignment.isPlannedSession}
-                            <button class="study-focus-remove" type="button" disabled={pending} aria-label={`Remove ${assignment.title} study session`} title="Remove study session" onclick={() => deleteStudySession(assignment.studySessionID)}><Trash2 size={12} /></button>
+                            <button class="study-focus-remove" type="button" disabled={pending} aria-label={`Remove ${assignment.title} study session`} title="Remove study session" onclick={() => deleteStudySession(assignment)}><Trash2 size={12} /></button>
                           {/if}
                         </span>
                       {/each}

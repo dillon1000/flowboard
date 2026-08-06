@@ -125,11 +125,48 @@
   }
 
   async function skipSession(session: StudySessionContext): Promise<void> {
-    await mutate(`/api/v1/study-sessions/${session.id}/skip`, { method: 'POST' }, 'Study session skipped');
+    pendingAction = session.id;
+    requestError = '';
+    try {
+      await api(`/api/v1/study-sessions/${session.id}/skip`, { method: 'POST' });
+      await refreshAll();
+      showToast('Study session skipped', {
+        action: {
+          label: 'Undo',
+          onclick: async () => {
+            await mutate(`/api/v1/study-sessions/${session.id}/restore`, { method: 'POST' }, 'Study session restored');
+          }
+        }
+      });
+    } catch (cause) {
+      requestError = messageFor(cause);
+    } finally {
+      pendingAction = '';
+    }
   }
 
   async function removeSession(session: StudySessionContext): Promise<void> {
-    await mutate(`/api/v1/study-sessions/${session.id}`, { method: 'DELETE' }, 'Study session removed');
+    pendingAction = session.id;
+    requestError = '';
+    try {
+      await api(`/api/v1/study-sessions/${session.id}`, { method: 'DELETE' });
+      await refreshAll();
+      showToast('Study session removed', {
+        action: {
+          label: 'Undo',
+          onclick: async () => {
+            await mutate(`/api/v1/tasks/${session.taskID}/study-sessions`, {
+              method: 'POST',
+              body: JSON.stringify({ scheduledDate: session.scheduledDate, plannedMinutes: session.plannedMinutes })
+            }, 'Study session restored');
+          }
+        }
+      });
+    } catch (cause) {
+      requestError = messageFor(cause);
+    } finally {
+      pendingAction = '';
+    }
   }
 
   async function planCourse(): Promise<void> {
