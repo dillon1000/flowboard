@@ -632,7 +632,7 @@
     transform 150ms var(--ease-out);
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--can-hover) {
   .semester-assignment:hover {
     background: radial-gradient(
         circle at 0 0,
@@ -755,7 +755,7 @@
    Responsive semester
    ========================================================================== */
 
-@media (width <= 1380px) {
+@media (--viewport-wide) {
   .semester-planner {
     grid-template-columns: 244px minmax(0, 1fr);
   }
@@ -778,7 +778,7 @@
   }
 }
 
-@media (width <= 1120px) {
+@media (--viewport-content) {
   .semester-insights {
     display: none;
   }
@@ -796,7 +796,7 @@
   }
 }
 
-@media (width <= 900px) {
+@media (--viewport-navigation) {
   .semester-planner {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
@@ -819,7 +819,7 @@
   }
 }
 
-@media (width <= 640px) {
+@media (--viewport-compact) {
   .semester-term-header {
     min-height: 0;
     padding: 20px 16px;

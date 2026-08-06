@@ -390,7 +390,7 @@ form.panel-row .button {
   scale: 1;
 }
 
-@media (max-width: 900px) {
+@media (--viewport-navigation) {
   .settings-split {
     grid-template-columns: 1fr;
   }

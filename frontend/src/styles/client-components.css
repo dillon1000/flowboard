@@ -445,7 +445,7 @@ span.flatpickr-weekday {
   padding: 0 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   .time-picker-panel {
     transition-duration: 1ms;
   }

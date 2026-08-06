@@ -86,7 +86,7 @@
 
 /* Desktop renders the planner at 80% scale to increase its information density.
    The larger canvas offsets that scale, so the planner still fills the workspace. */
-@media (width > 820px) {
+@media (--above-viewport-shell) {
   .study-planner {
     width: 125%;
     height: 125%;
@@ -814,7 +814,7 @@
   transition: color var(--duration) var(--ease), opacity var(--duration) var(--ease), transform 150ms var(--ease-out);
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--can-hover) {
   .study-assignment:hover {
     background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--study-course-glow) 22%, transparent), transparent 82px), var(--surface-hover);
     box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
@@ -1523,7 +1523,7 @@
   grid-template-columns: minmax(150px, 1fr) 150px 110px 110px auto;
 }
 
-@media (width <= 820px) {
+@media (--viewport-shell) {
   .study-workflow-band {
     grid-template-columns: auto minmax(0, 1fr);
     padding: 14px 16px;
@@ -1555,7 +1555,7 @@
    Responsive planner
    ========================================================================== */
 
-@media (width <= 1380px) {
+@media (--viewport-wide) {
   .study-planner {
     grid-template-columns: 232px minmax(0, 1fr);
   }
@@ -1574,7 +1574,7 @@
   }
 }
 
-@media (width <= 1120px) {
+@media (--viewport-content) {
   .study-unplanned {
     display: none;
   }
@@ -1592,7 +1592,7 @@
   }
 }
 
-@media (width <= 820px) {
+@media (--viewport-shell) {
   .study-overview-page {
     --sidebar-width: 248px;
     --topbar-height: 56px;
@@ -1687,7 +1687,7 @@
   }
 }
 
-@media (width <= 640px) {
+@media (--viewport-compact) {
   .study-week-header {
     min-height: auto;
     padding: 24px 16px;
@@ -1767,7 +1767,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   .study-day-toggle,
   .study-day-toggle-icons svg,
   .study-day-bar,
@@ -1788,7 +1788,7 @@
   animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   ::view-transition-group(study-day-0),
   ::view-transition-group(study-day-1),
   ::view-transition-group(study-day-2),
