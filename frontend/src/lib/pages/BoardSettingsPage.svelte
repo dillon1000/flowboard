@@ -55,7 +55,7 @@
   let deleteOpen = $state(false);
   let propertyType = $state('text');
   const viewTypeOptions: SelectMenuOption[] = [
-    { value: 'board', label: 'Board' },
+    { value: 'board', label: 'Columns' },
     { value: 'table', label: 'Table' },
     { value: 'calendar', label: 'Calendar' },
     { value: 'gantt', label: 'Gantt' },
@@ -80,7 +80,7 @@
   ];
   const groupOptions: SelectMenuOption[] = [
     { value: 'status', label: 'Status' },
-    { value: 'priority', label: 'Severity' }
+    { value: 'priority', label: 'Priority' }
   ];
   const sortDirectionOptions: SelectMenuOption[] = [
     { value: 'ascending', label: 'Ascending' },
@@ -134,7 +134,7 @@
           ? { description: String(data.get('description') ?? '') || null }
           : { name: String(data.get('name') ?? ''), description: String(data.get('description') ?? '') || null })
       },
-      'Board saved'
+      'Course saved'
     );
   }
 
@@ -202,7 +202,7 @@
           isCompleted: kind === 'status' && data.has('isCompleted')
         })
       },
-      kind === 'status' ? 'Status saved' : 'Severity saved'
+      kind === 'status' ? 'Status saved' : 'Priority saved'
     );
     if (saved) editingWorkflowOption = null;
   }
@@ -222,7 +222,7 @@
           isCompleted: data.has('isCompleted')
         })
       },
-      kind === 'status' ? 'Status added' : 'Severity added'
+      kind === 'status' ? 'Status added' : 'Priority added'
     );
     if (saved) form.reset();
   }
@@ -298,7 +298,7 @@
         `/api/v1/boards/${board.id}/templates/${templateID}/instantiate`,
         { method: 'POST' }
       );
-      showToast('Task created from template');
+      showToast('Assignment created from template');
       await goto(task.browserPath, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
@@ -336,7 +336,7 @@
     const saved = await mutate(
       `/api/v1/boards/${board.id}/import`,
       { method: 'POST', body: new FormData(form) },
-      'Board data imported'
+      'Course data imported'
     );
     if (saved) form.reset();
   }
@@ -346,7 +346,7 @@
     requestError = '';
     try {
       const copy = await api<BoardResponse>(`/api/v1/boards/${board.id}/duplicate`, { method: 'POST' });
-      showToast('Board duplicated');
+      showToast('Course duplicated');
       await goto(`/app/boards/${copy.id}`, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
@@ -355,7 +355,7 @@
   }
 
   async function deleteBoard(): Promise<void> {
-    if (await mutate(`/api/v1/boards/${board.id}`, { method: 'DELETE' }, 'Board deleted')) {
+    if (await mutate(`/api/v1/boards/${board.id}`, { method: 'DELETE' }, 'Course deleted')) {
       await goto('/app', { invalidateAll: true });
     }
   }
@@ -400,7 +400,7 @@
   <header class="page-header">
     <div class="page-title">
       <a class="page-eyebrow" href={board.firstViewHref}><ChevronLeft size={14} />{board.name}</a>
-      <h1>Board settings</h1>
+      <h1>Course settings</h1>
       <p>Configure views, fields, templates, sharing, and data.</p>
     </div>
   </header>
@@ -410,7 +410,7 @@
   {/if}
 
   <div class="settings-grid">
-    <nav class="settings-menu" aria-label="Board settings sections">
+    <nav class="settings-menu" aria-label="Course settings sections">
       <a class="nav-link" href="#general"><Settings size={15} /><span>General</span></a>
       <a class="nav-link" href="#views"><Columns3 size={15} /><span>Views</span></a>
       <a class="nav-link" href="#workflow"><ListFilter size={15} /><span>Workflow</span></a>
@@ -419,7 +419,7 @@
       <a class="nav-link" href="#templates"><Copy size={15} /><span>Templates</span></a>
       <a class="nav-link" href="#tap-actions"><KeyRound size={15} /><span>Tap actions</span></a>
       <a class="nav-link" href="#data"><Download size={15} /><span>Data</span></a>
-      <a class="nav-link" href="#danger"><Archive size={15} /><span>Board actions</span></a>
+      <a class="nav-link" href="#danger"><Archive size={15} /><span>Course actions</span></a>
     </nav>
 
     <div class="settings-content">
@@ -428,7 +428,7 @@
         <form class="panel panel-form" onsubmit={saveBoard}>
           <div class="field"><label for="settings-board-name">Name</label><input class="input" id="settings-board-name" name="name" value={board.name} minlength="2" maxlength="80" required readonly={board.isCanvasLinked} aria-describedby={board.isCanvasLinked ? 'canvas-board-name-help' : undefined} />{#if board.isCanvasLinked}<span class="field-help" id="canvas-board-name-help">Canvas manages the course name.</span>{/if}</div>
           <div class="field"><label for="settings-board-description">Description</label><textarea class="textarea" id="settings-board-description" name="description" maxlength="500">{board.description}</textarea></div>
-          <div class="form-actions"><button class="button primary" type="submit" disabled={pending}>Save board</button></div>
+          <div class="form-actions"><button class="button primary" type="submit" disabled={pending}>Save course</button></div>
         </form>
       </section>
 
@@ -452,10 +452,10 @@
       </section>
 
       <section class="section" id="workflow">
-        <div class="section-heading"><div><h2>Workflow</h2><p>Add the status and severity values that this board needs.</p></div></div>
+        <div class="section-heading"><div><h2>Workflow</h2><p>Add the status and priority values that this course needs.</p></div></div>
         <div class="settings-split">
           <div class="panel">
-            <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward board progress.</span></span></div>
+            <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward course progress.</span></span></div>
             {#each board.statuses as option (option.value)}
               <div class="panel-row">
                 <span class={`badge status ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
@@ -472,25 +472,25 @@
           </div>
 
           <div class="panel">
-            <div class="panel-row"><span class="panel-row-main"><strong>Severities</strong><span>Severity describes the effect or urgency of a task.</span></span></div>
+            <div class="panel-row"><span class="panel-row-main"><strong>Priorities</strong><span>Priority shows which assignments need attention first.</span></span></div>
             {#each board.severities as option (option.value)}
               <div class="panel-row">
                 <span class={`badge ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
                 <span class="panel-row-main"></span>
-                <button class="button small" type="button" aria-label={`Edit severity ${option.name}`} onclick={() => (editingWorkflowOption = { kind: 'severity', option })}>Edit</button>
+                <button class="button small" type="button" aria-label={`Edit priority ${option.name}`} onclick={() => (editingWorkflowOption = { kind: 'severity', option })}>Edit</button>
               </div>
             {/each}
             <form class="panel-row workflow-option-form" onsubmit={(event) => addWorkflowOption(event, 'severity')}>
-              <input class="input" name="name" placeholder="Severity name" maxlength="40" required />
+              <input class="input" name="name" placeholder="Priority name" maxlength="40" required />
               <WorkflowColorField />
-              <button class="button small" type="submit" disabled={pending}>Add severity</button>
+              <button class="button small" type="submit" disabled={pending}>Add priority</button>
             </form>
           </div>
         </div>
       </section>
 
       <section class="section" id="fields">
-        <div class="section-heading"><div><h2>Custom fields</h2><p>Add typed fields to every task on this board.</p></div></div>
+        <div class="section-heading"><div><h2>Custom fields</h2><p>Add typed fields to every assignment in this course.</p></div></div>
         <div class="panel">
           {#each board.properties as property}<div class="panel-row"><Tag size={15} /><span class="panel-row-main"><strong>{property.name}</strong><span>{property.detail}</span></span></div>{/each}
           <form class="panel-row" onsubmit={addProperty}>
@@ -512,15 +512,15 @@
       </section>
 
       <section class="section" id="templates">
-        <div class="section-heading"><div><h2>Task templates</h2><p>Reuse common task structure.</p></div></div>
+        <div class="section-heading"><div><h2>Assignment templates</h2><p>Reuse a common assignment structure.</p></div></div>
         <div class="panel">
           {#each board.templates as template (template.id)}<div class="panel-row"><Copy size={15} /><span class="panel-row-main"><strong>{template.name}</strong><span>{template.title}</span></span>{#if template.isDefault}<span class="badge">Default</span>{/if}<button class="button small" type="button" onclick={() => useTemplate(template.id)} disabled={pending}>Use</button><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/templates/${template.id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) }, 'Default template changed')} disabled={pending}>Set default</button><button class="icon-button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/templates/${template.id}`, { method: 'DELETE' }, 'Template deleted')} aria-label={`Delete ${template.name}`} disabled={pending}><X size={14} /></button></div>{/each}
-          <form class="panel-row" onsubmit={addTemplate}><input class="input" name="name" placeholder="Template name" maxlength="80" required /><input class="input" name="title" placeholder="Default task title" maxlength="120" required /><button class="button small" type="submit" disabled={pending}>Add template</button></form>
+          <form class="panel-row" onsubmit={addTemplate}><input class="input" name="name" placeholder="Template name" maxlength="80" required /><input class="input" name="title" placeholder="Default assignment title" maxlength="120" required /><button class="button small" type="submit" disabled={pending}>Add template</button></form>
         </div>
       </section>
 
       <section class="section" id="tap-actions">
-        <div class="section-heading"><div><h2>Tap actions</h2><p>Run a fixed task change from an NFC tag without signing in.</p></div><button class="button primary" type="button" onclick={() => { editingTap = null; tapOpen = true; }}><Plus size={14} />New Tap action</button></div>
+        <div class="section-heading"><div><h2>Tap actions</h2><p>Run a fixed assignment change from an NFC tag without signing in.</p></div><button class="button primary" type="button" onclick={() => { editingTap = null; tapOpen = true; }}><Plus size={14} />New Tap action</button></div>
         {#if provisionedURL}
           <div class="panel tap-provision">
             <div class="tap-provision-main">
@@ -560,17 +560,17 @@
       <section class="section" id="data">
         <div class="section-heading"><h2>Data</h2></div>
         <div class="panel">
-          <div class="panel-row"><span class="panel-row-main"><strong>Export board</strong><span>Download tasks and configuration as JSON.</span></span><a class="button" href={`/api/v1/boards/${board.id}/export`}><Download size={14} />Export</a></div>
-          <form class="panel-row" onsubmit={importBoard}><span class="panel-row-main"><strong>Import board</strong><span>Add tasks from a Flowboard JSON export.</span></span><label class="button"><Upload size={14} />Choose file<input class="sr-only" type="file" name="file" accept="application/json" required /></label><button class="button" type="submit" disabled={pending}>Import</button></form>
+          <div class="panel-row"><span class="panel-row-main"><strong>Export course</strong><span>Download assignments and course settings as JSON.</span></span><a class="button" href={`/api/v1/boards/${board.id}/export`}><Download size={14} />Export</a></div>
+          <form class="panel-row" onsubmit={importBoard}><span class="panel-row-main"><strong>Import course</strong><span>Add assignments from a Flowboard JSON export.</span></span><label class="button"><Upload size={14} />Choose file<input class="sr-only" type="file" name="file" accept="application/json" required /></label><button class="button" type="submit" disabled={pending}>Import</button></form>
         </div>
       </section>
 
       <section class="section" id="danger">
-        <div class="section-heading"><h2>Board actions</h2></div>
+        <div class="section-heading"><h2>Course actions</h2></div>
         <div class="panel danger-zone">
-          <div class="panel-row"><span class="panel-row-main"><strong>{board.isArchived ? 'Restore board' : 'Archive board'}</strong><span>Archived boards leave the main navigation.</span></span><button class="button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !board.isArchived }) }, board.isArchived ? 'Board restored' : 'Board archived')} disabled={pending}><Archive size={14} />{board.isArchived ? 'Restore' : 'Archive'}</button></div>
-          <div class="panel-row"><span class="panel-row-main"><strong>Duplicate board</strong><span>Copy tasks, views, fields, and templates.</span></span><button class="button" type="button" onclick={duplicateBoard} disabled={pending}><Copy size={14} />Duplicate</button></div>
-          {#if board.isOwner && !board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Delete board</strong><span>Permanently remove this board and its tasks.</span></span><button class="button danger" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div>{:else if board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Canvas course cannot be deleted</strong><span>Disconnect Canvas in Integrations to turn this into an ordinary local board.</span></span><a class="button small" href="/app/settings/integrations">Open integrations</a></div>{/if}
+          <div class="panel-row"><span class="panel-row-main"><strong>{board.isArchived ? 'Restore course' : 'Archive course'}</strong><span>Archived courses leave the main navigation.</span></span><button class="button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !board.isArchived }) }, board.isArchived ? 'Course restored' : 'Course archived')} disabled={pending}><Archive size={14} />{board.isArchived ? 'Restore' : 'Archive'}</button></div>
+          <div class="panel-row"><span class="panel-row-main"><strong>Duplicate course</strong><span>Copy assignments, views, fields, and templates.</span></span><button class="button" type="button" onclick={duplicateBoard} disabled={pending}><Copy size={14} />Duplicate</button></div>
+          {#if board.isOwner && !board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Delete course</strong><span>Permanently remove this course and its assignments.</span></span><button class="button danger" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div>{:else if board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Canvas course cannot be deleted</strong><span>Disconnect Canvas in Integrations to turn this into a local course.</span></span><a class="button small" href="/app/settings/integrations">Open integrations</a></div>{/if}
         </div>
       </section>
     </div>
@@ -588,7 +588,7 @@
           <div class="field"><label for="view-name">Name</label><input class="input" id="view-name" name="name" value={editingView.name} minlength="1" maxlength="80" required /></div>
           <div class="field"><label for="view-type">Layout</label><SelectMenu id="view-type" name="type" value={editingView.type} options={viewTypeOptions} ariaLabel="Layout" /></div>
         </div>
-        <div class="field"><label for="view-group">Group board cards by</label><SelectMenu id="view-group" name="groupBy" value={editingView.groupBy} options={groupOptions} ariaLabel="Group board cards by" initialFocus /></div>
+        <div class="field"><label for="view-group">Group assignments by</label><SelectMenu id="view-group" name="groupBy" value={editingView.groupBy} options={groupOptions} ariaLabel="Group assignments by" initialFocus /></div>
         <div class="form-grid">
           <div class="field"><label for="view-filter-field">Filter field</label><input class="input" id="view-filter-field" name="filterField" value={editingView.filterField} placeholder="status, priority, or label" /></div>
           <div class="field"><label for="view-filter-value">Filter value</label><input class="input" id="view-filter-value" name="filterValue" value={editingView.filterValue} placeholder="review" /></div>
@@ -605,7 +605,7 @@
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-workflow-title" tabindex="-1" use:dialogLayer={{ close: () => (editingWorkflowOption = null) }}>
     <form class="dialog" onsubmit={editWorkflowOption}>
       <div class="dialog-header">
-        <div><h2 id="edit-workflow-title">Edit {editingWorkflowOption.kind}</h2><p>The updated name and color apply everywhere on this board.</p></div>
+        <div><h2 id="edit-workflow-title">Edit {editingWorkflowOption.kind === 'severity' ? 'priority' : editingWorkflowOption.kind}</h2><p>The updated name and color apply everywhere in this course.</p></div>
         <button class="icon-button" type="button" onclick={() => (editingWorkflowOption = null)} aria-label="Close"><X size={16} /></button>
       </div>
       <div class="dialog-body">
@@ -615,13 +615,13 @@
           <label class="checkbox-label"><input class="checkbox-input" type="checkbox" name="isCompleted" value="true" checked={editingWorkflowOption.option.isCompleted} /><span class="checkbox-control" aria-hidden="true"><Check size={13} /></span><span>Counts as completed</span></label>
         {/if}
       </div>
-      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingWorkflowOption = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save {editingWorkflowOption.kind}</button></div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingWorkflowOption = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save {editingWorkflowOption.kind === 'severity' ? 'priority' : editingWorkflowOption.kind}</button></div>
     </form>
   </div>
 {/if}
 
 {#if deleteOpen}
   <div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-board-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}>
-    <div class="dialog"><div class="dialog-header"><div><h2 id="delete-board-title">Delete {board.name}?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteBoard} disabled={pending}>Delete board</button></div></div>
+    <div class="dialog"><div class="dialog-header"><div><h2 id="delete-board-title">Delete {board.name}?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteBoard} disabled={pending}>Delete course</button></div></div>
   </div>
 {/if}

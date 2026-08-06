@@ -46,10 +46,10 @@
   ];
 
   const sortFields: { value: SortField; name: string }[] = [
-    { value: 'board', name: 'Board order' },
+    { value: 'board', name: 'Manual order' },
     { value: 'due', name: 'Due date' },
     { value: 'title', name: 'Title' },
-    { value: 'severity', name: 'Severity' },
+    { value: 'severity', name: 'Priority' },
     { value: 'effort', name: 'Effort' },
     { value: 'grade', name: 'Score' }
   ];
@@ -95,7 +95,7 @@
   const severityOrder = $derived(
     new Map<string, number>(board.severityOptions.map((option: TaskOptionContext, index: number) => [option.value, index]))
   );
-  const sortName = $derived(sortFields.find((option) => option.value === sortField)?.name ?? 'Board order');
+  const sortName = $derived(sortFields.find((option) => option.value === sortField)?.name ?? 'Manual order');
   const dueName = $derived(dueFilters.find((option) => option.value === dueFilter)?.name ?? 'Any time');
 
   const isFiltered = $derived(
@@ -481,10 +481,10 @@
           {/snippet}
         </PopoverMenu>
 
-        <PopoverMenu panelLabel="Filter by severity" panelRole="listbox">
+        <PopoverMenu panelLabel="Filter by priority" panelRole="listbox">
           {#snippet trigger(control)}
             <button class:on={severityFilter.length > 0} class="tool-trigger" type="button" aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
-              Severity
+              Priority
               {#if severityFilter.length}<span class="tool-badge">{severityFilter.length}</span>{/if}
               <CaretDown size={12} />
             </button>
@@ -503,7 +503,7 @@
             {/each}
             {#if severityFilter.length}
               <div class="menu-separator"></div>
-              <button class="menu-option" type="button" role="option" aria-selected="false" onclick={() => (severityFilter = [])}>Every severity</button>
+              <button class="menu-option" type="button" role="option" aria-selected="false" onclick={() => (severityFilter = [])}>Every priority</button>
             {/if}
           {/snippet}
         </PopoverMenu>
@@ -570,7 +570,7 @@
           {#if isNarrowed}
             <span class="tool-result" aria-live="polite">{matchedCount} of {board.tasks.length} shown</span>
             {#if board.activeView.isBoard && isSorted}
-              <span class="tool-note">Clear the sort to drag cards</span>
+              <span class="tool-note">Clear the sort to drag assignments</span>
             {/if}
             <button class="tool-clear" type="button" onclick={clearControls}><X size={12} />Reset</button>
           {:else}
@@ -624,7 +624,7 @@
                 <tr>
                   <th>Assignment</th>
                   <th>Stage</th>
-                  <th>Severity</th>
+                  <th>Priority</th>
                   <th class="numeric">Effort</th>
                   <th class="numeric">Due</th>
                   <th class="numeric">Score</th>

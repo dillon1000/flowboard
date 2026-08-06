@@ -58,15 +58,15 @@
   async function prepare(): Promise<void> {
     tapState = 'running';
     heading = 'Opening tag…';
-    detail = 'Loading the task form.';
+    detail = 'Loading the assignment form.';
     outcome = '';
     retryAction = null;
     try {
       prepared = await request<TapPreparationResponse>('/api/v1/taps/prepare', { token });
       if (prepared.kind === 'create_task' && prepared.task) {
         tapState = 'ready';
-        heading = prepared.actionName || 'Create task';
-        detail = prepared.actionDescription || 'Enter the task details.';
+        heading = prepared.actionName || 'Create assignment';
+        detail = prepared.actionDescription || 'Enter the assignment details.';
         await tick();
         titleInput?.focus();
       } else {
@@ -170,7 +170,7 @@
   <main>
     <section class="tap-card" data-state={tapState} aria-live="polite" aria-labelledby="tap-title">
       {#if tapState !== 'ready'}<div class="state-icon" aria-hidden="true">{#if tapState === 'running'}<span class="spinner"></span>{:else if tapState === 'success'}<span class="check">✓</span>{:else}<img src={tapState === 'rotation' ? '/tagneedsrotation.svg' : '/scanerror.svg'} alt="" />{/if}</div>{/if}
-      <p class="state-label">{tapState === 'success' ? 'Action complete' : tapState === 'ready' ? 'Create task' : tapState === 'error' || tapState === 'rotation' ? 'Tap action stopped' : 'Tap action'}</p>
+      <p class="state-label">{tapState === 'success' ? 'Action complete' : tapState === 'ready' ? 'Create assignment' : tapState === 'error' || tapState === 'rotation' ? 'Tap action stopped' : 'Tap action'}</p>
       <h1 id="tap-title">{heading}</h1>
       {#if detail}<p class="message">{detail}</p>{/if}
       {#if outcome}<p class="result">{outcome}</p>{/if}
@@ -178,10 +178,10 @@
       {#if tapState === 'ready' && prepared?.task}
         <form class="tap-form" onsubmit={submitTask}>
           <div class="form-grid">
-            <label class="field wide"><span class="field-label">Task title</span><input bind:this={titleInput} name="title" maxlength="120" required /></label>
-            <label class="field wide"><span class="field-label">Task description</span><textarea name="description" maxlength="5000"></textarea></label>
+            <label class="field wide"><span class="field-label">Assignment title</span><input bind:this={titleInput} name="title" maxlength="120" required /></label>
+            <label class="field wide"><span class="field-label">Assignment description</span><textarea name="description" maxlength="5000"></textarea></label>
             <div class="field"><label class="field-label" for="tap-task-status">Status</label><SelectMenu id="tap-task-status" name="status" value={prepared.task.status} options={menuOptions(prepared.task.statuses)} ariaLabel="Status" /></div>
-            <div class="field"><label class="field-label" for="tap-task-priority">Severity</label><SelectMenu id="tap-task-priority" name="priority" value={prepared.task.priority} options={menuOptions(prepared.task.priorities)} ariaLabel="Severity" /></div>
+            <div class="field"><label class="field-label" for="tap-task-priority">Priority</label><SelectMenu id="tap-task-priority" name="priority" value={prepared.task.priority} options={menuOptions(prepared.task.priorities)} ariaLabel="Priority" /></div>
             <div class="field"><label class="field-label" for="tap-task-start">Start date</label><DatePicker id="tap-task-start" name="startAt" label="Start date" /></div>
             <div class="field"><label class="field-label" for="tap-task-due">Due date</label><DatePicker id="tap-task-due" name="dueAt" label="Due date" /></div>
             <label class="field wide"><span class="field-label">Labels</span><input name="labels" maxlength="500" placeholder="Design, Launch" /></label>
@@ -191,7 +191,7 @@
               </div>
             {/each}
           </div>
-          <button type="submit">Create task</button>
+          <button type="submit">Create assignment</button>
         </form>
       {/if}
       {#if retryAction}<button type="button" onclick={() => retryAction?.()}>Try again</button>{/if}

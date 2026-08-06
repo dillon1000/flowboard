@@ -824,7 +824,7 @@ struct BoardPageContext: Encodable {
         self.hasTasks = !tasks.isEmpty
         let configuration = activeView.configuration
         let groupBy = configuration?.groupBy ?? "status"
-        self.groupByName = groupBy == "priority" ? "Severity" : "Status"
+        self.groupByName = groupBy == "priority" ? "Priority" : "Status"
         self.hasFilters = !(configuration?.filters.isEmpty ?? true)
         self.filterSummary = configuration?.filters.first.map {
             "\($0.field.replacingOccurrences(of: "_", with: " ").capitalized): \($0.value)"
