@@ -1,6 +1,5 @@
 import { goto, invalidateAll } from '$app/navigation';
 import { beginActivity } from '$lib/ui/progress';
-import { showToast } from '$lib/ui/toast';
 
 export class APIError extends Error {
   constructor(
@@ -46,11 +45,9 @@ export async function refreshAll(): Promise<void> {
   }
 }
 
-/** Returns a useful inline error and also puts it in the persistent status stack. */
+/** Converts an unknown request failure into a useful message for the calling surface. */
 export function messageFor(error: unknown): string {
-  const message = error instanceof Error ? error.message : 'The request failed.';
-  showToast(message, { tone: 'error', duration: 6000 });
-  return message;
+  return error instanceof Error ? error.message : 'The request failed.';
 }
 
 async function errorMessage(response: Response): Promise<string> {
