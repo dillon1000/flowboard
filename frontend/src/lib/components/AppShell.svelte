@@ -152,7 +152,7 @@
       </nav>
       <div class="topbar-actions">
         <form class="search-control" method="get" action="/app/tasks" role="search">
-          <Search size={16} /><input bind:this={searchInput} name="q" aria-label="Search tasks" placeholder="Search tasks" /><kbd>⌘ K</kbd>
+          <Search size={16} /><input bind:this={searchInput} name="q" aria-label="Search assignments" placeholder="Search assignments" /><kbd>⌘ K</kbd>
         </form>
         <button class="icon-button mobile-search-button" type="button" onclick={openSearch} aria-label="Search assignments"><Search size={16} /></button>
         <ThemeToggle />

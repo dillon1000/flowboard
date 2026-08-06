@@ -226,7 +226,7 @@
   async function toggleFollow(): Promise<void> {
     await mutate(`/api/v1/tasks/${detail.task.id}/followers/me`, {
       method: detail.isFollowing ? 'DELETE' : 'POST'
-    }, detail.isFollowing ? 'Task unfollowed' : 'Task followed');
+    }, detail.isFollowing ? 'Assignment unfollowed' : 'Assignment followed');
   }
 
   function openReminders(): void {
@@ -297,7 +297,7 @@
     const saved = await mutate(`/api/v1/tasks/${detail.task.id}`, {
       method: 'PATCH',
       body: JSON.stringify(body)
-    }, 'Task updated');
+    }, 'Assignment updated');
     if (saved) editOpen = false;
   }
 
@@ -485,7 +485,7 @@
 
   async function archiveTask(): Promise<void> {
     const wasArchived = detail.task.isArchived;
-    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !wasArchived }) }, wasArchived ? 'Task restored' : 'Task archived') && !wasArchived) {
+    if (await mutate(`/api/v1/tasks/${detail.task.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !wasArchived }) }, wasArchived ? 'Assignment restored' : 'Assignment archived') && !wasArchived) {
       await goto(detail.boardHref);
     }
   }
@@ -495,7 +495,7 @@
     requestError = '';
     try {
       await api(`/api/v1/tasks/${detail.task.id}`, { method: 'DELETE' });
-      showToast('Task deleted');
+      showToast('Assignment deleted');
       await goto(detail.boardHref, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
@@ -539,7 +539,7 @@
       <h1>{detail.task.title}</h1>
       <div class="task-headline-actions">
         {#if detail.canEdit}
-          <PopoverMenu panelLabel="Change task status" panelRole="listbox" align="right">
+          <PopoverMenu panelLabel="Change assignment status" panelRole="listbox" align="right">
             {#snippet trigger(control)}
               <button class="task-status-trigger" type="button" disabled={pending} aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
                 <span class={`badge status ${selectedStatusOption?.colorClass ?? detail.task.statusColorClass}`} style={selectedStatusOption?.colorStyle ?? detail.task.statusColorStyle}>{selectedStatusOption?.name ?? detail.task.statusName}</span>
@@ -568,9 +568,9 @@
           <button class="button primary" type="button" onclick={() => changeStatus(completionOption.value)} disabled={pending}><CheckCircle size={15} />Mark complete</button>
         {/if}
 
-        <PopoverMenu panelLabel="More task actions" align="right">
+        <PopoverMenu panelLabel="More assignment actions" align="right">
           {#snippet trigger(control)}
-            <button class="icon-button task-more" type="button" aria-haspopup="menu" aria-expanded={control.open} aria-label="More task actions" onclick={control.toggle}>
+            <button class="icon-button task-more" type="button" aria-haspopup="menu" aria-expanded={control.open} aria-label="More assignment actions" onclick={control.toggle}>
               <DotsThree size={18} weight="bold" />
             </button>
           {/snippet}
@@ -583,13 +583,13 @@
             </button>
             {#if detail.canEdit}
               <button class="menu-option" type="button" role="menuitem" onclick={() => { close(); editOpen = true; }}>
-                <Pencil size={15} />{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit task'}
+                <Pencil size={15} />{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit assignment'}
               </button>
               <div class="menu-separator"></div>
               <button class="menu-option" type="button" role="menuitem" disabled={pending} onclick={() => { close(); archiveTask(); }}>
-                <Archive size={15} />{detail.task.isArchived ? 'Restore task' : 'Archive task'}
+                <Archive size={15} />{detail.task.isArchived ? 'Restore assignment' : 'Archive assignment'}
               </button>
-              {#if !detail.task.isCanvasLinked}<button class="menu-option danger" type="button" role="menuitem" onclick={() => { close(); deleteOpen = true; }}><Trash2 size={15} />Delete task</button>{/if}
+              {#if !detail.task.isCanvasLinked}<button class="menu-option danger" type="button" role="menuitem" onclick={() => { close(); deleteOpen = true; }}><Trash2 size={15} />Delete assignment</button>{/if}
             {/if}
           {/snippet}
         </PopoverMenu>
@@ -816,11 +816,11 @@
         {/snippet}
         {#snippet severityEditor()}
           <form class="property-inline-form" onsubmit={(event) => saveInlineProperty(event, 'priority')}>
-            <SelectMenu id="inline-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Severity" />
+            <SelectMenu id="inline-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Priority" />
             {@render inlineActions()}
           </form>
         {/snippet}
-        {@render detailRow('priority', 'Severity', true, severityValue, severityEditor)}
+        {@render detailRow('priority', 'Priority', true, severityValue, severityEditor)}
 
         {#snippet assigneeValue()}<span>{detail.task.assigneeName}</span>{/snippet}
         {#snippet assigneeEditor()}
@@ -900,11 +900,11 @@
 {#if editOpen}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}>
     <form class="dialog wide" onsubmit={saveTask}>
-      <div class="dialog-header"><div><h2 id="edit-task-title">{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit task'}</h2><p>{detail.task.isCanvasLinked ? 'Canvas manages the academic fields for this assignment.' : 'Update the task and its schedule.'}</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-header"><div><h2 id="edit-task-title">{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit assignment'}</h2><p>{detail.task.isCanvasLinked ? 'Canvas manages the academic fields for this assignment.' : 'Update the assignment and its schedule.'}</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body"><div class="form-grid">
         {#if !detail.task.isCanvasLinked}<div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><textarea class="textarea" id="edit-description" name="description" maxlength="5000">{detail.task.description}</textarea><span class="field-help">Markdown is supported.</span></div>{/if}
         <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={currentStatus} options={statusMenuOptions} ariaLabel="Status" /></div>
-        <div class="field"><label for="edit-priority">Severity</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Severity" /></div>
+        <div class="field"><label for="edit-priority">Priority</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Priority" /></div>
         <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
         <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>
         {#if !detail.task.isCanvasLinked}<div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div><div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>{/if}
@@ -920,7 +920,7 @@
 {#if remindersOpen}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="task-reminders-title" tabindex="-1" use:dialogLayer={{ close: () => (remindersOpen = false) }}>
     <div class="dialog reminder-dialog">
-      <div class="dialog-header"><div><h2 id="task-reminders-title">Task reminders</h2><p>Email reminders for this assignment.</p></div><button class="icon-button" type="button" onclick={() => (remindersOpen = false)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-header"><div><h2 id="task-reminders-title">Assignment reminders</h2><p>Email reminders for this assignment.</p></div><button class="icon-button" type="button" onclick={() => (remindersOpen = false)} aria-label="Close"><X size={16} /></button></div>
       <div class="dialog-body reminder-dialog-body">
         <div class="reminder-recipient"><Alarm size={18} /><span><strong>Send to {currentUserEmail}</strong><small>Each reminder is sent once. You can add up to three.</small></span><span class="badge count tabular">{detail.reminders.length}/3</span></div>
 
@@ -952,4 +952,4 @@
   </div>
 {/if}
 
-{#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-task-title">Delete this task?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteTask} disabled={pending}>Delete task</button></div></div></div>{/if}
+{#if deleteOpen}<div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-task-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}><div class="dialog"><div class="dialog-header"><div><h2 id="delete-task-title">Delete this assignment?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteTask} disabled={pending}>Delete assignment</button></div></div></div>{/if}

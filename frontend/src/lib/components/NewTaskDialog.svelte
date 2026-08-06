@@ -53,7 +53,7 @@
       form.reset();
       open = false;
       await refreshAll();
-      showToast('Task created');
+      showToast('Assignment created');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -66,7 +66,7 @@
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="new-task-title" tabindex="-1" use:dialogLayer={{ close: () => (open = false) }}>
     <form class="dialog wide" onsubmit={submit}>
       <div class="dialog-header">
-        <div><h2 id="new-task-title">Create task</h2><p>{board.hasDefaultTemplate ? `Using the ${board.defaultTemplateName} template.` : 'Add the work, then refine its details.'}</p></div>
+        <div><h2 id="new-task-title">Create assignment</h2><p>{board.hasDefaultTemplate ? `Using the ${board.defaultTemplateName} template.` : 'Add the work, then refine its details.'}</p></div>
         <button class="icon-button" type="button" onclick={() => (open = false)} aria-label="Close"><X size={16} /></button>
       </div>
       <div class="dialog-body">
@@ -75,7 +75,7 @@
           <div class="field wide"><label for="new-task-name">Title</label><input class="input" id="new-task-name" name="title" value={board.newTaskTitle} maxlength="120" required data-dialog-focus /></div>
           <div class="field wide"><label for="new-task-description">Description</label><textarea class="textarea" id="new-task-description" name="description" maxlength="5000">{board.newTaskDescription}</textarea></div>
           <div class="field"><label for="new-task-status">Status</label><SelectMenu id="new-task-status" name="status" value={board.newTaskStatus} options={statusOptions} ariaLabel="Status" /></div>
-          <div class="field"><label for="new-task-priority">Severity</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Severity" /></div>
+          <div class="field"><label for="new-task-priority">Priority</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Priority" /></div>
           <div class="field"><label for="new-task-start">Start date</label><DatePicker id="new-task-start" name="startAt" label="Start date" /></div>
           <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
           <div class="field"><label for="new-task-time">Due time</label><TimePicker id="new-task-time" name="dueTime" label="Due time" /></div>
@@ -83,7 +83,7 @@
           <div class="field wide"><label for="new-task-labels">Labels</label><input class="input" id="new-task-labels" name="labels" value={board.newTaskLabels} maxlength="500" placeholder="Design, Launch" /></div>
         </div>
       </div>
-      <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create task'}</button></div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create assignment'}</button></div>
     </form>
   </div>
 {/if}

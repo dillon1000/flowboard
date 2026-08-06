@@ -41,7 +41,7 @@
     {/if}
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Assignment</th><th>Course</th><th>Status</th><th>Severity</th><th>Plan</th><th>Due</th>{#if archived}<th>Action</th>{/if}</tr></thead>
+        <thead><tr><th>Assignment</th><th>Course</th><th>Status</th><th>Priority</th><th>Plan</th><th>Due</th>{#if archived}<th>Action</th>{/if}</tr></thead>
         <tbody>
           {#each tasks.tasks as task (task.id)}
             <tr>
