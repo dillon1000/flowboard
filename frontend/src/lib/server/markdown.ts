@@ -40,6 +40,12 @@ export function renderMarkdown(value: string): string {
       th: ['align'],
       td: ['align']
     },
+    transformTags: {
+      a: (_tagName, attributes) => ({
+        tagName: 'a',
+        attribs: { ...attributes, target: '_blank', rel: 'noopener noreferrer' }
+      })
+    },
     allowedSchemes: ['http', 'https', 'mailto']
   });
 }
