@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, messageFor, refreshAll } from '$lib/api';
   import type { APIKeysPageContext, CreatedAPIKeyResponse } from '$lib/types';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import { CheckIcon as Check, CopyIcon as Copy, KeyIcon as KeyRound, PlusIcon as Plus } from 'phosphor-svelte';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
   import { showToast } from '$lib/ui/toast';
@@ -10,6 +11,7 @@
   let pending = $state(false);
   let requestError = $state('');
   let copied = $state(false);
+  let revokeKeyID = $state('');
   const createdKey = $derived(createdKeyOverride || keys.createdKey);
 
   async function createKey(event: SubmitEvent): Promise<void> {
@@ -34,16 +36,17 @@
     }
   }
 
-  async function revoke(keyID: string): Promise<void> {
-    if (!confirm('Revoke this API key?')) return;
+  async function revoke(keyID: string): Promise<boolean> {
     pending = true;
     requestError = '';
     try {
       await api(`/api/v1/auth/api-keys/${keyID}`, { method: 'DELETE' });
       await refreshAll();
       showToast('API key revoked');
+      return true;
     } catch (cause) {
       requestError = messageFor(cause);
+      return false;
     } finally {
       pending = false;
     }
@@ -75,7 +78,7 @@
       <section class="section" aria-labelledby="create-key-title"><div class="section-heading"><div><h2 id="create-key-title">Create a key</h2><p>Use a name that identifies the script or service.</p></div></div><form class="panel panel-form" onsubmit={createKey}><div class="field"><label for="api-key-name">Name</label><input class="input" id="api-key-name" name="name" placeholder="Release automation" minlength="1" maxlength="80" required /></div><div class="form-actions"><button class="button primary" type="submit" disabled={pending}><Plus size={14} />Create key</button></div></form></section>
 
       <section class="section" aria-labelledby="active-keys-title"><div class="section-heading"><div><h2 id="active-keys-title">Active keys</h2><p>Revoke a key when a service no longer needs access.</p></div></div>
-        {#if keys.hasKeys}<div class="panel">{#each keys.keys as key (key.id)}<div class="panel-row api-key-row"><KeyRound size={16} /><span class="panel-row-main"><strong>{key.name} · <code>{key.prefix}…</code></strong><span>Created {key.createdAt} · Expires {key.expiresAt} · Last used {key.lastUsedAt}</span></span><button class="button danger small" type="button" onclick={() => revoke(key.id)} disabled={pending}>Revoke</button></div>{/each}</div>{:else}<div class="panel"><div class="panel-row"><span class="panel-row-main"><strong>No API keys</strong><span>Create a key when you are ready to connect an integration.</span></span></div></div>{/if}
+        {#if keys.hasKeys}<div class="panel">{#each keys.keys as key (key.id)}<div class="panel-row api-key-row"><KeyRound size={16} /><span class="panel-row-main"><strong>{key.name} · <code>{key.prefix}…</code></strong><span>Created {key.createdAt} · Expires {key.expiresAt} · Last used {key.lastUsedAt}</span></span><button class="button danger small" type="button" onclick={() => (revokeKeyID = key.id)} disabled={pending}>Revoke</button></div>{/each}</div>{:else}<div class="panel"><div class="panel-row"><span class="panel-row-main"><strong>No API keys</strong><span>Create a key when you are ready to connect an integration.</span></span></div></div>{/if}
       </section>
 
       <section class="section" aria-labelledby="use-key-title">
@@ -108,3 +111,5 @@
     </div>
   </div>
 </div>
+
+<ConfirmDialog open={Boolean(revokeKeyID)} title="Revoke this API key?" description="Services that use this key will lose access at once." confirmLabel="Revoke key" pendingLabel="Revoking…" oncancel={() => (revokeKeyID = '')} onconfirm={() => revoke(revokeKeyID)} />

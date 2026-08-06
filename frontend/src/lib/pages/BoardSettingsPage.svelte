@@ -3,6 +3,7 @@
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { api, messageFor, refreshAll } from '$lib/api';
   import Avatar from '$lib/components/Avatar.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import TapActionDialog from '$lib/components/TapActionDialog.svelte';
   import WorkflowColorField from '$lib/components/WorkflowColorField.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
@@ -44,6 +45,8 @@
   let tapOpen = $state(false);
   let editingTap = $state<TapActionContext | null>(null);
   let editingView = $state<BoardSettingsViewContext | null>(null);
+  let deletingView = $state<BoardSettingsViewContext | null>(null);
+  let deletingTap = $state<TapActionContext | null>(null);
   let editingWorkflowOption = $state<{
     kind: 'status' | 'severity';
     option: TaskOptionContext;
@@ -121,6 +124,16 @@
     } finally {
       pending = false;
     }
+  }
+
+  function deleteSelectedView(): Promise<boolean> {
+    if (!deletingView) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/views/${deletingView.id}`, { method: 'DELETE' }, 'View deleted');
+  }
+
+  function deleteSelectedTap(): Promise<boolean> {
+    if (!deletingTap) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/tap-actions/${deletingTap.id}`, { method: 'DELETE' }, 'Tap action deleted');
   }
 
   async function saveBoard(event: SubmitEvent): Promise<void> {
@@ -440,7 +453,7 @@
               <Columns3 size={15} />
               <span class="panel-row-main"><strong>{view.name}</strong><span>{view.typeName} · Grouped by {view.groupByName}</span></span>
               <button class="button small" type="button" onclick={() => (editingView = view)}>Configure</button>
-              <button class="icon-button" type="button" onclick={() => confirm(`Delete ${view.name}?`) && mutate(`/api/v1/boards/${board.id}/views/${view.id}`, { method: 'DELETE' }, 'View deleted')} aria-label={`Delete ${view.name}`} disabled={pending}><X size={14} /></button>
+              <button class="icon-button" type="button" onclick={() => (deletingView = view)} aria-label={`Delete ${view.name}`} disabled={pending}><X size={14} /></button>
             </div>
           {/each}
           <form class="panel-row" onsubmit={addView}>
@@ -546,7 +559,7 @@
                 <button class="button small" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/tap-actions/${action.id}`, { method: 'PATCH', body: JSON.stringify({ isEnabled: !action.isEnabled }) }, action.isEnabled ? 'Tap action disabled' : 'Tap action enabled')} disabled={pending}>{action.isEnabled ? 'Disable' : 'Enable'}</button>
                 <button class="button ghost small" type="button" onclick={() => rotateTap(action.id)} disabled={pending}>Rotate link</button>
                 <button class="button ghost small" type="button" onclick={() => { editingTap = action; tapOpen = true; }}>Edit</button>
-                <button class="icon-button" type="button" onclick={() => confirm('Delete this Tap action?') && mutate(`/api/v1/boards/${board.id}/tap-actions/${action.id}`, { method: 'DELETE' }, 'Tap action deleted')} aria-label={`Delete ${action.name}`} disabled={pending}><Trash2 size={14} /></button>
+                <button class="icon-button" type="button" onclick={() => (deletingTap = action)} aria-label={`Delete ${action.name}`} disabled={pending}><Trash2 size={14} /></button>
               </div>
             {/each}
           {:else}
@@ -578,6 +591,8 @@
 </div>
 
 <TapActionDialog bind:open={tapOpen} {board} action={editingTap} onprovision={provisionTap} />
+<ConfirmDialog open={Boolean(deletingView)} title={`Delete ${deletingView?.name ?? 'this view'}?`} description="This saved layout will be removed from the course." confirmLabel="Delete view" pendingLabel="Deleting…" oncancel={() => (deletingView = null)} onconfirm={deleteSelectedView} />
+<ConfirmDialog open={Boolean(deletingTap)} title={`Delete ${deletingTap?.name ?? 'this Tap action'}?`} description="The NFC link for this action will stop working." confirmLabel="Delete action" pendingLabel="Deleting…" oncancel={() => (deletingTap = null)} onconfirm={deleteSelectedTap} />
 
 {#if editingView}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="configure-view-title" tabindex="-1" use:dialogLayer={{ close: () => (editingView = null) }}>

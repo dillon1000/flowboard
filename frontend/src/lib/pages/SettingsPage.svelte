@@ -4,6 +4,7 @@
   import type { CommonPageContext, CreatedCalendarFeedResponse, SettingsPageContext } from '$lib/types';
   import { CheckIcon as Check, CopyIcon as Copy, SignOutIcon as LogOut } from 'phosphor-svelte';
   import Avatar from '$lib/components/Avatar.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
   import { showToast } from '$lib/ui/toast';
 
@@ -17,6 +18,8 @@
   let calendarFeedURL = $state('');
   let calendarCopied = $state(false);
   let timeZoneInput: HTMLInputElement;
+  let rotateCalendarOpen = $state(false);
+  let disableCalendarOpen = $state(false);
 
   async function saveProfile(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -62,9 +65,8 @@
     }
   }
 
-  async function rotateCalendarFeed(): Promise<void> {
+  async function rotateCalendarFeed(): Promise<boolean> {
     const wasEnabled = settings.calendarFeed.isEnabled;
-    if (wasEnabled && !confirm('Rotate this calendar link? The current link will stop working.')) return;
     calendarPending = true;
     requestError = '';
     try {
@@ -73,15 +75,16 @@
       calendarCopied = false;
       await refreshAll();
       showToast(wasEnabled ? 'Calendar link rotated' : 'Calendar link created');
+      return true;
     } catch (cause) {
       requestError = messageFor(cause);
+      return false;
     } finally {
       calendarPending = false;
     }
   }
 
-  async function revokeCalendarFeed(): Promise<void> {
-    if (!confirm('Disable this calendar feed? The current link will stop working.')) return;
+  async function revokeCalendarFeed(): Promise<boolean> {
     calendarPending = true;
     requestError = '';
     try {
@@ -89,11 +92,18 @@
       calendarFeedURL = '';
       await refreshAll();
       showToast('Calendar feed disabled');
+      return true;
     } catch (cause) {
       requestError = messageFor(cause);
+      return false;
     } finally {
       calendarPending = false;
     }
+  }
+
+  function requestCalendarFeed(): void {
+    if (settings.calendarFeed.isEnabled) rotateCalendarOpen = true;
+    else void rotateCalendarFeed();
   }
 
   async function copyCalendarFeed(): Promise<void> {
@@ -169,8 +179,8 @@
               <span>{settings.calendarFeed.isEnabled ? `Current link starts with ${settings.calendarFeed.prefix}…` : 'Create a private subscription link for any calendar app.'}</span>
             </span>
             <span class="calendar-feed-actions">
-              <button class="button" type="button" onclick={rotateCalendarFeed} disabled={calendarPending}>{settings.calendarFeed.isEnabled ? 'Rotate link' : 'Create link'}</button>
-              {#if settings.calendarFeed.isEnabled}<button class="button danger" type="button" onclick={revokeCalendarFeed} disabled={calendarPending}>Disable</button>{/if}
+              <button class="button" type="button" onclick={requestCalendarFeed} disabled={calendarPending}>{settings.calendarFeed.isEnabled ? 'Rotate link' : 'Create link'}</button>
+              {#if settings.calendarFeed.isEnabled}<button class="button danger" type="button" onclick={() => (disableCalendarOpen = true)} disabled={calendarPending}>Disable</button>{/if}
             </span>
           </div>
         </div>
@@ -180,3 +190,6 @@
     </div>
   </div>
 </div>
+
+<ConfirmDialog open={rotateCalendarOpen} title="Rotate this calendar link?" description="The current subscription link will stop working." confirmLabel="Rotate link" pendingLabel="Rotating…" tone="primary" oncancel={() => (rotateCalendarOpen = false)} onconfirm={rotateCalendarFeed} />
+<ConfirmDialog open={disableCalendarOpen} title="Disable this calendar feed?" description="The current subscription link will stop working." confirmLabel="Disable feed" pendingLabel="Disabling…" oncancel={() => (disableCalendarOpen = false)} onconfirm={revokeCalendarFeed} />
