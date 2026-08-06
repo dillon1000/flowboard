@@ -93,6 +93,53 @@ struct CustomFieldTests {
         )
     }
 
+    @Test("Field names update and deletion removes stored values")
+    func fieldLifecycle() async throws {
+        try await withApp(configure: configure) { app in
+            let session = try await register(on: app)
+            let board = try #require(try await Board.find(session.boardID, on: app.db))
+            let definition = BoardPropertyDefinition(
+                id: "reading-kind",
+                name: "Reading knd",
+                type: .text,
+                options: []
+            )
+            board.propertyDefinitions = [definition]
+            try await board.update(on: app.db)
+            let task = Task(
+                boardID: session.boardID,
+                title: "Read chapter four",
+                position: 1_000,
+                creatorID: session.userID
+            )
+            task.properties = [definition.id: "Textbook"]
+            try await task.create(on: app.db)
+
+            let updated = try await app.testing().sendRequest(
+                .PATCH,
+                "api/v1/boards/\(session.boardID)/properties/\(definition.id)",
+                headers: ["Cookie": session.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(UpdatePropertyTestRequest(name: "Reading kind"))
+                }
+            )
+            #expect(updated.status == .ok)
+            let updatedBoard = try #require(try await Board.find(session.boardID, on: app.db))
+            #expect(updatedBoard.propertyDefinitions?.first?.name == "Reading kind")
+
+            let deleted = try await app.testing().sendRequest(
+                .DELETE,
+                "api/v1/boards/\(session.boardID)/properties/\(definition.id)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(deleted.status == .noContent)
+            let deletedBoard = try #require(try await Board.find(session.boardID, on: app.db))
+            let deletedTask = try #require(try await Task.find(task.id, on: app.db))
+            #expect(deletedBoard.propertyDefinitions?.isEmpty == true)
+            #expect(deletedTask.properties?[definition.id] == nil)
+        }
+    }
+
     private func definition(
         _ type: BoardPropertyType,
         options: [BoardPropertyOption] = []
@@ -105,4 +152,8 @@ private struct CreatePropertyTestRequest: Content {
     let name: String
     let type: BoardPropertyType
     let options: [String]
+}
+
+private struct UpdatePropertyTestRequest: Content {
+    let name: String
 }

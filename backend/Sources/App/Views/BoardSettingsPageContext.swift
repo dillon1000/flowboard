@@ -14,6 +14,7 @@ struct BoardSettingsPageContext: Encodable {
     let members: [BoardMemberContext]
     let templates: [TemplateContext]
     let properties: [PropertyDefinitionContext]
+    let filterLabels: [String]
     let statuses: [TaskOptionContext]
     let severities: [TaskOptionContext]
     let defaultTapStatus: String
@@ -66,6 +67,7 @@ struct BoardSettingsPageContext: Encodable {
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
         self.properties = (board.propertyDefinitions ?? []).map(PropertyDefinitionContext.init)
+        self.filterLabels = Array(Set(tapTasks.flatMap(\.labels))).sorted()
         let defaultStatus = board.taskStatuses.first ?? BoardTaskOption.defaultStatuses[0]
         let defaultSeverity = board.taskSeverities.first ?? BoardTaskOption.defaultSeverities[0]
         self.statuses = board.taskStatuses.map {
@@ -276,16 +278,32 @@ struct TemplateContext: Encodable {
 struct PropertyDefinitionContext: Encodable {
     let id: String
     let name: String
+    let type: String
     let typeName: String
     let detail: String
+    let hasOptions: Bool
+    let options: [PropertyDefinitionOptionContext]
 
     init(definition: BoardPropertyDefinition) {
         self.id = definition.id
         self.name = definition.name
+        self.type = definition.type.rawValue
         self.typeName = definition.type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
         self.detail = definition.options.isEmpty
             ? typeName
             : "\(typeName) · \(definition.options.map(\.name).joined(separator: ", "))"
+        self.hasOptions = definition.type.usesOptions
+        self.options = definition.options.map(PropertyDefinitionOptionContext.init)
+    }
+}
+
+struct PropertyDefinitionOptionContext: Encodable {
+    let value: String
+    let label: String
+
+    init(option: BoardPropertyOption) {
+        self.value = option.id
+        self.label = option.name
     }
 }
 

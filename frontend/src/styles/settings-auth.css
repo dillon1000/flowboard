@@ -30,6 +30,63 @@
   margin-top: 0;
 }
 
+.advanced-settings {
+  margin-top: 36px;
+}
+
+.advanced-settings > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-border);
+  cursor: pointer;
+  list-style: none;
+}
+
+.advanced-settings > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-settings > summary span {
+  display: grid;
+  gap: 3px;
+}
+
+.advanced-settings > summary strong {
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.advanced-settings > summary small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.advanced-settings > summary svg {
+  flex: none;
+  transition: transform 160ms ease;
+}
+
+.advanced-settings[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.advanced-settings-body {
+  padding-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .advanced-settings > summary svg {
+    transition: none;
+  }
+}
+
 .planning-email-form {
   gap: 0;
 }
