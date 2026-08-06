@@ -152,6 +152,79 @@ export interface StudyAssignmentContext {
   description: string;
   studySessionID: string;
   hasStudySession: boolean;
+  sessionState: '' | 'planned' | 'completed' | 'skipped';
+  actualMinutes: number | null;
+  completedAt: string | null;
+  isPlannedSession: boolean;
+}
+
+export interface StudyRecurringCommitment {
+  id: string;
+  title: string;
+  kind: 'class' | 'work';
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+}
+
+export interface StudyCalendarConflict {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface StudyEstimatePreset {
+  id: string;
+  name: string;
+  minutes: number;
+  keywords: string[];
+}
+
+export interface StudySettingsContext {
+  weekdayCapacityMinutes: Record<string, number>;
+  blockedDates: string[];
+  recurringCommitments: StudyRecurringCommitment[];
+  calendarConflicts: StudyCalendarConflict[];
+  estimatePresets: StudyEstimatePreset[];
+  timeZoneConfirmed: boolean;
+  availabilityConfigured: boolean;
+}
+
+export interface StudyRecoveryContext {
+  missedSessionCount: number;
+  deadlineChangeCount: number;
+  overloadedDayCount: number;
+  issueCount: number;
+  hasIssues: boolean;
+  summary: string;
+}
+
+export interface StudyEstimateInboxItemContext {
+  id: string;
+  title: string;
+  courseName: string;
+  dueDisplay: string;
+  typeName: string;
+  suggestedMinutes: number;
+  suggestedPresetID: string;
+}
+
+export interface StudyOnboardingStepContext {
+  key: 'canvas' | 'timezone' | 'availability' | 'estimates' | 'plan';
+  title: string;
+  description: string;
+  href: string;
+  isComplete: boolean;
+  isCurrent: boolean;
+}
+
+export interface StudyOnboardingContext {
+  steps: StudyOnboardingStepContext[];
+  completedStepCount: number;
+  isVisible: boolean;
+  nextStepKey: string;
 }
 
 export interface StudyPlanCandidateContext {
@@ -179,6 +252,10 @@ export interface StudyDayContext {
   unestimatedAssignmentCount: number;
   workloadLabel: string;
   workloadClass: string;
+  availableMinutes: number;
+  availableLabel: string;
+  isBlocked: boolean;
+  isOverloaded: boolean;
 }
 
 export interface StudyWorkloadDayContext {
@@ -208,6 +285,11 @@ export interface OverviewPageContext {
   unplannedFocusCount: number;
   hasUnplannedFocus: boolean;
   studyStreakDays: number;
+  studySettings: StudySettingsContext;
+  recovery: StudyRecoveryContext;
+  estimationInbox: StudyEstimateInboxItemContext[];
+  hasEstimationInbox: boolean;
+  onboarding: StudyOnboardingContext;
 }
 
 export interface AutoPlanStudySessionsResponse {
@@ -216,6 +298,10 @@ export interface AutoPlanStudySessionsResponse {
   plannedMinutes: number;
   remainingMinutes: number;
   unplannedTaskCount: number;
+}
+
+export interface RepairStudyWeekResponse extends AutoPlanStudySessionsResponse {
+  repairedSessionCount: number;
 }
 
 export interface SemesterAssignmentContext {
