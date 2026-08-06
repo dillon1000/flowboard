@@ -19,9 +19,15 @@ describe('server renderMarkdown', () => {
   });
 
   it('keeps safe external links', () => {
-    expect(renderMarkdown('[Guide](https://example.com/guide)')).toContain(
-      'href="https://example.com/guide"'
+    const result = renderMarkdown(
+      '<a href="https://example.com/guide" target="named-frame" rel="opener">Guide</a>'
     );
+
+    expect(result).toContain('href="https://example.com/guide"');
+    expect(result).toContain('target="_blank"');
+    expect(result).toContain('rel="noopener noreferrer"');
+    expect(result).not.toContain('named-frame');
+    expect(result).not.toContain('rel="opener"');
   });
 
   it('renders tables, images, rules, headings, and deleted text', () => {
