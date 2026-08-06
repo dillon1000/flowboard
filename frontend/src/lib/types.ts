@@ -612,8 +612,16 @@ export interface TemplateContext {
 export interface PropertyDefinitionContext {
   id: string;
   name: string;
+  type: string;
   typeName: string;
   detail: string;
+  hasOptions: boolean;
+  options: PropertyDefinitionOptionContext[];
+}
+
+export interface PropertyDefinitionOptionContext {
+  value: string;
+  label: string;
 }
 
 export interface TapTaskOptionContext {
@@ -674,6 +682,7 @@ export interface BoardSettingsPageContext {
   members: BoardMemberContext[];
   templates: TemplateContext[];
   properties: PropertyDefinitionContext[];
+  filterLabels: string[];
   statuses: TaskOptionContext[];
   severities: TaskOptionContext[];
   defaultTapStatus: string;

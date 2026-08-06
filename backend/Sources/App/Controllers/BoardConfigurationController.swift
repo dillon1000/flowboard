@@ -1,3 +1,4 @@
+import Fluent
 import Foundation
 import Vapor
 
@@ -7,6 +8,8 @@ struct BoardConfigurationController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let boards = routes.grouped("boards", ":boardID")
         boards.post("properties", use: createProperty)
+        boards.patch("properties", ":propertyID", use: updateProperty)
+        boards.delete("properties", ":propertyID", use: deleteProperty)
         boards.post("task-options", use: createTaskOption)
         boards.patch("task-options", ":optionID", use: updateTaskOption)
     }
@@ -65,6 +68,78 @@ struct BoardConfigurationController: RouteCollection {
         ]
         try await access.board.update(on: req.db)
         return try BoardResponse(board: access.board)
+    }
+
+    func updateProperty(req: Request) async throws -> BoardResponse {
+        let access = try await requiredBoard(req)
+        let input = try req.content.decode(UpdatePropertyRequest.self)
+        let propertyID = try req.parameters.require("propertyID")
+        let name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...60).contains(name.count) else {
+            throw Abort(.unprocessableEntity, reason: "Use a field name between 1 and 60 characters.")
+        }
+        var definitions = access.board.propertyDefinitions ?? []
+        guard let index = definitions.firstIndex(where: { $0.id == propertyID }) else {
+            throw Abort(.notFound, reason: "The custom field does not exist on this course.")
+        }
+        guard !definitions.enumerated().contains(where: { definitionIndex, definition in
+            definitionIndex != index && definition.name.caseInsensitiveCompare(name) == .orderedSame
+        }) else {
+            throw Abort(.conflict, reason: "That custom field name already exists on this course.")
+        }
+        let current = definitions[index]
+        definitions[index] = BoardPropertyDefinition(
+            id: current.id,
+            name: name,
+            type: current.type,
+            options: current.options
+        )
+        access.board.propertyDefinitions = definitions
+        try await access.board.update(on: req.db)
+        return try BoardResponse(board: access.board)
+    }
+
+    /// Removes the definition, saved task values, and view rules that refer to
+    /// the field. The transaction prevents partially deleted course metadata.
+    func deleteProperty(req: Request) async throws -> HTTPStatus {
+        let access = try await requiredBoard(req)
+        let propertyID = try req.parameters.require("propertyID")
+        let definitions = access.board.propertyDefinitions ?? []
+        guard definitions.contains(where: { $0.id == propertyID }) else {
+            throw Abort(.notFound, reason: "The custom field does not exist on this course.")
+        }
+        let boardID = try access.board.requireID()
+        let tasks = try await Task.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .all()
+        let views = try await BoardView.query(on: req.db)
+            .filter(\.$board.$id == boardID)
+            .all()
+        try await req.db.transaction { database in
+            access.board.propertyDefinitions = definitions.filter { $0.id != propertyID }
+            try await access.board.update(on: database)
+
+            for task in tasks where task.properties?[propertyID] != nil {
+                task.properties?.removeValue(forKey: propertyID)
+                try await task.update(on: database)
+            }
+
+            for view in views {
+                guard let configuration = view.configuration else { continue }
+                let filters = configuration.filters.filter { $0.field != propertyID }
+                let sorts = configuration.sorts.filter { $0.field != propertyID }
+                guard filters.count != configuration.filters.count || sorts.count != configuration.sorts.count else {
+                    continue
+                }
+                view.configuration = BoardViewConfiguration(
+                    groupBy: configuration.groupBy,
+                    filters: filters,
+                    sorts: sorts
+                )
+                try await view.update(on: database)
+            }
+        }
+        return .noContent
     }
 
     func createTaskOption(req: Request) async throws -> BoardResponse {
@@ -169,6 +244,10 @@ private struct CreatePropertyRequest: Content {
     let name: String
     let type: BoardPropertyType
     let options: [String]
+}
+
+private struct UpdatePropertyRequest: Content {
+    let name: String
 }
 
 private struct TaskOptionRequest: Content {
