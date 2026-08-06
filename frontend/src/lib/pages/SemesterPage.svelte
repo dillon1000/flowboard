@@ -12,6 +12,7 @@
     WarningIcon as Warning,
   } from 'phosphor-svelte';
   import { scrollFades } from '$lib/actions/scrollFades';
+  import { durationLabel } from '$lib/ui/deadline';
 
   interface SemesterWeekView {
     week: SemesterWeekContext;
@@ -94,14 +95,6 @@
     }
     return () => observer.disconnect();
   });
-
-  function durationLabel(minutes: number): string {
-    if (minutes === 0) return '—';
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainder = minutes % 60;
-    return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
-  }
 
   function weekSummary(row: SemesterWeekView): string {
     if (row.week.assignmentCount === 0) return 'No deadlines';

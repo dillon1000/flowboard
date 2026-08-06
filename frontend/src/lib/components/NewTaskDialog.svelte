@@ -4,6 +4,7 @@
   import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
+  import { estimateMinutes, parseLabels } from '$lib/ui/formValues';
   import DatePicker from './DatePicker.svelte';
   import LabelsField from './LabelsField.svelte';
   import TimePicker from './TimePicker.svelte';
@@ -24,11 +25,6 @@
     return date ? `${date}T00:00:00Z` : null;
   }
 
-  function estimateMinutes(value: FormDataEntryValue | null): number | null {
-    const minutes = Number(value);
-    return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
-  }
-
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
@@ -44,7 +40,7 @@
           description: String(data.get('description') ?? '') || null,
           status: String(data.get('status') ?? board.newTaskStatus),
           priority: String(data.get('priority') ?? board.newTaskPriority),
-          labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean),
+          labels: parseLabels(data.get('labels')),
           startAt: apiDate(data.get('startAt')),
           dueAt: apiDate(data.get('dueAt')),
           dueTime: data.get('dueAt') ? String(data.get('dueTime') ?? '') || null : null,

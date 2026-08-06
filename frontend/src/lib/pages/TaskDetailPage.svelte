@@ -16,6 +16,7 @@
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { onMount, type Snippet } from 'svelte';
   import { showToast } from '$lib/ui/toast';
+  import { estimateMinutes, parseLabels } from '$lib/ui/formValues';
 
   // The API rejects larger request bodies. Keep the browser limit equal to the
   // server limit so a user gets a useful message before an upload starts.
@@ -177,11 +178,6 @@
     return date ? `${date}T00:00:00Z` : null;
   }
 
-  function estimateMinutes(value: FormDataEntryValue | null): number | null {
-    const minutes = Number(value);
-    return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
-  }
-
   function score(value: FormDataEntryValue | null): number | null {
     const raw = String(value ?? '').trim();
     if (!raw) return null;
@@ -290,7 +286,7 @@
       assigneeID: assigneeID || null,
       startAt: apiDate(data.get('startAt')),
       estimatedMinutes: estimateMinutes(data.get('estimatedMinutes')),
-      labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean)
+      labels: parseLabels(data.get('labels'))
     };
     if (!detail.task.isCanvasLinked) Object.assign(body, {
       title: String(data.get('title') ?? ''),

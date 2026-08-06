@@ -26,6 +26,8 @@
   } from '$lib/types';
   import { previewFromAssignment, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
+  import { durationLabel } from '$lib/ui/deadline';
+  import { estimateMinutes, parseLabels } from '$lib/ui/formValues';
   import {
     ArrowCircleUpRightIcon as OpenAssignment,
     CalendarDotsIcon as CalendarDays,
@@ -142,22 +144,9 @@
     return `Your busiest day is ${busiestDay.weekdayLabel} at ${durationLabel(busiestDay.workloadMinutes)} of ${durationLabel(busiestDay.availableMinutes)} available.`;
   });
 
-  function durationLabel(minutes: number): string {
-    if (minutes === 0) return '0m';
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainder = minutes % 60;
-    return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
-  }
-
   function dateLabel(value: string): string {
     const date = new Date(`${value}T00:00:00Z`);
     return Number.isNaN(date.getTime()) ? value : dateOnlyFormatter.format(date);
-  }
-
-  function estimateMinutes(value: FormDataEntryValue | null): number | null {
-    const minutes = Number(value);
-    return Number.isInteger(minutes) && minutes > 0 ? minutes : null;
   }
 
   function toggleDay(dateLabel: string): void {
@@ -359,7 +348,7 @@
           boardID: String(data.get('boardID') ?? overview.defaultCourseID),
           title: String(data.get('title') ?? ''),
           description: String(data.get('description') ?? '') || null,
-          labels: String(data.get('labels') ?? '').split(',').map((label) => label.trim()).filter(Boolean),
+          labels: parseLabels(data.get('labels')),
           dueAt: dueDate ? `${dueDate}T00:00:00Z` : null,
           dueTime: dueDate ? String(data.get('dueTime') ?? '') || null : null,
           estimatedMinutes: estimateMinutes(data.get('estimatedMinutes'))
