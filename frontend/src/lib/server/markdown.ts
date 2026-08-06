@@ -17,11 +17,29 @@ export function renderMarkdown(value: string): string {
       'li',
       'blockquote',
       'a',
+      'img',
+      'hr',
       'h1',
       'h2',
-      'h3'
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'del',
+      'table',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td'
     ],
-    allowedAttributes: { a: ['href', 'title', 'target', 'rel'] },
+    allowedAttributes: {
+      a: ['href', 'title', 'target', 'rel'],
+      img: ['src', 'alt', 'title'],
+      th: ['align'],
+      td: ['align']
+    },
     allowedSchemes: ['http', 'https', 'mailto']
   });
 }
