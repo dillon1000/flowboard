@@ -40,7 +40,9 @@ struct StudySessionTests {
                 StudyPlanningSession(
                     taskID: $0.taskID,
                     scheduledDate: $0.scheduledDate,
-                    plannedMinutes: $0.plannedMinutes
+                    plannedMinutes: $0.plannedMinutes,
+                    state: .planned,
+                    actualMinutes: nil
                 )
             },
             dailyLimitMinutes: 120,
@@ -83,6 +85,7 @@ struct StudySessionTests {
             )
             #expect(created.status == .created)
             let createdSession = try created.content.decode(StudySessionResponse.self)
+            #expect(createdSession.state == .planned)
 
             let updated = try await app.testing().sendRequest(
                 .PATCH,
@@ -96,6 +99,18 @@ struct StudySessionTests {
             )
             #expect(updated.status == .ok)
             #expect(try updated.content.decode(StudySessionResponse.self).plannedMinutes == 45)
+
+            let completed = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/\(createdSession.id)/complete",
+                headers: ["Cookie": registered.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(CompleteStudySessionRequest(actualMinutes: 40))
+                }
+            )
+            #expect(completed.status == .ok)
+            #expect(try completed.content.decode(StudySessionResponse.self).state == .completed)
+            #expect(try completed.content.decode(StudySessionResponse.self).actualMinutes == 40)
 
             let listed = try await app.testing().sendRequest(
                 .GET,
