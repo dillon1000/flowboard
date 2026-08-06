@@ -14,6 +14,7 @@ struct AuthController: RouteCollection {
         protected.post("logout", use: logout)
         try protected.register(collection: APIKeyController())
         try protected.register(collection: CalendarFeedManagementController())
+        try protected.register(collection: CanvasConnectionController())
     }
 
     func configuration(req: Request) -> AuthConfigurationResponse {

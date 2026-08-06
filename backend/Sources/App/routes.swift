@@ -30,6 +30,11 @@ func routes(_ app: Application) throws {
     try api.register(collection: TapExecutionController())
     try api.register(collection: CalendarFeedController())
 
+    let canvasIntegration = api
+        .grouped(CanvasCredentialMiddleware())
+        .grouped("integrations", "canvas")
+    try canvasIntegration.register(collection: CanvasSyncController())
+
     // SvelteKit requests these presentation-ready models during server rendering.
     // They are session-only because they include private workspace navigation.
     let workspace = api

@@ -1,5 +1,6 @@
 import Fluent
 import Foundation
+import Vapor
 
 /// Stores one Canvas origin and its restricted sync credential for one user.
 /// The raw credential never enters this model or the database.
@@ -57,5 +58,46 @@ final class CanvasConnection: Model, @unchecked Sendable {
         self.canvasOrigin = canvasOrigin
         self.syncKeyHash = syncKeyHash
         self.syncKeyPrefix = syncKeyPrefix
+    }
+}
+
+extension CanvasConnection: Authenticatable {}
+
+struct CreateCanvasConnectionRequest: Content {
+    let canvasOrigin: String
+}
+
+struct CanvasConnectionResponse: Content {
+    let id: UUID
+    let canvasOrigin: String
+    let keyPrefix: String
+    let lastSnapshotID: String?
+    let lastCapturedAt: Date?
+    let lastSuccessfulSyncAt: Date?
+    let lastErrorSummary: String?
+    let createdAt: Date?
+    let updatedAt: Date?
+
+    init(connection: CanvasConnection) throws {
+        self.id = try connection.requireID()
+        self.canvasOrigin = connection.canvasOrigin
+        self.keyPrefix = connection.syncKeyPrefix
+        self.lastSnapshotID = connection.lastSnapshotID
+        self.lastCapturedAt = connection.lastCapturedAt
+        self.lastSuccessfulSyncAt = connection.lastSuccessfulSyncAt
+        self.lastErrorSummary = connection.lastErrorSummary
+        self.createdAt = connection.createdAt
+        self.updatedAt = connection.updatedAt
+    }
+}
+
+/// Returns a new raw sync key once. List and status responses expose only its prefix.
+struct CreatedCanvasConnectionResponse: Content {
+    let connection: CanvasConnectionResponse
+    let syncKey: String
+
+    init(connection: CanvasConnection, syncKey: String) throws {
+        self.connection = try CanvasConnectionResponse(connection: connection)
+        self.syncKey = syncKey
     }
 }
