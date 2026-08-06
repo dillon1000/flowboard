@@ -15,6 +15,7 @@ struct StudySessionController: RouteCollection {
         sessions.post("repair", use: repair)
         sessions.post(":sessionID", "complete", use: complete)
         sessions.post(":sessionID", "skip", use: skip)
+        sessions.post(":sessionID", "restore", use: restore)
         sessions.patch(":sessionID", use: update)
         sessions.delete(":sessionID", use: delete)
     }
@@ -124,6 +125,36 @@ struct StudySessionController: RouteCollection {
             throw Abort(.conflict, reason: "Only a planned study session can be skipped.")
         }
         session.state = .skipped
+        session.actualMinutes = nil
+        session.completedAt = nil
+        try await session.update(on: req.db)
+        return try StudySessionResponse(session: session)
+    }
+
+    /// Restores a skipped block when a user selects Undo. The total estimate is
+    /// checked again because another block may have been added after the skip.
+    func restore(req: Request) async throws -> StudySessionResponse {
+        let user = try req.auth.require(User.self)
+        let userID = try user.requireID()
+        let session = try await requiredSession(req, userID: userID)
+        let task = try await session.$task.get(on: req.db)
+        _ = try await BoardAccessService.require(
+            boardID: task.$board.id,
+            userID: userID,
+            permission: .view,
+            on: req.db
+        )
+        guard session.state == .skipped else {
+            throw Abort(.conflict, reason: "Only a skipped study session can be restored.")
+        }
+        try await validateTotal(
+            session.plannedMinutes,
+            task: task,
+            user: user,
+            excluding: session.requireID(),
+            on: req.db
+        )
+        session.state = .planned
         session.actualMinutes = nil
         session.completedAt = nil
         try await session.update(on: req.db)

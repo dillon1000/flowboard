@@ -169,7 +169,7 @@
   flex: 1;
 }
 
-.toast > button {
+.toast-dismiss {
   display: grid;
   width: 24px;
   height: 24px;
@@ -183,7 +183,20 @@
   cursor: pointer;
 }
 
-.toast > button:hover {
+.toast-action {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--ds-blue-900);
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-dismiss:hover,
+.toast-action:hover {
   background: var(--ds-gray-alpha-100);
 }
 

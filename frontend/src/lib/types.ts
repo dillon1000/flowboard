@@ -151,6 +151,8 @@ export interface StudyAssignmentContext {
   dueDisplay: string;
   description: string;
   studySessionID: string;
+  taskID: string;
+  scheduledDate: string;
   hasStudySession: boolean;
   sessionState: '' | 'planned' | 'completed' | 'skipped';
   actualMinutes: number | null;

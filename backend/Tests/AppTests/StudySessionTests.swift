@@ -159,6 +159,22 @@ struct StudySessionTests {
             let createdSession = try created.content.decode(StudySessionResponse.self)
             #expect(createdSession.state == .planned)
 
+            let skipped = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/\(createdSession.id)/skip",
+                headers: ["Cookie": registered.cookie]
+            )
+            #expect(skipped.status == .ok)
+            #expect(try skipped.content.decode(StudySessionResponse.self).state == .skipped)
+
+            let restored = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/\(createdSession.id)/restore",
+                headers: ["Cookie": registered.cookie]
+            )
+            #expect(restored.status == .ok)
+            #expect(try restored.content.decode(StudySessionResponse.self).state == .planned)
+
             let updated = try await app.testing().sendRequest(
                 .PATCH,
                 "api/v1/study-sessions/\(createdSession.id)",

@@ -404,6 +404,7 @@ struct StudyDayContext: Encodable {
                 courseColorClass: courseColors[value.task.boardID] ?? "course-blue",
                 plannedMinutes: value.session.plannedMinutes,
                 studySessionID: value.session.id,
+                scheduledDate: value.session.scheduledDate,
                 sessionState: value.session.state,
                 actualMinutes: value.session.actualMinutes,
                 completedAt: value.session.completedAt
@@ -587,6 +588,8 @@ struct StudyAssignmentContext: Encodable {
     let dueDisplay: String
     let description: String
     let studySessionID: String
+    let taskID: String
+    let scheduledDate: String
     let hasStudySession: Bool
     let sessionState: String
     let actualMinutes: Int?
@@ -598,6 +601,7 @@ struct StudyAssignmentContext: Encodable {
         courseColorClass: String,
         plannedMinutes: Int? = nil,
         studySessionID: UUID? = nil,
+        scheduledDate: String = "",
         sessionState: StudySessionState = .planned,
         actualMinutes: Int? = nil,
         completedAt: Date? = nil
@@ -634,6 +638,8 @@ struct StudyAssignmentContext: Encodable {
         self.dueDisplay = task.dueDisplay
         self.description = task.description
         self.studySessionID = studySessionID?.uuidString ?? ""
+        self.taskID = task.id.uuidString
+        self.scheduledDate = scheduledDate
         self.hasStudySession = studySessionID != nil
         self.sessionState = studySessionID == nil ? "" : sessionState.rawValue
         self.actualMinutes = actualMinutes
