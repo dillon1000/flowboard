@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import type { AuthActionData } from '$lib/server/auth';
   import type { AuthConfiguration } from '$lib/types';
-  import { ColumnsIcon as Columns3, CopyIcon as Copy, SignInIcon as LogIn, UsersIcon as Users } from 'phosphor-svelte';
+  import { CalendarDotsIcon as CalendarDays, CheckCircleIcon as CheckCircle, ClockIcon as Clock, SignInIcon as LogIn } from 'phosphor-svelte';
   import BuildSignature from './BuildSignature.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
 
@@ -83,13 +83,13 @@
 
     {#if isRegister}
       <aside class="auth-aside">
-        <blockquote>Everything your team needs to ship the work.</blockquote>
+        <blockquote>Turn your deadlines into a week you can follow.</blockquote>
         <ul class="auth-points">
-          <li><Columns3 size={18} />Board, table, calendar, Gantt, and gallery views</li>
-          <li><Users size={18} />Shared courses with per-role access</li>
-          <li><Copy size={18} />Templates, custom fields, and JSON export</li>
+          <li><CalendarDays size={18} />Bring Canvas deadlines and every course into one place</li>
+          <li><Clock size={18} />Estimate assignments quickly and plan around your real availability</li>
+          <li><CheckCircle size={18} />Finish study blocks and build a streak from work you completed</li>
         </ul>
-        <p class="auth-footer">Your work stays private until you share it.</p>
+        <p class="auth-footer">Start with one course. Build the week from there.</p>
       </aside>
     {/if}
   </main>

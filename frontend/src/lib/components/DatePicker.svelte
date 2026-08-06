@@ -7,7 +7,7 @@
     name,
     value = '',
     label,
-    placeholder = 'Choose a date',
+    placeholder = 'YYYY-MM-DD',
     required = false,
     disabled = false,
     initialFocus = false,
@@ -34,7 +34,7 @@
     void import('flatpickr').then(({ default: flatpickr }) => {
       if (disposed) return;
       picker = flatpickr(input, {
-        allowInput: false,
+        allowInput: true,
         altInput: true,
         altInputClass: 'input',
         altFormat: 'M j, Y',
@@ -71,6 +71,8 @@
   {placeholder}
   {required}
   {disabled}
+  inputmode="numeric"
+  pattern="\d{4}-\d{2}-\d{2}"
   autocomplete="off"
   data-dialog-focus={initialFocus ? '' : undefined}
 />
