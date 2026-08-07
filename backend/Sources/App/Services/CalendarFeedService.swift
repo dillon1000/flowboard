@@ -47,9 +47,8 @@ enum CalendarFeedService {
             .first()
     }
 
-    /// Renders stable all-day study blocks and deadline events. Timed deadlines
-    /// are converted from the user's local zone to UTC so clients need no custom
-    /// VTIMEZONE definition.
+    /// Renders stable timed study blocks and deadline events. Local planning
+    /// times are converted to UTC so clients need no custom VTIMEZONE definition.
     static func response(
         credential: CalendarFeedCredential,
         on database: any Database
@@ -73,6 +72,11 @@ enum CalendarFeedService {
         }
         let taskByID = Dictionary(uniqueKeysWithValues: try tasks.map { (try $0.requireID(), $0) })
         let calendar = planningCalendar(timeZoneIdentifier: user.timeZoneIdentifier)
+        let totalMinutesByDate = Dictionary(grouping: sessions, by: \.scheduledDate)
+            .mapValues { values in values.reduce(0) { $0 + $1.plannedMinutes } }
+        var nextStartMinuteByDate = totalMinutesByDate.mapValues { totalMinutes in
+            min(18 * 60, max(0, 24 * 60 - totalMinutes))
+        }
         var lines = [
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
@@ -89,23 +93,45 @@ enum CalendarFeedService {
             lines.append("BEGIN:VEVENT")
             lines.append("UID:task-\(taskID.uuidString.lowercased())@focalpoint")
             lines.append("DTSTAMP:\(timestamp(task.updatedAt ?? task.createdAt ?? Date()))")
+            let alarmTrigger: String
             if let dueDate = timedDeadline(task: task, dateKey: dateKey, calendar: calendar) {
                 lines.append("DTSTART:\(timestamp(dueDate))")
+                alarmTrigger = "-PT1H"
             } else {
                 lines.append("DTSTART;VALUE=DATE:\(compactDate(dateKey))")
+                alarmTrigger = "-P1D"
             }
             lines.append("SUMMARY:\(escapeText("Due: \(task.title)"))")
             lines.append("DESCRIPTION:\(escapeText("Course: \(task.board.name)"))")
             lines.append("STATUS:CONFIRMED")
+            lines.append("BEGIN:VALARM")
+            lines.append("TRIGGER:\(alarmTrigger)")
+            lines.append("ACTION:DISPLAY")
+            lines.append("DESCRIPTION:\(escapeText("Deadline: \(task.title)"))")
+            lines.append("END:VALARM")
             lines.append("END:VEVENT")
         }
 
-        for session in sessions.sorted(by: { $0.scheduledDate < $1.scheduledDate }) {
+        for session in sessions.sorted(by: {
+            if $0.scheduledDate != $1.scheduledDate {
+                return $0.scheduledDate < $1.scheduledDate
+            }
+            return ($0.id?.uuidString ?? "") < ($1.id?.uuidString ?? "")
+        }) {
             guard let sessionID = session.id, let task = taskByID[session.$task.id] else { continue }
+            let startMinute = nextStartMinuteByDate[session.scheduledDate] ?? 18 * 60
+            guard let start = studySessionStart(
+                dateKey: session.scheduledDate,
+                minuteOfDay: startMinute,
+                calendar: calendar
+            ), let end = calendar.date(byAdding: .minute, value: session.plannedMinutes, to: start)
+            else { continue }
+            nextStartMinuteByDate[session.scheduledDate] = startMinute + session.plannedMinutes
             lines.append("BEGIN:VEVENT")
             lines.append("UID:study-session-\(sessionID.uuidString.lowercased())@focalpoint")
             lines.append("DTSTAMP:\(timestamp(session.updatedAt ?? session.createdAt ?? Date()))")
-            lines.append("DTSTART;VALUE=DATE:\(compactDate(session.scheduledDate))")
+            lines.append("DTSTART:\(timestamp(start))")
+            lines.append("DTEND:\(timestamp(end))")
             lines.append("SUMMARY:\(escapeText("Study: \(task.title)"))")
             lines.append(
                 "DESCRIPTION:\(escapeText("\(displayDuration(session.plannedMinutes)) planned · \(task.board.name)"))"
@@ -174,6 +200,22 @@ enum CalendarFeedService {
             return nil
         }
         return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
+    }
+
+    /// Places each date's study work sequentially from 6:00 PM. If the total
+    /// duration cannot fit before midnight, the first block moves earlier.
+    private static func studySessionStart(
+        dateKey: String,
+        minuteOfDay: Int,
+        calendar: Calendar
+    ) -> Date? {
+        guard let date = planningDate(dateKey, calendar: calendar) else { return nil }
+        return calendar.date(
+            bySettingHour: minuteOfDay / 60,
+            minute: minuteOfDay % 60,
+            second: 0,
+            of: date
+        )
     }
 
     private static func escapeText(_ value: String) -> String {

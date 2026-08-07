@@ -14,6 +14,7 @@ struct BoardSettingsPageContext: Encodable {
     let members: [BoardMemberContext]
     let templates: [TemplateContext]
     let properties: [PropertyDefinitionContext]
+    let filterLabels: [String]
     let statuses: [TaskOptionContext]
     let severities: [TaskOptionContext]
     let defaultTapStatus: String
@@ -66,6 +67,7 @@ struct BoardSettingsPageContext: Encodable {
         self.members = try members.map(BoardMemberContext.init)
         self.templates = try templates.map(TemplateContext.init)
         self.properties = (board.propertyDefinitions ?? []).map(PropertyDefinitionContext.init)
+        self.filterLabels = Array(Set(tapTasks.flatMap(\.labels))).sorted()
         let defaultStatus = board.taskStatuses.first ?? BoardTaskOption.defaultStatuses[0]
         let defaultSeverity = board.taskSeverities.first ?? BoardTaskOption.defaultSeverities[0]
         self.statuses = board.taskStatuses.map {
@@ -147,7 +149,7 @@ struct TapActionContext: Encodable {
         self.hasDisplayDescription = action.displayDescription != nil
         self.prefix = action.tokenPrefix
         self.kind = action.kind.rawValue
-        self.kindName = action.kind == .createTask ? "Create task" : "Update task"
+        self.kindName = action.kind == .createTask ? "Create assignment" : "Update assignment"
         self.isCreateTask = action.kind == .createTask
         self.isUpdateTask = action.kind == .updateTask
         self.isEnabled = action.isEnabled
@@ -162,9 +164,9 @@ struct TapActionContext: Encodable {
             "Active"
         }
         self.summary = if action.kind == .createTask {
-            "Create a task from scanner input"
+            "Create an assignment from scanner input"
         } else {
-            "Set \(targetTask?.title ?? "missing task") to \(board.statusOption(for: TaskStatus(rawValue: action.configuration.status)).name)"
+            "Set \(targetTask?.title ?? "missing assignment") to \(board.statusOption(for: TaskStatus(rawValue: action.configuration.status)).name)"
         }
         self.status = action.configuration.status
         self.statusName = board.statusOption(
@@ -176,7 +178,7 @@ struct TapActionContext: Encodable {
             for: TaskPriority(rawValue: severity)
         ).name
         self.targetTaskID = action.$targetTask.id?.uuidString ?? ""
-        self.targetTaskName = targetTask?.title ?? "Select a task"
+        self.targetTaskName = targetTask?.title ?? "Select an assignment"
         self.statusOptions = board.taskStatuses.map {
             TaskOptionContext(option: $0, selectedValue: action.configuration.status)
         }
@@ -231,7 +233,7 @@ struct BoardSettingsViewContext: Encodable {
         self.type = view.type.rawValue
         self.typeName = view.type.rawValue.capitalized
         self.groupBy = view.configuration?.groupBy ?? "status"
-        self.groupByName = self.groupBy == "priority" ? "Severity" : "Status"
+        self.groupByName = self.groupBy == "priority" ? "Priority" : "Status"
         self.isGroupedByStatus = self.groupBy == "status"
         self.isGroupedByPriority = self.groupBy == "priority"
         self.filterField = view.configuration?.filters.first?.field ?? ""
@@ -276,16 +278,32 @@ struct TemplateContext: Encodable {
 struct PropertyDefinitionContext: Encodable {
     let id: String
     let name: String
+    let type: String
     let typeName: String
     let detail: String
+    let hasOptions: Bool
+    let options: [PropertyDefinitionOptionContext]
 
     init(definition: BoardPropertyDefinition) {
         self.id = definition.id
         self.name = definition.name
+        self.type = definition.type.rawValue
         self.typeName = definition.type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized
         self.detail = definition.options.isEmpty
             ? typeName
             : "\(typeName) · \(definition.options.map(\.name).joined(separator: ", "))"
+        self.hasOptions = definition.type.usesOptions
+        self.options = definition.options.map(PropertyDefinitionOptionContext.init)
+    }
+}
+
+struct PropertyDefinitionOptionContext: Encodable {
+    let value: String
+    let label: String
+
+    init(option: BoardPropertyOption) {
+        self.value = option.id
+        self.label = option.name
     }
 }
 

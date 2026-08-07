@@ -2,70 +2,38 @@
    Weekly study planner
    ========================================================================== */
 
-/* The planner matches the selected two-stage navigation: a compact product
-   rail stays fixed while the course filter owns the first content column. */
-.study-overview-page {
-  --sidebar-width: 72px;
-  --topbar-height: 70px;
-}
-
-.study-overview-page .sidebar {
-  width: 72px;
-}
-
-.study-overview-page .sidebar .brand-row,
-.study-overview-page .sidebar .nav-link,
-.study-overview-page .sidebar .user-row {
-  justify-content: center;
-}
-
-.study-overview-page .sidebar .brand-row,
-.study-overview-page .sidebar .user-row {
-  padding-inline: 12px;
-}
-
-.study-overview-page .sidebar .brand-logo {
-  width: 26px;
-}
-
-.study-overview-page .sidebar .nav-link {
-  min-height: 52px;
-  gap: 0;
-  padding: 0;
-}
-
-.study-overview-page .sidebar .nav-link span,
-.study-overview-page .sidebar .nav-link small,
-.study-overview-page .sidebar .user-row > span:last-child,
-.study-overview-page .sidebar > .build-signature {
+/* Both sidebars are independent: the app sidebar collapses from the topbar
+   button, and this course panel collapses from the toggle in the week header.
+   The panel's state lives on the root so every planner page shares it. */
+:root[data-panel='collapsed'] :is(.study-course-panel, .semester-term-panel, .course-panel) {
   display: none;
 }
 
-.study-overview-page .sidebar .nav-link svg {
-  width: 18px;
-  height: 18px;
+:root[data-panel='collapsed'] :is(.study-planner, .semester-planner, .course-workspace) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.study-overview-page .sidebar-section {
-  padding: 8px;
-}
-
-.study-overview-page .settings-nav {
-  padding: 8px;
-}
-
-.study-overview-page .user-row {
-  width: 52px;
-  min-height: 52px;
+.context-panel-toggle {
+  flex: 0 0 auto;
   align-self: center;
-  padding: 0;
-  margin: 10px;
-  border-top: 0;
-  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
 }
 
-.study-overview-page .topbar {
-  display: none;
+.context-panel-toggle:hover {
+  color: var(--text);
+}
+
+/* The toggle joins the header row, so the title takes the flexible middle. */
+.study-week-header .study-week-title,
+.semester-term-header .semester-term-title,
+.course-header .course-title {
+  flex: 1;
+}
+
+@media (--viewport-compact) {
+  .context-panel-toggle {
+    align-self: flex-start;
+  }
 }
 
 .study-page {
@@ -81,19 +49,11 @@
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
 }
 
-/* Desktop renders the planner at 80% scale to increase its information density.
-   The larger canvas offsets that scale, so the planner still fills the workspace. */
-@media (width > 820px) {
-  .study-planner {
-    width: 125%;
-    height: 125%;
-    transform: scale(0.8);
-    transform-origin: top left;
-  }
-}
+/* Density comes from the type and spacing scale itself, not from a transform:
+   the planner is drawn small rather than drawn large and scaled down. */
 
 /* ==========================================================================
    Week panel
@@ -104,7 +64,7 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  padding: 22px 14px 0;
+  padding: 16px 12px 0;
   border-right: 1px solid var(--border);
   background: var(--surface-sunken);
 }
@@ -132,8 +92,8 @@
 .study-week-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 12px 4px;
-  margin: 0 0 18px;
+  padding: 10px 2px;
+  margin: 0 0 14px;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-border);
@@ -160,7 +120,7 @@
 .study-week-stats dd {
   margin: 0;
   font-family: 'Geist Mono Variable', ui-monospace, monospace;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -201,13 +161,13 @@
 
 .study-course-link {
   display: flex;
-  min-height: 38px;
+  min-height: 32px;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   padding: 0 10px;
   border-radius: var(--radius-small);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12.5px;
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
 }
@@ -382,48 +342,40 @@
 
 .study-week-header {
   display: flex;
-  min-height: 196px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
-  padding: 26px 28px 26px 40px;
+  gap: 20px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--border);
 }
 
 .study-week-title {
-  max-width: 620px;
+  min-width: 0;
 }
 
 .study-week-title h1 {
   margin: 0;
-  font-size: 42px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .study-week-title > p {
-  margin: 12px 0 0;
-  color: var(--text-secondary);
-  font-size: 16px;
+  margin: 2px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
   line-height: 1.45;
   text-wrap: pretty;
 }
 
 .study-week-actions {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 24px;
-}
-
-.study-week-actions .button {
-  height: 44px;
-  gap: 9px;
-  padding-inline: 19px;
-  font-size: 15px;
+  gap: 8px;
 }
 
 .study-week-actions .button.primary {
@@ -435,31 +387,27 @@
   background: var(--ds-blue-800);
 }
 
-.study-week-actions .button svg {
-  width: 17px;
-  height: 17px;
-}
-
 /* Assignments with no work day are the only week facts the day rows cannot
-   show: they have no day yet. So the header carries them, and nothing else. */
+   show: they have no day yet. They sit in the panel with the other rollups. */
 .study-unplanned {
   display: grid;
-  width: 292px;
-  min-height: 152px;
   flex: 0 0 auto;
   align-content: start;
   gap: 4px;
-  padding: 18px;
+  padding: 10px 12px 12px;
+  margin-bottom: 12px;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-border);
 }
 
 .study-unplanned h2 {
-  margin: 0 0 4px;
-  color: var(--text-secondary);
-  font-size: 14px;
+  margin: 0 0 2px;
+  color: var(--text-tertiary);
+  font-size: 10px;
   font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .study-unplanned-list {
@@ -468,10 +416,10 @@
 
 .study-unplanned-list button {
   display: grid;
-  min-height: 38px;
+  min-height: 34px;
   align-content: center;
   gap: 2px;
-  padding: 6px 2px;
+  padding: 5px 2px;
   border: 0;
   color: var(--text);
   background: transparent;
@@ -486,7 +434,7 @@
 
 .study-unplanned-list strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -525,14 +473,14 @@
 .study-day {
   position: relative;
   display: grid;
-  min-height: 104px;
-  grid-template-columns: 168px minmax(0, 1fr);
+  min-height: 80px;
+  grid-template-columns: 148px minmax(0, 1fr);
   align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
 
 .study-day.collapsed {
-  min-height: 66px;
+  min-height: 46px;
 }
 
 .study-day.today::before {
@@ -548,8 +496,8 @@
 .study-day-date {
   display: grid;
   align-content: center;
-  gap: 3px;
-  padding: 14px 20px 14px 38px;
+  gap: 2px;
+  padding: 10px 16px 10px 24px;
   border-right: 1px solid var(--border);
   color: var(--text-secondary);
 }
@@ -563,8 +511,8 @@
 }
 
 .study-day-date strong {
-  font-size: 15px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 450;
 }
 
 .study-day-date small {
@@ -589,7 +537,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .study-day-track {
@@ -643,11 +591,11 @@
 
 .study-day-summary {
   display: grid;
-  min-height: 65px;
+  min-height: 45px;
   grid-template-columns: auto minmax(160px, 1fr) auto;
   align-items: center;
-  gap: 8px 18px;
-  padding: 10px 60px 10px 24px;
+  gap: 6px 14px;
+  padding: 6px 96px 6px 20px;
 }
 
 .study-day-summary-count {
@@ -674,7 +622,7 @@
 
 .study-assignment-scroller {
   min-width: 0;
-  padding: 10px 62px 10px 12px;
+  padding: 8px 56px 8px 12px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -700,28 +648,28 @@
   display: grid;
   width: max-content;
   min-width: 0;
-  grid-auto-columns: minmax(240px, 300px);
+  grid-auto-columns: minmax(208px, 256px);
   grid-auto-flow: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .study-no-assignments {
   display: flex;
-  min-height: 103px;
+  min-height: 56px;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 20px;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .study-assignment {
   --study-course-glow: var(--ds-gray-500);
   position: relative;
   display: grid;
-  min-height: 92px;
+  min-height: 72px;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 9px 11px;
   border-radius: var(--radius-large);
   color: var(--text);
   background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--study-course-glow) 18%, transparent), transparent 76px), var(--surface);
@@ -763,7 +711,7 @@
   display: -webkit-box;
   overflow: hidden;
   align-self: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.3;
@@ -814,7 +762,7 @@
   transition: color var(--duration) var(--ease), opacity var(--duration) var(--ease), transform 150ms var(--ease-out);
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (--can-hover) {
   .study-assignment:hover {
     background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--study-course-glow) 22%, transparent), transparent 82px), var(--surface-hover);
     box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
@@ -832,8 +780,8 @@
 .study-focus-blocks {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 62px 12px 14px;
+  gap: 5px;
+  padding: 0 56px 9px 14px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -860,17 +808,17 @@
 
 .study-focus-chip {
   display: flex;
-  min-height: 28px;
+  min-height: 24px;
   flex: 0 0 auto;
-  max-width: 260px;
+  max-width: 240px;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px;
+  gap: 7px;
+  padding: 0 9px;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   background: var(--surface);
   box-shadow: var(--shadow-border);
-  font-size: 12px;
+  font-size: 11px;
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
 }
@@ -951,11 +899,13 @@
   z-index: 2;
   top: 50%;
   right: 16px;
-  display: grid;
-  width: 28px;
+  display: flex;
+  width: auto;
   height: 28px;
+  align-items: center;
+  gap: 5px;
   place-items: center;
-  padding: 0;
+  padding: 0 8px;
   border: 0;
   border-radius: var(--radius-small);
   color: var(--text-tertiary);
@@ -964,6 +914,14 @@
   opacity: 0.7;
   transform: translateY(-50%);
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease), opacity var(--duration) var(--ease);
+}
+
+.study-day-toggle-label {
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .study-day-toggle:hover {
@@ -1002,13 +960,13 @@
 
 .study-week-footer {
   display: flex;
-  min-height: 46px;
+  min-height: 34px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--border);
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .study-week-footer svg {
@@ -1019,7 +977,8 @@
 }
 
 .study-week-footer a,
-.study-week-footer span {
+.study-week-footer span,
+.study-week-footer button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1028,99 +987,627 @@
   transition: color var(--duration) var(--ease);
 }
 
+.study-week-footer button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
 .study-week-footer a:hover {
   color: var(--text);
+}
+
+/* ==========================================================================
+   Availability, recovery, and session truth
+   ========================================================================== */
+
+.study-availability-summary {
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--border);
+}
+
+.study-availability-summary > :is(button, a) {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.study-availability-summary > :is(button, a):hover {
+  background: var(--surface-hover);
+}
+
+.study-availability-summary span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.study-availability-summary strong {
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.study-availability-summary small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.study-workflow-band {
+  position: relative;
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.study-workflow-band.recovery {
+  border-left: 3px dashed var(--ds-amber-700);
+  background: color-mix(in srgb, var(--ds-amber-100) 56%, var(--surface));
+}
+
+.study-workflow-band > div:not(.study-onboarding-progress) {
+  display: grid;
+  gap: 3px;
+}
+
+.study-workflow-band strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.study-workflow-band p {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.study-workflow-mark {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ds-amber-900);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 14px;
+}
+
+.study-onboarding-progress {
+  display: flex;
+  width: 72px;
+  align-items: center;
+  gap: 5px;
+}
+
+.study-onboarding-progress span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ds-gray-400);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.study-onboarding-progress span.complete {
+  background: var(--ds-green-700);
+}
+
+.study-onboarding-progress span.current {
+  background: var(--ds-blue-700);
+  box-shadow: 0 0 0 3px var(--ds-blue-300);
+}
+
+.study-day.needs-repair::after {
+  position: absolute;
+  z-index: 1;
+  inset: 5px auto 5px 4px;
+  border-left: 2px dashed var(--ds-amber-700);
+  content: '';
+}
+
+.study-day[data-load='overloaded'] .study-day-bar {
+  background: var(--ds-amber-700);
+}
+
+.study-day[data-load='blocked'] .study-day-bar {
+  background: var(--ds-gray-500);
+}
+
+.study-day[data-load='overloaded'] .study-day-load-time {
+  color: var(--ds-amber-900);
+}
+
+.study-day-load-time {
+  min-width: 64px;
+  text-align: right;
+}
+
+.study-focus-item:has(.study-focus-actions) {
+  padding-right: 0;
+}
+
+.study-focus-item:has(.study-focus-actions) .study-focus-chip {
+  border-radius: var(--radius-full) 0 0 var(--radius-full);
+}
+
+.study-focus-actions {
+  display: flex;
+  min-height: 24px;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+}
+
+.study-focus-actions button {
+  padding: 0 9px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.study-focus-actions button:first-child {
+  color: var(--ds-green-900);
+}
+
+.study-focus-actions button:last-child {
+  color: var(--ds-red-900);
+}
+
+.study-focus-actions button:hover {
+  background: var(--surface-hover);
+}
+
+.study-focus-chip em {
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  color: var(--ds-green-900);
+  background: var(--ds-green-200);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.study-focus-item.completed .study-focus-chip {
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--ds-green-100) 66%, var(--surface));
+}
+
+.study-focus-item.skipped .study-focus-chip {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.study-focus-item.skipped .study-focus-chip em {
+  color: var(--text-tertiary);
+  background: var(--surface-active);
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   Planning workflow dialogs
+   ========================================================================== */
+
+.dialog.compact {
+  width: min(430px, 100%);
+}
+
+.study-estimate-dialog {
+  width: min(920px, 100%);
+  max-height: min(860px, calc(100vh - 48px));
+}
+
+.study-estimate-dialog .dialog-body {
+  display: grid;
+  gap: 22px;
+  overflow-y: auto;
+}
+
+.study-preset-editor,
+.study-availability-section {
+  display: grid;
+  gap: 10px;
+}
+
+.study-preset-editor h3,
+.study-section-heading :is(h2, h3) {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.study-preset-editor > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.study-preset-editor label,
+.study-capacity-grid label {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+  font-size: 11px;
+}
+
+.study-preset-editor label > span:last-child,
+.study-estimate-list article > label {
+  position: relative;
+}
+
+.study-preset-editor input,
+.study-estimate-list input,
+.study-capacity-grid input {
+  width: 100%;
+  height: 32px;
+  padding: 0 34px 0 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-preset-editor small,
+.study-estimate-list label small {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  transform: translateY(-50%);
+}
+
+.study-estimate-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.study-estimate-list article {
+  display: grid;
+  min-height: 60px;
+  grid-template-columns: minmax(220px, 1fr) 150px 100px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.study-estimate-list article > div {
+  display: grid;
+  gap: 3px;
+}
+
+.study-estimate-list strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-estimate-list small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.study-estimate-list select {
+  height: 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-small);
+  color: var(--text-secondary);
+  background: var(--surface);
+  font: inherit;
+  font-size: 11px;
+}
+
+.study-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.study-section-heading span {
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.study-capacity-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.study-capacity-grid label {
+  padding: 8px;
+  text-align: center;
+}
+
+.study-capacity-grid input {
+  padding: 0 5px;
+  text-align: center;
+}
+
+.study-inline-add,
+.study-conflict-builder,
+.study-commitment-builder {
+  display: grid;
+  gap: 8px;
+}
+
+.study-inline-add {
+  grid-template-columns: minmax(0, 220px) auto;
+  justify-content: start;
+}
+
+.study-setting-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.study-setting-chips > span {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 5px 0 9px;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-border);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.study-setting-chips button,
+.study-setting-list button {
+  border: 0;
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.study-setting-list {
+  display: grid;
+  gap: 5px;
+}
+
+.study-setting-list article {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+}
+
+.study-setting-list article > span {
+  display: grid;
+  gap: 2px;
+}
+
+.study-setting-list strong {
+  font-size: 11px;
+}
+
+.study-setting-list small,
+.study-setting-list button {
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.study-commitment-builder {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.study-commitment-builder > .input,
+.study-conflict-builder > .input {
+  grid-column: 1 / -1;
+}
+
+.study-commitment-builder > .button,
+.study-conflict-builder > .button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.study-commitment-builder fieldset {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+}
+
+.study-commitment-builder legend {
+  margin-bottom: 6px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.study-commitment-builder fieldset label {
+  position: relative;
+}
+
+.study-commitment-builder fieldset input {
+  position: absolute;
+  opacity: 0;
+}
+
+.study-commitment-builder fieldset span {
+  display: grid;
+  min-width: 38px;
+  height: 28px;
+  place-items: center;
+  border-radius: var(--radius-small);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-border);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.study-commitment-builder fieldset input:checked + span {
+  color: var(--ds-blue-900);
+  background: var(--ds-blue-200);
+  box-shadow: 0 0 0 1px var(--ds-blue-500);
+}
+
+.study-conflict-builder {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.availability-settings-form {
+  display: grid;
+  gap: 20px;
+  padding: 16px;
+}
+
+/* The verdict and the save action stay together at the top: the total is what
+   the whole form exists to change, and saving should never require scrolling. */
+.availability-settings-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.availability-settings-summary > div {
+  display: grid;
+  gap: 2px;
+}
+
+.availability-settings-summary strong {
+  color: var(--text);
+  font-size: 16px;
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Availability sections use the same ledger shape as the settings pages. */
+.availability-settings-form .study-availability-section {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  column-gap: 24px;
+  row-gap: 8px;
+  align-items: start;
+}
+
+.availability-settings-form .study-section-heading {
+  display: block;
+  grid-column: 1;
+}
+
+.availability-settings-form .study-section-heading span {
+  display: block;
+  margin-top: 2px;
+}
+
+.availability-settings-form .study-availability-section > :not(.study-section-heading) {
+  grid-column: 2;
+}
+
+@media (--viewport-navigation) {
+  .availability-settings-form .study-availability-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .availability-settings-form .study-availability-section > :not(.study-section-heading) {
+    grid-column: 1;
+  }
+}
+
+@media (--viewport-shell) {
+  .study-workflow-band {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 14px 16px;
+  }
+
+  .study-workflow-band .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .study-preset-editor > div,
+  .study-capacity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .study-estimate-list article,
+  .study-commitment-builder,
+  .study-conflict-builder {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 10px 0;
+  }
+
+  .study-focus-actions button {
+    padding-inline: 7px;
+  }
 }
 
 /* ==========================================================================
    Responsive planner
    ========================================================================== */
 
-@media (width <= 1380px) {
+@media (--viewport-wide) {
   .study-planner {
-    grid-template-columns: 232px minmax(0, 1fr);
-  }
-
-  .study-week-header {
-    gap: 24px;
-    padding-inline: 24px;
-  }
-
-  .study-unplanned {
-    width: 250px;
+    grid-template-columns: 228px minmax(0, 1fr);
   }
 
   .study-assignment-track {
-    grid-auto-columns: minmax(228px, 280px);
+    grid-auto-columns: minmax(200px, 244px);
   }
 }
 
-@media (width <= 1120px) {
-  .study-unplanned {
-    display: none;
-  }
-
-  .study-week-header {
-    min-height: 172px;
-  }
-
+@media (--viewport-content) {
   .study-day {
-    grid-template-columns: 140px minmax(0, 1fr);
+    grid-template-columns: 128px minmax(0, 1fr);
   }
 
   .study-day-date {
-    padding-left: 24px;
+    padding-left: 20px;
   }
 }
 
-@media (width <= 820px) {
-  .study-overview-page {
-    --sidebar-width: 248px;
-    --topbar-height: 56px;
-  }
-
-  .study-overview-page .sidebar {
-    width: 248px;
-  }
-
-  .study-overview-page .sidebar .brand-row,
-  .study-overview-page .sidebar .nav-link,
-  .study-overview-page .sidebar .user-row {
-    justify-content: flex-start;
-  }
-
-  .study-overview-page .sidebar .brand-row,
-  .study-overview-page .sidebar .user-row {
-    padding-inline: 16px;
-  }
-
-  .study-overview-page .sidebar .user-row {
-    width: auto;
-    min-height: 60px;
-    align-self: stretch;
-    margin: 0;
-    border-top: 1px solid var(--border);
-    border-radius: 0;
-  }
-
-  .study-overview-page .sidebar .nav-link {
-    min-height: 40px;
-    gap: 10px;
-    padding: 0 10px;
-  }
-
-  .study-overview-page .sidebar .nav-link span,
-  .study-overview-page .sidebar .user-row > span:last-child,
-  .study-overview-page .sidebar > .build-signature {
-    display: revert;
-  }
-
-  .study-overview-page .topbar {
-    display: flex;
-    min-height: var(--topbar-height);
-    padding-inline: 16px;
-  }
-
+@media (--viewport-shell) {
   .study-page {
     overflow: visible;
   }
@@ -1137,6 +1624,7 @@
   }
 
   .study-panel-heading,
+  .study-unplanned,
   .study-limits {
     display: none;
   }
@@ -1168,24 +1656,17 @@
   }
 }
 
-@media (width <= 640px) {
+@media (--viewport-compact) {
   .study-week-header {
-    min-height: auto;
-    padding: 24px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
   }
 
-  .study-week-title h1 {
-    font-size: 32px;
-  }
-
-  .study-week-title > p {
-    font-size: 15px;
-  }
-
-  .study-week-actions,
   .study-week-actions > *,
   .study-week-actions .button {
-    width: 100%;
+    flex: 1;
   }
 
   .study-day,
@@ -1248,7 +1729,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   .study-day-toggle,
   .study-day-toggle-icons svg,
   .study-day-bar,
@@ -1269,7 +1750,7 @@
   animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   ::view-transition-group(study-day-0),
   ::view-transition-group(study-day-1),
   ::view-transition-group(study-day-2),

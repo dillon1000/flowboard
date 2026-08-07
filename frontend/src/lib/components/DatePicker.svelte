@@ -5,12 +5,14 @@
   let {
     id,
     name,
-    value = '',
+    value = $bindable(''),
     label,
-    placeholder = 'Choose a date',
+    placeholder = 'YYYY-MM-DD',
     required = false,
     disabled = false,
-    initialFocus = false
+    initialFocus = false,
+    minDate = '',
+    maxDate = ''
   } = $props<{
     id: string;
     name: string;
@@ -20,6 +22,8 @@
     required?: boolean;
     disabled?: boolean;
     initialFocus?: boolean;
+    minDate?: string;
+    maxDate?: string;
   }>();
 
   let input: HTMLInputElement;
@@ -30,12 +34,17 @@
     void import('flatpickr').then(({ default: flatpickr }) => {
       if (disposed) return;
       picker = flatpickr(input, {
-        allowInput: false,
+        allowInput: true,
         altInput: true,
         altInputClass: 'input',
         altFormat: 'M j, Y',
         dateFormat: 'Y-m-d',
         defaultDate: value || undefined,
+        minDate: minDate || undefined,
+        maxDate: maxDate || undefined,
+        onChange: (_dates, dateValue) => {
+          value = dateValue;
+        },
         disableMobile: true,
         monthSelectorType: 'static',
         nextArrow: '<span aria-hidden="true">→</span>',
@@ -65,6 +74,8 @@
   {placeholder}
   {required}
   {disabled}
+  inputmode="numeric"
+  pattern="\d{4}-\d{2}-\d{2}"
   autocomplete="off"
   data-dialog-focus={initialFocus ? '' : undefined}
 />

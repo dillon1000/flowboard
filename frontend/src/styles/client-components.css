@@ -102,15 +102,49 @@
   font-weight: 600;
 }
 
+.markdown img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.markdown table {
+  width: 100%;
+  margin: 12px 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.markdown th,
+.markdown td {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown th {
+  background: var(--surface-subtle);
+  font-weight: 700;
+}
+
 /* ==========================================================================
    Toast
    ========================================================================== */
 
-.toast {
+.toast-stack {
   position: fixed;
   z-index: 140;
   right: 20px;
   bottom: 20px;
+  display: grid;
+  width: min(380px, calc(100vw - 40px));
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -120,14 +154,57 @@
   background: var(--surface);
   box-shadow: var(--shadow-border), var(--shadow-modal);
   font-size: 13px;
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
-  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+  pointer-events: auto;
+  animation: toast-enter 180ms var(--ease-out);
 }
 
-.toast[data-visible='true'] {
-  opacity: 1;
-  transform: none;
+.toast.error {
+  border-left: 3px solid var(--ds-red-700);
+  color: var(--ds-red-1000);
+  background: var(--ds-red-100);
+}
+
+.toast > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.toast-dismiss {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: currentcolor;
+  background: transparent;
+  cursor: pointer;
+}
+
+.toast-action {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: var(--radius-small);
+  color: var(--ds-blue-900);
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toast-dismiss:hover,
+.toast-action:hover {
+  background: var(--ds-gray-alpha-100);
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
 }
 
 /* ==========================================================================
@@ -445,7 +522,7 @@ span.flatpickr-weekday {
   padding: 0 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   .time-picker-panel {
     transition-duration: 1ms;
   }

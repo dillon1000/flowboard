@@ -1,16 +1,21 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { dialogLayer } from '$lib/actions/dialogLayer';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import Avatar from '$lib/components/Avatar.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+  import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TapActionDialog from '$lib/components/TapActionDialog.svelte';
   import WorkflowColorField from '$lib/components/WorkflowColorField.svelte';
   import SelectMenu, { type SelectMenuOption } from '$lib/components/SelectMenu.svelte';
   import type {
     BoardResponse,
+    BoardMemberContext,
     BoardSettingsPageContext,
     BoardSettingsViewContext,
+    PropertyDefinitionContext,
     TapActionContext,
+    TemplateContext,
     TaskOptionContext,
     TaskResponse
   } from '$lib/types';
@@ -22,11 +27,12 @@
     ColumnsIcon as Columns3,
     CopyIcon as Copy,
     DownloadIcon as Download,
-    KeyIcon as KeyRound,
-    ListMagnifyingGlassIcon as ListFilter,
+    DotsThreeIcon as DotsThree,
+    ListChecksIcon as ListChecks,
     PlusIcon as Plus,
     GearIcon as Settings,
     TagIcon as Tag,
+    TextTIcon as TextT,
     TrashIcon as Trash2,
     UploadIcon as Upload,
     UsersIcon as Users,
@@ -39,11 +45,22 @@
   const standardNFCTagBytes = 504;
 
   let { board } = $props<{ board: BoardSettingsPageContext }>();
-  let pending = $state(false);
+  let pendingCount = $state(0);
+  const pending = $derived(pendingCount > 0);
   let requestError = $state('');
   let tapOpen = $state(false);
   let editingTap = $state<TapActionContext | null>(null);
   let editingView = $state<BoardSettingsViewContext | null>(null);
+  let deletingView = $state<BoardSettingsViewContext | null>(null);
+  let deletingTap = $state<TapActionContext | null>(null);
+  let removingMember = $state<BoardMemberContext | null>(null);
+  let deletingTemplate = $state<TemplateContext | null>(null);
+  let editingProperty = $state<PropertyDefinitionContext | null>(null);
+  let deletingProperty = $state<PropertyDefinitionContext | null>(null);
+  let archiveOpen = $state(false);
+  let duplicateOpen = $state(false);
+  let viewFilterField = $state('');
+  let viewFilterValue = $state('');
   let editingWorkflowOption = $state<{
     kind: 'status' | 'severity';
     option: TaskOptionContext;
@@ -55,7 +72,7 @@
   let deleteOpen = $state(false);
   let propertyType = $state('text');
   const viewTypeOptions: SelectMenuOption[] = [
-    { value: 'board', label: 'Board' },
+    { value: 'board', label: 'Columns' },
     { value: 'table', label: 'Table' },
     { value: 'calendar', label: 'Calendar' },
     { value: 'gantt', label: 'Gantt' },
@@ -80,12 +97,31 @@
   ];
   const groupOptions: SelectMenuOption[] = [
     { value: 'status', label: 'Status' },
-    { value: 'priority', label: 'Severity' }
+    { value: 'priority', label: 'Priority' }
   ];
   const sortDirectionOptions: SelectMenuOption[] = [
     { value: 'ascending', label: 'Ascending' },
     { value: 'descending', label: 'Descending' }
   ];
+  const sortFieldOptions: SelectMenuOption[] = [
+    { value: '', label: 'No sorting' },
+    { value: 'title', label: 'Assignment title' },
+    { value: 'due_at', label: 'Due date' },
+    { value: 'priority', label: 'Priority' }
+  ];
+  const filterFieldOptions = $derived<SelectMenuOption[]>([
+    { value: '', label: 'No filter' },
+    { value: 'status', label: 'Status' },
+    { value: 'priority', label: 'Priority' },
+    ...(board.filterLabels.length ? [{ value: 'label', label: 'Label' }] : []),
+    ...board.properties.filter((property: PropertyDefinitionContext) => property.hasOptions).map((property: PropertyDefinitionContext) => ({ value: property.id, label: property.name }))
+  ]);
+  const filterValueOptions = $derived.by<SelectMenuOption[]>(() => {
+    if (viewFilterField === 'status') return board.statuses.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }));
+    if (viewFilterField === 'priority') return board.severities.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }));
+    if (viewFilterField === 'label') return board.filterLabels.map((label: string) => ({ value: label, label }));
+    return board.properties.find((property: PropertyDefinitionContext) => property.id === viewFilterField)?.options ?? [{ value: '', label: 'No value' }];
+  });
 
   const provisionedURL = $derived(provisionedURLOverride || board.createdTapURL);
   const provisionedURLByteCount = $derived(
@@ -108,19 +144,59 @@
   }
 
   async function mutate(path: string, init: RequestInit, successMessage = ''): Promise<boolean> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       await api(path, init);
-      await invalidateAll();
+      await refreshAll();
       if (successMessage) showToast(successMessage);
       return true;
     } catch (cause) {
       requestError = messageFor(cause);
       return false;
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
+  }
+
+  function deleteSelectedView(): Promise<boolean> {
+    if (!deletingView) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/views/${deletingView.id}`, { method: 'DELETE' }, 'View deleted');
+  }
+
+  function deleteSelectedTap(): Promise<boolean> {
+    if (!deletingTap) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/tap-actions/${deletingTap.id}`, { method: 'DELETE' }, 'Tap action deleted');
+  }
+
+  function removeSelectedMember(): Promise<boolean> {
+    if (!removingMember) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/members/${removingMember.id}`, { method: 'DELETE' }, 'Member removed');
+  }
+
+  function deleteSelectedTemplate(): Promise<boolean> {
+    if (!deletingTemplate) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/templates/${deletingTemplate.id}`, { method: 'DELETE' }, 'Template deleted');
+  }
+
+  function deleteSelectedProperty(): Promise<boolean> {
+    if (!deletingProperty) return Promise.resolve(false);
+    return mutate(`/api/v1/boards/${board.id}/properties/${deletingProperty.id}`, { method: 'DELETE' }, 'Custom field deleted');
+  }
+
+  function archiveCourse(): Promise<boolean> {
+    return mutate(`/api/v1/boards/${board.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: true }) }, 'Course archived');
+  }
+
+  function openViewEditor(view: BoardSettingsViewContext): void {
+    viewFilterField = view.filterField;
+    viewFilterValue = view.filterValue;
+    editingView = view;
+  }
+
+  function selectFilterField(value: string): void {
+    viewFilterField = value;
+    viewFilterValue = filterValueOptions[0]?.value ?? '';
   }
 
   async function saveBoard(event: SubmitEvent): Promise<void> {
@@ -134,7 +210,7 @@
           ? { description: String(data.get('description') ?? '') || null }
           : { name: String(data.get('name') ?? ''), description: String(data.get('description') ?? '') || null })
       },
-      'Board saved'
+      'Course saved'
     );
   }
 
@@ -202,7 +278,7 @@
           isCompleted: kind === 'status' && data.has('isCompleted')
         })
       },
-      kind === 'status' ? 'Status saved' : 'Severity saved'
+      kind === 'status' ? 'Status saved' : 'Priority saved'
     );
     if (saved) editingWorkflowOption = null;
   }
@@ -222,7 +298,7 @@
           isCompleted: data.has('isCompleted')
         })
       },
-      kind === 'status' ? 'Status added' : 'Severity added'
+      kind === 'status' ? 'Status added' : 'Priority added'
     );
     if (saved) form.reset();
   }
@@ -247,6 +323,17 @@
       form.reset();
       propertyType = 'text';
     }
+  }
+
+  async function saveProperty(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    if (!editingProperty) return;
+    const name = String(new FormData(event.currentTarget as HTMLFormElement).get('name') ?? '');
+    const saved = await mutate(`/api/v1/boards/${board.id}/properties/${editingProperty.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name })
+    }, 'Custom field saved');
+    if (saved) editingProperty = null;
   }
 
   async function addMember(event: SubmitEvent): Promise<void> {
@@ -291,18 +378,19 @@
   }
 
   async function useTemplate(templateID: string): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const task = await api<TaskResponse>(
         `/api/v1/boards/${board.id}/templates/${templateID}/instantiate`,
         { method: 'POST' }
       );
-      showToast('Task created from template');
+      showToast('Assignment created from template');
       await goto(task.browserPath, { invalidateAll: true });
     } catch (cause) {
       requestError = messageFor(cause);
-      pending = false;
+    } finally {
+      pendingCount -= 1;
     }
   }
 
@@ -313,7 +401,7 @@
   }
 
   async function rotateTap(actionID: string): Promise<void> {
-    pending = true;
+    pendingCount += 1;
     requestError = '';
     try {
       const result = await api<{ url: string }>(
@@ -321,12 +409,12 @@
         { method: 'POST' }
       );
       provisionTap(result.url);
-      await invalidateAll();
+      await refreshAll();
       showToast('Tap link rotated');
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
-      pending = false;
+      pendingCount -= 1;
     }
   }
 
@@ -336,26 +424,29 @@
     const saved = await mutate(
       `/api/v1/boards/${board.id}/import`,
       { method: 'POST', body: new FormData(form) },
-      'Board data imported'
+      'Course data imported'
     );
     if (saved) form.reset();
   }
 
-  async function duplicateBoard(): Promise<void> {
-    pending = true;
+  async function duplicateBoard(): Promise<boolean> {
+    pendingCount += 1;
     requestError = '';
     try {
       const copy = await api<BoardResponse>(`/api/v1/boards/${board.id}/duplicate`, { method: 'POST' });
-      showToast('Board duplicated');
+      showToast('Course duplicated');
       await goto(`/app/boards/${copy.id}`, { invalidateAll: true });
+      return true;
     } catch (cause) {
       requestError = messageFor(cause);
-      pending = false;
+      return false;
+    } finally {
+      pendingCount -= 1;
     }
   }
 
   async function deleteBoard(): Promise<void> {
-    if (await mutate(`/api/v1/boards/${board.id}`, { method: 'DELETE' }, 'Board deleted')) {
+    if (await mutate(`/api/v1/boards/${board.id}`, { method: 'DELETE' }, 'Course deleted')) {
       await goto('/app', { invalidateAll: true });
     }
   }
@@ -396,12 +487,12 @@
   }
 </script>
 
-<div class="page">
+<div class="page narrow">
   <header class="page-header">
     <div class="page-title">
       <a class="page-eyebrow" href={board.firstViewHref}><ChevronLeft size={14} />{board.name}</a>
-      <h1>Board settings</h1>
-      <p>Configure views, fields, templates, sharing, and data.</p>
+      <h1>Course settings</h1>
+      <p>Everything this course owns — basics, layout, workflow, sharing, and data.</p>
     </div>
   </header>
 
@@ -410,16 +501,16 @@
   {/if}
 
   <div class="settings-grid">
-    <nav class="settings-menu" aria-label="Board settings sections">
+    <nav class="settings-menu" aria-label="Course settings sections">
       <a class="nav-link" href="#general"><Settings size={15} /><span>General</span></a>
       <a class="nav-link" href="#views"><Columns3 size={15} /><span>Views</span></a>
-      <a class="nav-link" href="#workflow"><ListFilter size={15} /><span>Workflow</span></a>
-      <a class="nav-link" href="#fields"><Tag size={15} /><span>Custom fields</span></a>
+      <a class="nav-link" href="#workflow"><ListChecks size={15} /><span>Workflow</span></a>
+      <a class="nav-link" href="#fields"><TextT size={15} /><span>Custom fields</span></a>
       <a class="nav-link" href="#members"><Users size={15} /><span>Members</span></a>
       <a class="nav-link" href="#templates"><Copy size={15} /><span>Templates</span></a>
-      <a class="nav-link" href="#tap-actions"><KeyRound size={15} /><span>Tap actions</span></a>
+      <a class="nav-link" href="#tap-actions"><Tag size={15} /><span>Tap actions</span></a>
       <a class="nav-link" href="#data"><Download size={15} /><span>Data</span></a>
-      <a class="nav-link" href="#danger"><Archive size={15} /><span>Board actions</span></a>
+      <a class="nav-link" href="#danger"><Archive size={15} /><span>Course actions</span></a>
     </nav>
 
     <div class="settings-content">
@@ -428,7 +519,7 @@
         <form class="panel panel-form" onsubmit={saveBoard}>
           <div class="field"><label for="settings-board-name">Name</label><input class="input" id="settings-board-name" name="name" value={board.name} minlength="2" maxlength="80" required readonly={board.isCanvasLinked} aria-describedby={board.isCanvasLinked ? 'canvas-board-name-help' : undefined} />{#if board.isCanvasLinked}<span class="field-help" id="canvas-board-name-help">Canvas manages the course name.</span>{/if}</div>
           <div class="field"><label for="settings-board-description">Description</label><textarea class="textarea" id="settings-board-description" name="description" maxlength="500">{board.description}</textarea></div>
-          <div class="form-actions"><button class="button primary" type="submit" disabled={pending}>Save board</button></div>
+          <div class="form-actions"><button class="button primary" type="submit" disabled={pending}>Save course</button></div>
         </form>
       </section>
 
@@ -439,8 +530,8 @@
             <div class="panel-row">
               <Columns3 size={15} />
               <span class="panel-row-main"><strong>{view.name}</strong><span>{view.typeName} · Grouped by {view.groupByName}</span></span>
-              <button class="button small" type="button" onclick={() => (editingView = view)}>Configure</button>
-              <button class="icon-button" type="button" onclick={() => confirm(`Delete ${view.name}?`) && mutate(`/api/v1/boards/${board.id}/views/${view.id}`, { method: 'DELETE' }, 'View deleted')} aria-label={`Delete ${view.name}`} disabled={pending}><X size={14} /></button>
+              <button class="button small" type="button" onclick={() => openViewEditor(view)}>Configure</button>
+              <button class="icon-button" type="button" onclick={() => (deletingView = view)} aria-label={`Delete ${view.name}`} disabled={pending}><X size={14} /></button>
             </div>
           {/each}
           <form class="panel-row" onsubmit={addView}>
@@ -452,10 +543,10 @@
       </section>
 
       <section class="section" id="workflow">
-        <div class="section-heading"><div><h2>Workflow</h2><p>Add the status and severity values that this board needs.</p></div></div>
+        <div class="section-heading"><div><h2>Workflow</h2><p>Add the status and priority values that this course needs.</p></div></div>
         <div class="settings-split">
           <div class="panel">
-            <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward board progress.</span></span></div>
+            <div class="panel-row"><span class="panel-row-main"><strong>Statuses</strong><span>Completed statuses count toward course progress.</span></span></div>
             {#each board.statuses as option (option.value)}
               <div class="panel-row">
                 <span class={`badge status ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
@@ -472,27 +563,34 @@
           </div>
 
           <div class="panel">
-            <div class="panel-row"><span class="panel-row-main"><strong>Severities</strong><span>Severity describes the effect or urgency of a task.</span></span></div>
+            <div class="panel-row"><span class="panel-row-main"><strong>Priorities</strong><span>Priority shows which assignments need attention first.</span></span></div>
             {#each board.severities as option (option.value)}
               <div class="panel-row">
                 <span class={`badge ${option.colorClass}`} style={option.colorStyle}>{option.name}</span>
                 <span class="panel-row-main"></span>
-                <button class="button small" type="button" aria-label={`Edit severity ${option.name}`} onclick={() => (editingWorkflowOption = { kind: 'severity', option })}>Edit</button>
+                <button class="button small" type="button" aria-label={`Edit priority ${option.name}`} onclick={() => (editingWorkflowOption = { kind: 'severity', option })}>Edit</button>
               </div>
             {/each}
             <form class="panel-row workflow-option-form" onsubmit={(event) => addWorkflowOption(event, 'severity')}>
-              <input class="input" name="name" placeholder="Severity name" maxlength="40" required />
+              <input class="input" name="name" placeholder="Priority name" maxlength="40" required />
               <WorkflowColorField />
-              <button class="button small" type="submit" disabled={pending}>Add severity</button>
+              <button class="button small" type="submit" disabled={pending}>Add priority</button>
             </form>
           </div>
         </div>
       </section>
 
       <section class="section" id="fields">
-        <div class="section-heading"><div><h2>Custom fields</h2><p>Add typed fields to every task on this board.</p></div></div>
+        <div class="section-heading"><div><h2>Custom fields</h2><p>Add typed fields to every assignment in this course.</p></div></div>
         <div class="panel">
-          {#each board.properties as property}<div class="panel-row"><Tag size={15} /><span class="panel-row-main"><strong>{property.name}</strong><span>{property.detail}</span></span></div>{/each}
+          {#each board.properties as property (property.id)}
+            <div class="panel-row">
+              <Tag size={15} />
+              <span class="panel-row-main"><strong>{property.name}</strong><span>{property.detail}</span></span>
+              <button class="button small" type="button" onclick={() => (editingProperty = property)}>Edit</button>
+              <button class="icon-button" type="button" onclick={() => (deletingProperty = property)} aria-label={`Delete ${property.name}`} disabled={pending}><Trash2 size={14} /></button>
+            </div>
+          {/each}
           <form class="panel-row" onsubmit={addProperty}>
             <input class="input" name="name" placeholder="Field name" maxlength="60" required />
             <SelectMenu name="type" value={propertyType} options={fieldTypeOptions} ariaLabel="Field type" onchange={selectPropertyType} />
@@ -506,21 +604,21 @@
         <div class="section-heading"><div><h2>Members</h2><p>Viewer, Commenter, Editor, and Admin roles control access.</p></div></div>
         <div class="panel">
           <div class="panel-row"><Avatar avatar={board.ownerAvatar} /><span class="panel-row-main"><strong>{board.ownerName}</strong><span>{board.ownerEmail}</span></span><span class="badge">Owner</span></div>
-          {#each board.members as member (member.id)}<div class="panel-row"><Avatar avatar={member.avatar} /><span class="panel-row-main"><strong>{member.name}</strong><span>{member.email}</span></span><span class="badge">{member.role}</span><button class="icon-button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/members/${member.id}`, { method: 'DELETE' }, 'Member removed')} aria-label={`Remove ${member.name}`} disabled={pending}><X size={14} /></button></div>{/each}
+          {#each board.members as member (member.id)}<div class="panel-row"><Avatar avatar={member.avatar} /><span class="panel-row-main"><strong>{member.name}</strong><span>{member.email}</span></span><span class="badge">{member.role}</span><button class="icon-button" type="button" onclick={() => (removingMember = member)} aria-label={`Remove ${member.name}`} disabled={pending}><X size={14} /></button></div>{/each}
           <form class="panel-row" onsubmit={addMember}><input class="input" type="email" name="email" placeholder="Member email" required /><SelectMenu name="role" value="editor" options={memberRoleOptions} ariaLabel="Member role" /><button class="button small" type="submit" disabled={pending}>Share</button></form>
         </div>
       </section>
 
       <section class="section" id="templates">
-        <div class="section-heading"><div><h2>Task templates</h2><p>Reuse common task structure.</p></div></div>
+        <div class="section-heading"><div><h2>Assignment templates</h2><p>Reuse a common assignment structure.</p></div></div>
         <div class="panel">
-          {#each board.templates as template (template.id)}<div class="panel-row"><Copy size={15} /><span class="panel-row-main"><strong>{template.name}</strong><span>{template.title}</span></span>{#if template.isDefault}<span class="badge">Default</span>{/if}<button class="button small" type="button" onclick={() => useTemplate(template.id)} disabled={pending}>Use</button><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/templates/${template.id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) }, 'Default template changed')} disabled={pending}>Set default</button><button class="icon-button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/templates/${template.id}`, { method: 'DELETE' }, 'Template deleted')} aria-label={`Delete ${template.name}`} disabled={pending}><X size={14} /></button></div>{/each}
-          <form class="panel-row" onsubmit={addTemplate}><input class="input" name="name" placeholder="Template name" maxlength="80" required /><input class="input" name="title" placeholder="Default task title" maxlength="120" required /><button class="button small" type="submit" disabled={pending}>Add template</button></form>
+          {#each board.templates as template (template.id)}<div class="panel-row"><Copy size={15} /><span class="panel-row-main"><strong>{template.name}</strong><span>{template.title}</span></span>{#if template.isDefault}<span class="badge">Default</span>{/if}<button class="button small" type="button" onclick={() => useTemplate(template.id)} disabled={pending}>Use</button><button class="button ghost small" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/templates/${template.id}`, { method: 'PATCH', body: JSON.stringify({ isDefault: true }) }, 'Default template changed')} disabled={pending}>Set default</button><button class="icon-button" type="button" onclick={() => (deletingTemplate = template)} aria-label={`Delete ${template.name}`} disabled={pending}><X size={14} /></button></div>{/each}
+          <form class="panel-row" onsubmit={addTemplate}><input class="input" name="name" placeholder="Template name" maxlength="80" required /><input class="input" name="title" placeholder="Default assignment title" maxlength="120" required /><button class="button small" type="submit" disabled={pending}>Add template</button></form>
         </div>
       </section>
 
       <section class="section" id="tap-actions">
-        <div class="section-heading"><div><h2>Tap actions</h2><p>Run a fixed task change from an NFC tag without signing in.</p></div><button class="button primary" type="button" onclick={() => { editingTap = null; tapOpen = true; }}><Plus size={14} />New Tap action</button></div>
+        <div class="section-heading"><div><h2>Tap actions</h2><p>Run a fixed assignment change from an NFC tag without signing in.</p></div><button class="button primary" type="button" onclick={() => { editingTap = null; tapOpen = true; }}><Plus size={14} />New Tap action</button></div>
         {#if provisionedURL}
           <div class="panel tap-provision">
             <div class="tap-provision-main">
@@ -544,9 +642,17 @@
                 <code class="tap-token-prefix">{action.prefix}…</code>
                 <span class={`badge ${action.isActive ? 'success' : 'subtle'}`}>{action.stateName}</span>
                 <button class="button small" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}/tap-actions/${action.id}`, { method: 'PATCH', body: JSON.stringify({ isEnabled: !action.isEnabled }) }, action.isEnabled ? 'Tap action disabled' : 'Tap action enabled')} disabled={pending}>{action.isEnabled ? 'Disable' : 'Enable'}</button>
-                <button class="button ghost small" type="button" onclick={() => rotateTap(action.id)} disabled={pending}>Rotate link</button>
-                <button class="button ghost small" type="button" onclick={() => { editingTap = action; tapOpen = true; }}>Edit</button>
-                <button class="icon-button" type="button" onclick={() => confirm('Delete this Tap action?') && mutate(`/api/v1/boards/${board.id}/tap-actions/${action.id}`, { method: 'DELETE' }, 'Tap action deleted')} aria-label={`Delete ${action.name}`} disabled={pending}><Trash2 size={14} /></button>
+                <PopoverMenu panelLabel={`Actions for ${action.name}`} align="right">
+                  {#snippet trigger(control)}
+                    <button class="icon-button" type="button" aria-haspopup="menu" aria-expanded={control.open} aria-label={`Actions for ${action.name}`} onclick={control.toggle}><DotsThree size={18} weight="bold" /></button>
+                  {/snippet}
+                  {#snippet children(close)}
+                    <button class="menu-option" type="button" role="menuitem" disabled={pending} onclick={() => { close(); rotateTap(action.id); }}>Rotate link</button>
+                    <button class="menu-option" type="button" role="menuitem" onclick={() => { close(); editingTap = action; tapOpen = true; }}>Edit action</button>
+                    <div class="menu-separator"></div>
+                    <button class="menu-option danger" type="button" role="menuitem" disabled={pending} onclick={() => { close(); deletingTap = action; }}><Trash2 size={14} />Delete action</button>
+                  {/snippet}
+                </PopoverMenu>
               </div>
             {/each}
           {:else}
@@ -560,17 +666,17 @@
       <section class="section" id="data">
         <div class="section-heading"><h2>Data</h2></div>
         <div class="panel">
-          <div class="panel-row"><span class="panel-row-main"><strong>Export board</strong><span>Download tasks and configuration as JSON.</span></span><a class="button" href={`/api/v1/boards/${board.id}/export`}><Download size={14} />Export</a></div>
-          <form class="panel-row" onsubmit={importBoard}><span class="panel-row-main"><strong>Import board</strong><span>Add tasks from a Flowboard JSON export.</span></span><label class="button"><Upload size={14} />Choose file<input class="sr-only" type="file" name="file" accept="application/json" required /></label><button class="button" type="submit" disabled={pending}>Import</button></form>
+          <div class="panel-row"><span class="panel-row-main"><strong>Export course</strong><span>Download assignments and course settings as JSON.</span></span><a class="button" href={`/api/v1/boards/${board.id}/export`}><Download size={14} />Export</a></div>
+          <form class="panel-row" onsubmit={importBoard}><span class="panel-row-main"><strong>Import course</strong><span>Add assignments from a Flowboard JSON export.</span></span><label class="button"><Upload size={14} />Choose file<input class="sr-only" type="file" name="file" accept="application/json" required /></label><button class="button" type="submit" disabled={pending}>Import</button></form>
         </div>
       </section>
 
       <section class="section" id="danger">
-        <div class="section-heading"><h2>Board actions</h2></div>
+        <div class="section-heading"><h2>Course actions</h2></div>
         <div class="panel danger-zone">
-          <div class="panel-row"><span class="panel-row-main"><strong>{board.isArchived ? 'Restore board' : 'Archive board'}</strong><span>Archived boards leave the main navigation.</span></span><button class="button" type="button" onclick={() => mutate(`/api/v1/boards/${board.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: !board.isArchived }) }, board.isArchived ? 'Board restored' : 'Board archived')} disabled={pending}><Archive size={14} />{board.isArchived ? 'Restore' : 'Archive'}</button></div>
-          <div class="panel-row"><span class="panel-row-main"><strong>Duplicate board</strong><span>Copy tasks, views, fields, and templates.</span></span><button class="button" type="button" onclick={duplicateBoard} disabled={pending}><Copy size={14} />Duplicate</button></div>
-          {#if board.isOwner && !board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Delete board</strong><span>Permanently remove this board and its tasks.</span></span><button class="button danger" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div>{:else if board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Canvas course cannot be deleted</strong><span>Disconnect Canvas in Integrations to turn this into an ordinary local board.</span></span><a class="button small" href="/app/settings/integrations">Open integrations</a></div>{/if}
+          <div class="panel-row"><span class="panel-row-main"><strong>{board.isArchived ? 'Restore course' : 'Archive course'}</strong><span>Archived courses leave the main navigation.</span></span><button class="button" type="button" onclick={() => board.isArchived ? mutate(`/api/v1/boards/${board.id}`, { method: 'PATCH', body: JSON.stringify({ isArchived: false }) }, 'Course restored') : (archiveOpen = true)} disabled={pending}><Archive size={14} />{board.isArchived ? 'Restore' : 'Archive'}</button></div>
+          <div class="panel-row"><span class="panel-row-main"><strong>Duplicate course</strong><span>Copy assignments, views, fields, and templates.</span></span><button class="button" type="button" onclick={() => (duplicateOpen = true)} disabled={pending}><Copy size={14} />Duplicate</button></div>
+          {#if board.isOwner && !board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Delete course</strong><span>Permanently remove this course and its assignments.</span></span><button class="button danger" type="button" onclick={() => (deleteOpen = true)}>Delete</button></div>{:else if board.isCanvasLinked}<div class="panel-row"><span class="panel-row-main"><strong>Canvas course cannot be deleted</strong><span>Disconnect Canvas in Integrations to turn this into a local course.</span></span><a class="button small" href="/app/settings/integrations">Open integrations</a></div>{/if}
         </div>
       </section>
     </div>
@@ -578,6 +684,13 @@
 </div>
 
 <TapActionDialog bind:open={tapOpen} {board} action={editingTap} onprovision={provisionTap} />
+<ConfirmDialog open={Boolean(deletingView)} title={`Delete ${deletingView?.name ?? 'this view'}?`} description="This saved layout will be removed from the course." confirmLabel="Delete view" pendingLabel="Deleting…" oncancel={() => (deletingView = null)} onconfirm={deleteSelectedView} />
+<ConfirmDialog open={Boolean(deletingTap)} title={`Delete ${deletingTap?.name ?? 'this Tap action'}?`} description="The NFC link for this action will stop working." confirmLabel="Delete action" pendingLabel="Deleting…" oncancel={() => (deletingTap = null)} onconfirm={deleteSelectedTap} />
+<ConfirmDialog open={Boolean(removingMember)} title={`Remove ${removingMember?.name ?? 'this member'}?`} description="This person will lose access to the course and its assignments." confirmLabel="Remove member" pendingLabel="Removing…" oncancel={() => (removingMember = null)} onconfirm={removeSelectedMember} />
+<ConfirmDialog open={Boolean(deletingTemplate)} title={`Delete ${deletingTemplate?.name ?? 'this template'}?`} description="This template will no longer be available for new assignments." confirmLabel="Delete template" pendingLabel="Deleting…" oncancel={() => (deletingTemplate = null)} onconfirm={deleteSelectedTemplate} />
+<ConfirmDialog open={Boolean(deletingProperty)} title={`Delete ${deletingProperty?.name ?? 'this custom field'}?`} description="This removes the field and its values from every assignment in this course." confirmLabel="Delete field" pendingLabel="Deleting…" oncancel={() => (deletingProperty = null)} onconfirm={deleteSelectedProperty} />
+<ConfirmDialog open={archiveOpen} title={`Archive ${board.name}?`} description="The course will leave the main navigation. You can restore it later." confirmLabel="Archive course" pendingLabel="Archiving…" oncancel={() => (archiveOpen = false)} onconfirm={archiveCourse} />
+<ConfirmDialog open={duplicateOpen} title={`Duplicate ${board.name}?`} description="A new course will include these assignments, views, fields, and templates." confirmLabel="Duplicate course" pendingLabel="Duplicating…" tone="primary" oncancel={() => (duplicateOpen = false)} onconfirm={duplicateBoard} />
 
 {#if editingView}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="configure-view-title" tabindex="-1" use:dialogLayer={{ close: () => (editingView = null) }}>
@@ -588,11 +701,11 @@
           <div class="field"><label for="view-name">Name</label><input class="input" id="view-name" name="name" value={editingView.name} minlength="1" maxlength="80" required /></div>
           <div class="field"><label for="view-type">Layout</label><SelectMenu id="view-type" name="type" value={editingView.type} options={viewTypeOptions} ariaLabel="Layout" /></div>
         </div>
-        <div class="field"><label for="view-group">Group board cards by</label><SelectMenu id="view-group" name="groupBy" value={editingView.groupBy} options={groupOptions} ariaLabel="Group board cards by" initialFocus /></div>
+        <div class="field"><label for="view-group">Group assignments by</label><SelectMenu id="view-group" name="groupBy" value={editingView.groupBy} options={groupOptions} ariaLabel="Group assignments by" initialFocus /></div>
         <div class="form-grid">
-          <div class="field"><label for="view-filter-field">Filter field</label><input class="input" id="view-filter-field" name="filterField" value={editingView.filterField} placeholder="status, priority, or label" /></div>
-          <div class="field"><label for="view-filter-value">Filter value</label><input class="input" id="view-filter-value" name="filterValue" value={editingView.filterValue} placeholder="review" /></div>
-          <div class="field"><label for="view-sort-field">Sort field</label><input class="input" id="view-sort-field" name="sortField" value={editingView.sortField} placeholder="title, due_at, or priority" /></div>
+          <div class="field"><label for="view-filter-field">Filter field</label><SelectMenu id="view-filter-field" name="filterField" bind:value={viewFilterField} options={filterFieldOptions} ariaLabel="Filter field" onchange={selectFilterField} /></div>
+          <div class="field"><label for="view-filter-value">Filter value</label><SelectMenu id="view-filter-value" name="filterValue" bind:value={viewFilterValue} options={filterValueOptions} ariaLabel="Filter value" disabled={!viewFilterField} /></div>
+          <div class="field"><label for="view-sort-field">Sort field</label><SelectMenu id="view-sort-field" name="sortField" value={editingView.sortField} options={sortFieldOptions} ariaLabel="Sort field" /></div>
           <div class="field"><label for="view-sort-direction">Sort direction</label><SelectMenu id="view-sort-direction" name="sortDirection" value={editingView.sortDirection} options={sortDirectionOptions} ariaLabel="Sort direction" /></div>
         </div>
       </div>
@@ -601,11 +714,24 @@
   </div>
 {/if}
 
+{#if editingProperty}
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-property-title" tabindex="-1" use:dialogLayer={{ close: () => (editingProperty = null) }}>
+    <form class="dialog compact" onsubmit={saveProperty}>
+      <div class="dialog-header"><div><h2 id="edit-property-title">Edit custom field</h2><p>Rename the field across this course.</p></div><button class="icon-button" type="button" onclick={() => (editingProperty = null)} aria-label="Close"><X size={16} /></button></div>
+      <div class="dialog-body">
+        <div class="field"><label for="property-name">Name</label><input class="input" id="property-name" name="name" value={editingProperty.name} minlength="1" maxlength="60" required data-dialog-focus /></div>
+        <p class="field-help">The {editingProperty.typeName.toLowerCase()} field type and its options stay unchanged.</p>
+      </div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingProperty = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save field</button></div>
+    </form>
+  </div>
+{/if}
+
 {#if editingWorkflowOption}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-workflow-title" tabindex="-1" use:dialogLayer={{ close: () => (editingWorkflowOption = null) }}>
     <form class="dialog" onsubmit={editWorkflowOption}>
       <div class="dialog-header">
-        <div><h2 id="edit-workflow-title">Edit {editingWorkflowOption.kind}</h2><p>The updated name and color apply everywhere on this board.</p></div>
+        <div><h2 id="edit-workflow-title">Edit {editingWorkflowOption.kind === 'severity' ? 'priority' : editingWorkflowOption.kind}</h2><p>The updated name and color apply everywhere in this course.</p></div>
         <button class="icon-button" type="button" onclick={() => (editingWorkflowOption = null)} aria-label="Close"><X size={16} /></button>
       </div>
       <div class="dialog-body">
@@ -615,13 +741,13 @@
           <label class="checkbox-label"><input class="checkbox-input" type="checkbox" name="isCompleted" value="true" checked={editingWorkflowOption.option.isCompleted} /><span class="checkbox-control" aria-hidden="true"><Check size={13} /></span><span>Counts as completed</span></label>
         {/if}
       </div>
-      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingWorkflowOption = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save {editingWorkflowOption.kind}</button></div>
+      <div class="dialog-footer"><button class="button" type="button" onclick={() => (editingWorkflowOption = null)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save {editingWorkflowOption.kind === 'severity' ? 'priority' : editingWorkflowOption.kind}</button></div>
     </form>
   </div>
 {/if}
 
 {#if deleteOpen}
   <div class="dialog-layer" role="alertdialog" aria-modal="true" aria-labelledby="delete-board-title" tabindex="-1" use:dialogLayer={{ close: () => (deleteOpen = false), closeOnBackdrop: false }}>
-    <div class="dialog"><div class="dialog-header"><div><h2 id="delete-board-title">Delete {board.name}?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteBoard} disabled={pending}>Delete board</button></div></div>
+    <div class="dialog"><div class="dialog-header"><div><h2 id="delete-board-title">Delete {board.name}?</h2><p>This action cannot be undone.</p></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (deleteOpen = false)} data-dialog-focus>Cancel</button><button class="button danger" type="button" onclick={deleteBoard} disabled={pending}>Delete course</button></div></div>
   </div>
 {/if}

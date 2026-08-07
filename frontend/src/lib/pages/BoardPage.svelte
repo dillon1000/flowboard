@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext, TaskOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { ArrowRightIcon as ArrowRight, ArrowSquareOutIcon as ArrowSquareOut, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, ChartBarHorizontalIcon as GanttChart, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
+  import ContextPanelToggle from '$lib/components/ContextPanelToggle.svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
+  import StudySessionPanel from '$lib/components/StudySessionPanel.svelte';
   import { deadlineFrom, durationLabel } from '$lib/ui/deadline';
   import { buildGanttScale, ganttPlacement, type GanttPlacement } from '$lib/ui/gantt';
   import { plainSummary } from '$lib/ui/summary';
@@ -14,7 +15,8 @@
   import { showToast } from '$lib/ui/toast';
 
   type DueFilter = 'any' | 'overdue' | 'week' | 'undated';
-  type SortField = 'board' | 'due' | 'title' | 'severity' | 'effort' | 'grade';
+  type SortField = 'board' | 'due' | 'title' | 'status' | 'severity' | 'effort' | 'grade';
+  type GanttScale = 'week' | 'month' | 'term';
   interface ScheduledGanttRow {
     task: TaskCardContext;
     placement: GanttPlacement;
@@ -38,6 +40,7 @@
   let dueFilter = $state<DueFilter>('any');
   let sortField = $state<SortField>('board');
   let sortAscending = $state(true);
+  let ganttScaleName = $state<GanttScale>('month');
 
   const dueFilters: { value: DueFilter; name: string }[] = [
     { value: 'any', name: 'Any time' },
@@ -47,10 +50,11 @@
   ];
 
   const sortFields: { value: SortField; name: string }[] = [
-    { value: 'board', name: 'Board order' },
+    { value: 'board', name: 'Manual order' },
     { value: 'due', name: 'Due date' },
     { value: 'title', name: 'Title' },
-    { value: 'severity', name: 'Severity' },
+    { value: 'status', name: 'Stage' },
+    { value: 'severity', name: 'Priority' },
     { value: 'effort', name: 'Effort' },
     { value: 'grade', name: 'Score' }
   ];
@@ -60,6 +64,7 @@
     year: 'numeric',
     timeZone: 'UTC'
   });
+  const ganttDayWidths: Record<GanttScale, number> = { week: 28, month: 14, term: 4 };
 
   $effect(() => {
     columns = cloneColumns(board.columns);
@@ -96,7 +101,10 @@
   const severityOrder = $derived(
     new Map<string, number>(board.severityOptions.map((option: TaskOptionContext, index: number) => [option.value, index]))
   );
-  const sortName = $derived(sortFields.find((option) => option.value === sortField)?.name ?? 'Board order');
+  const statusOrder = $derived(
+    new Map<string, number>(board.statusOptions.map((option: TaskOptionContext, index: number) => [option.value, index]))
+  );
+  const sortName = $derived(sortFields.find((option) => option.value === sortField)?.name ?? 'Manual order');
   const dueName = $derived(dueFilters.find((option) => option.value === dueFilter)?.name ?? 'Any time');
 
   const isFiltered = $derived(
@@ -119,6 +127,10 @@
   const visibleDays = $derived(
     board.calendarDays.map((day: CalendarDayContext) => ({ ...day, tasks: day.tasks.filter(matches) }))
   );
+  const calendarTaskCount = $derived(
+    visibleDays.reduce((total: number, day: CalendarDayContext) => total + day.tasks.length, 0)
+  );
+  const ganttDayWidth = $derived(ganttDayWidths[ganttScaleName]);
   const ganttScale = $derived(buildGanttScale(board.tasks));
   const ganttRows = $derived.by((): { scheduled: ScheduledGanttRow[]; unscheduled: TaskCardContext[] } => {
     const scheduled: ScheduledGanttRow[] = [];
@@ -153,6 +165,7 @@
   /** The measure being sorted on, or null when the assignment does not carry it. */
   function measure(task: TaskCardContext): number | null {
     if (sortField === 'due') return task.hasDueDate ? deadlineFrom(task.dueInput).days : null;
+    if (sortField === 'status') return statusOrder.get(task.statusValue) ?? null;
     if (sortField === 'severity') return severityOrder.get(task.priorityValue) ?? null;
     if (sortField === 'effort') return task.hasEstimate ? task.estimatedMinutes : null;
     if (sortField === 'grade') return task.hasGrade && task.gradePossible > 0 ? task.gradeEarned / task.gradePossible : null;
@@ -172,6 +185,20 @@
 
   function toggleValue(values: string[], value: string): string[] {
     return values.includes(value) ? values.filter((kept) => kept !== value) : [...values, value];
+  }
+
+  /** A repeated click reverses the selected table column. */
+  function sortByColumn(field: Exclude<SortField, 'board'>): void {
+    if (sortField === field) sortAscending = !sortAscending;
+    else {
+      sortField = field;
+      sortAscending = true;
+    }
+  }
+
+  function ariaSort(field: Exclude<SortField, 'board'>): 'ascending' | 'descending' | 'none' {
+    if (sortField !== field) return 'none';
+    return sortAscending ? 'ascending' : 'descending';
   }
 
   function clearControls(): void {
@@ -254,7 +281,6 @@
     const target = dropTarget;
     finishDrag();
 
-    const snapshot = cloneColumns(columns);
     const sourceColumn = columns.find((column) => column.value === source.status);
     const destinationColumn = columns.find((column) => column.value === status);
     const sourceTaskIndex = sourceColumn?.tasks.findIndex((task) => task.id === source.id) ?? -1;
@@ -269,7 +295,18 @@
     const targetIndex = source.status === status && sourceTaskIndex < rawTargetIndex
       ? rawTargetIndex - 1
       : rawTargetIndex;
-    if (source.status === status && sourceTaskIndex === targetIndex) return;
+    await moveColumnTask(source.id, source.status, status, targetIndex);
+  }
+
+  /** Moves one card in the optimistic lane model, then saves the same order. */
+  async function moveColumnTask(taskID: string, sourceStatus: string, status: string, targetIndex: number): Promise<void> {
+    if (movingTaskID) return;
+    const snapshot = cloneColumns(columns);
+    const sourceColumn = columns.find((column) => column.value === sourceStatus);
+    const destinationColumn = columns.find((column) => column.value === status);
+    const sourceTaskIndex = sourceColumn?.tasks.findIndex((task) => task.id === taskID) ?? -1;
+    if (!sourceColumn || !destinationColumn || sourceTaskIndex < 0) return;
+    if (sourceStatus === status && sourceTaskIndex === targetIndex) return;
 
     const sourceWasCompleted = sourceColumn.isCompleted;
     const [task] = sourceColumn.tasks.splice(sourceTaskIndex, 1);
@@ -282,16 +319,64 @@
     };
     destinationColumn.tasks.splice(Math.min(targetIndex, destinationColumn.tasks.length), 0, movedTask);
     columns = [...columns];
-    movingTaskID = source.id;
+    movingTaskID = taskID;
     requestError = '';
     try {
-      await api(`/api/v1/tasks/${source.id}/move`, {
+      await api(`/api/v1/tasks/${taskID}/move`, {
         method: 'POST',
         body: JSON.stringify({ status, targetIndex })
       });
       if (!sourceWasCompleted && destinationColumn.isCompleted) confetti({ particleCount: 70, spread: 65, origin: { y: 0.75 } });
-      await invalidateAll();
-      showToast('Task moved');
+      await refreshAll();
+      showToast('Assignment moved');
+    } catch (cause) {
+      columns = snapshot;
+      requestError = messageFor(cause);
+    } finally {
+      movingTaskID = null;
+    }
+  }
+
+  /**
+   * Gives touch and keyboard users the same stage change as drag. A board that
+   * is grouped by another field keeps the card in place until fresh data loads.
+   */
+  async function moveTaskToStage(taskID: string, status: string): Promise<void> {
+    if (movingTaskID) return;
+    const sourceColumn = columns.find((column) => column.tasks.some((task) => task.id === taskID));
+    const task = sourceColumn?.tasks.find((candidate) => candidate.id === taskID);
+    if (!sourceColumn || !task || task.statusValue === status) return;
+
+    if (canDrag) {
+      const destinationColumn = columns.find((column) => column.value === status);
+      if (destinationColumn) {
+        await moveColumnTask(taskID, sourceColumn.value, status, destinationColumn.tasks.length);
+        return;
+      }
+    }
+
+    const snapshot = cloneColumns(columns);
+    const option = board.statusOptions.find((candidate: TaskOptionContext) => candidate.value === status);
+    columns = columns.map((column) => ({
+      ...column,
+      tasks: column.tasks.map((candidate) => candidate.id === taskID && option ? {
+        ...candidate,
+        statusValue: option.value,
+        statusName: option.name,
+        statusColorClass: option.colorClass,
+        statusColorStyle: option.colorStyle
+      } : candidate)
+    }));
+    movingTaskID = taskID;
+    requestError = '';
+    try {
+      const targetIndex = board.tasks.filter((candidate: TaskCardContext) => candidate.statusValue === status).length;
+      await api(`/api/v1/tasks/${taskID}/move`, {
+        method: 'POST',
+        body: JSON.stringify({ status, targetIndex })
+      });
+      showToast('Assignment moved');
+      await refreshAll();
     } catch (cause) {
       columns = snapshot;
       requestError = messageFor(cause);
@@ -353,22 +438,23 @@
           {/each}
         </div>
       </section>
-
-      <p class="course-ladder-key">Bars compare how many assignments sit in each stage.</p>
     </aside>
 
     <section class="course-main" aria-labelledby="course-title">
       <header class="course-header">
+        <ContextPanelToggle label="course panel" />
         <div class="course-title">
           <h1 id="course-title">{board.name}</h1>
           {#if board.isCanvasLinked}<a class="canvas-source-link" href={board.canvasURL} target="_blank" rel="noopener"><span class="badge subtle">Synced from Canvas</span>{#if board.canvasCourseCode}<span>{board.canvasCourseCode}</span>{/if}{#if board.canvasTermName}<span>· {board.canvasTermName}</span>{/if}<ArrowSquareOut size={13} /></a>{/if}
           <p>{board.description || (board.canAdmin ? 'Add a course description in Course settings.' : 'Keep assignments, notes, and course material together.')}</p>
         </div>
         <div class="course-actions">
-          {#if board.canEdit}<button class="button primary large" type="button" onclick={() => (createTaskOpen = true)}><Plus size={16} />Add assignment</button>{/if}
-          {#if board.canAdmin}<a class="button large" href={`/app/boards/${board.id}/settings`}><Settings size={16} />Course settings</a>{/if}
+          {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />Add assignment</button>{/if}
+          {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Course settings</a>{/if}
         </div>
       </header>
+
+      <StudySessionPanel sessions={board.studySessions} variant="course" courseID={board.id} />
 
       <nav class="course-views" aria-label="Course views">
         {#each board.views as view (view.id)}
@@ -424,10 +510,10 @@
           {/snippet}
         </PopoverMenu>
 
-        <PopoverMenu panelLabel="Filter by severity" panelRole="listbox">
+        <PopoverMenu panelLabel="Filter by priority" panelRole="listbox">
           {#snippet trigger(control)}
             <button class:on={severityFilter.length > 0} class="tool-trigger" type="button" aria-haspopup="listbox" aria-expanded={control.open} onclick={control.toggle}>
-              Severity
+              Priority
               {#if severityFilter.length}<span class="tool-badge">{severityFilter.length}</span>{/if}
               <CaretDown size={12} />
             </button>
@@ -446,7 +532,7 @@
             {/each}
             {#if severityFilter.length}
               <div class="menu-separator"></div>
-              <button class="menu-option" type="button" role="option" aria-selected="false" onclick={() => (severityFilter = [])}>Every severity</button>
+              <button class="menu-option" type="button" role="option" aria-selected="false" onclick={() => (severityFilter = [])}>Every priority</button>
             {/if}
           {/snippet}
         </PopoverMenu>
@@ -513,7 +599,7 @@
           {#if isNarrowed}
             <span class="tool-result" aria-live="polite">{matchedCount} of {board.tasks.length} shown</span>
             {#if board.activeView.isBoard && isSorted}
-              <span class="tool-note">Clear the sort to drag cards</span>
+              <span class="tool-note">Clear the sort to drag assignments</span>
             {/if}
             <button class="tool-clear" type="button" onclick={clearControls}><X size={12} />Reset</button>
           {:else}
@@ -545,6 +631,8 @@
                       draggable={canDrag && !movingTaskID}
                       moving={movingTaskID === task.id}
                       dropPosition={dropTarget?.taskID === task.id ? dropTarget.position : null}
+                      moveOptions={board.canEdit ? board.statusOptions : []}
+                      onmove={(status) => moveTaskToStage(task.id, status)}
                       ondragstart={(event) => startDrag(task.id, column.value, event)}
                       ondragend={finishDrag}
                       ondragover={(event) => dragOverTask(event, column.value, task.id)}
@@ -563,12 +651,12 @@
             <table class="ledger">
               <thead>
                 <tr>
-                  <th>Assignment</th>
-                  <th>Stage</th>
-                  <th>Severity</th>
-                  <th class="numeric">Effort</th>
-                  <th class="numeric">Due</th>
-                  <th class="numeric">Score</th>
+                  <th scope="col" aria-sort={ariaSort('title')}><button class="table-sort" type="button" onclick={() => sortByColumn('title')}>Assignment<span aria-hidden="true">{sortField === 'title' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th scope="col" aria-sort={ariaSort('status')}><button class="table-sort" type="button" onclick={() => sortByColumn('status')}>Stage<span aria-hidden="true">{sortField === 'status' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th scope="col" aria-sort={ariaSort('severity')}><button class="table-sort" type="button" onclick={() => sortByColumn('severity')}>Priority<span aria-hidden="true">{sortField === 'severity' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th class="numeric" scope="col" aria-sort={ariaSort('effort')}><button class="table-sort end" type="button" onclick={() => sortByColumn('effort')}>Effort<span aria-hidden="true">{sortField === 'effort' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th class="numeric" scope="col" aria-sort={ariaSort('due')}><button class="table-sort end" type="button" onclick={() => sortByColumn('due')}>Due<span aria-hidden="true">{sortField === 'due' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+                  <th class="numeric" scope="col" aria-sort={ariaSort('grade')}><button class="table-sort end" type="button" onclick={() => sortByColumn('grade')}>Score<span aria-hidden="true">{sortField === 'grade' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
                 </tr>
               </thead>
               <tbody>
@@ -604,50 +692,73 @@
               </div>
               <a class="button small" href={board.todayMonthHref}>Today</a>
             </header>
-            <div class="month-sheet">
-              <div class="month-weekdays">
-                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            {#if calendarTaskCount}
+              <div class="month-sheet">
+                <div class="month-weekdays" aria-hidden="true">
+                  <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                </div>
+                <div class="month-grid">
+                  {#each visibleDays as day (day.dateInput)}
+                    {@const minutes = dayMinutes(day)}
+                    <div
+                      class:muted={day.isMuted}
+                      class:today={day.isToday}
+                      class="month-day"
+                      role="group"
+                      aria-label={`${day.dateLabel}, ${day.tasks.length} ${day.tasks.length === 1 ? 'assignment' : 'assignments'}`}
+                    >
+                      <span class="month-day-head">
+                        <time class="month-day-date" datetime={day.dateInput}>{day.day}</time>
+                        {#if minutes > 0}<span class="month-day-load" title={`${durationLabel(minutes)} of estimated work due`}>{durationLabel(minutes)}</span>{/if}
+                      </span>
+                      {#each day.tasks.slice(0, 3) as task (task.id)}
+                        <a
+                          class={`month-task stage-tint ${task.statusColorClass}`}
+                          style={task.statusColorStyle}
+                          href={task.href}
+                          use:taskPreview={previewFromTask(task)}
+                        >{task.title}</a>
+                      {/each}
+                      {#if day.tasks.length > 3}<span class="month-more">+{day.tasks.length - 3} more</span>{/if}
+                    </div>
+                  {/each}
+                </div>
               </div>
-              <div class="month-grid">
-                {#each visibleDays as day}
-                  {@const minutes = dayMinutes(day)}
-                  <div class:muted={day.isMuted} class:today={day.isToday} class="month-day">
-                    <span class="month-day-head">
-                      <span class="month-day-date">{day.day}</span>
-                      {#if minutes > 0}<span class="month-day-load" title={`${durationLabel(minutes)} of estimated work due`}>{durationLabel(minutes)}</span>{/if}
-                    </span>
-                    {#each day.tasks as task}
-                      <a
-                        class={`month-task stage-tint ${task.statusColorClass}`}
-                        style={task.statusColorStyle}
-                        href={task.href}
-                        use:taskPreview={previewFromTask(task)}
-                      >{task.title}</a>
-                    {/each}
-                  </div>
-                {/each}
+            {:else}
+              <div class="course-empty calendar-empty">
+                <span>{board.calendarMonthLabel}</span>
+                <h2>{isFiltered ? 'No deadlines match these filters' : 'No deadlines this month'}</h2>
+                <p>{isFiltered ? 'Widen the filters above to see more of this course.' : 'Use the month controls to check another month, or add a due date to an assignment.'}</p>
+                {#if isFiltered}<button class="button small" type="button" onclick={clearControls}><X size={13} />Reset filters</button>{/if}
               </div>
-            </div>
+            {/if}
           </section>
         {:else if board.activeView.isGantt}
           {#if visibleTasks.length}
-            <section class="gantt" aria-labelledby="gantt-title">
+            <section class="gantt" aria-labelledby="gantt-title" style={`--gantt-day-width: ${ganttDayWidth}px; --gantt-week-width: ${ganttDayWidth * 7}px`}>
               <header class="gantt-summary">
                 <div>
                   <span>Course timeline</span>
                   <h2 id="gantt-title">{ganttRangeDate(ganttScale.startInput)} – {ganttRangeDate(ganttScale.endInput)}</h2>
                 </div>
-                <p>
-                  {ganttRows.scheduled.length} scheduled
-                  {#if ganttRows.unscheduled.length} · {ganttRows.unscheduled.length} need dates{/if}
-                </p>
+                <div class="gantt-summary-actions">
+                  <p>
+                    {ganttRows.scheduled.length} scheduled
+                    {#if ganttRows.unscheduled.length} · {ganttRows.unscheduled.length} need dates{/if}
+                  </p>
+                  <div class="gantt-scale" role="group" aria-label="Timeline scale">
+                    <button type="button" aria-pressed={ganttScaleName === 'week'} onclick={() => (ganttScaleName = 'week')}>Week</button>
+                    <button type="button" aria-pressed={ganttScaleName === 'month'} onclick={() => (ganttScaleName = 'month')}>Month</button>
+                    <button type="button" aria-pressed={ganttScaleName === 'term'} onclick={() => (ganttScaleName = 'term')}>Term</button>
+                  </div>
+                </div>
               </header>
 
               <!-- svelte-ignore a11y_no_noninteractive_tabindex (keyboard users need to scroll the timeline) -->
               <div class="gantt-scroll" role="region" tabindex="0" aria-label="Course timeline. Scroll horizontally to see more dates.">
                 <div
                   class="gantt-sheet"
-                  style={`--gantt-days: ${ganttScale.dayCount}; --gantt-timeline-width: ${ganttScale.dayCount * 28}px`}
+                  style={`--gantt-days: ${ganttScale.dayCount}; --gantt-timeline-width: ${ganttScale.dayCount * ganttDayWidth}px`}
                 >
                   <div class="gantt-months" aria-hidden="true">
                     <span class="gantt-axis-label">Assignment</span>

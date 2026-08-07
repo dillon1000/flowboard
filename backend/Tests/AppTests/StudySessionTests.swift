@@ -40,7 +40,9 @@ struct StudySessionTests {
                 StudyPlanningSession(
                     taskID: $0.taskID,
                     scheduledDate: $0.scheduledDate,
-                    plannedMinutes: $0.plannedMinutes
+                    plannedMinutes: $0.plannedMinutes,
+                    state: .planned,
+                    actualMinutes: nil
                 )
             },
             dailyLimitMinutes: 120,
@@ -49,6 +51,78 @@ struct StudySessionTests {
         )
         #expect(secondPlan.allocations.isEmpty)
         #expect(secondPlan.remainingMinutes == 0)
+    }
+
+    @Test("Missed plans return to the estimate")
+    func replansMissedWork() throws {
+        let taskID = UUID()
+        let monday = try #require(studySessionDate("2026-08-03"))
+        let result = StudyPlanningService.plan(
+            tasks: [
+                StudyPlanningTask(
+                    id: taskID,
+                    dueDate: "2026-08-03",
+                    estimatedMinutes: 60,
+                    priority: "high"
+                ),
+            ],
+            sessions: [
+                StudyPlanningSession(
+                    taskID: taskID,
+                    scheduledDate: "2026-08-02",
+                    plannedMinutes: 60,
+                    state: .planned,
+                    actualMinutes: nil
+                ),
+            ],
+            dailyLimitMinutes: 120,
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: monday
+        )
+
+        #expect(result.allocations.count == 1)
+        #expect(result.allocations.first?.scheduledDate == "2026-08-03")
+        #expect(result.allocations.first?.plannedMinutes == 60)
+    }
+
+    @Test("Recovery detects missed and overloaded plans")
+    func detectsRecoveryWork() throws {
+        let monday = try #require(studySessionDate("2026-08-03"))
+        let taskID = UUID()
+        let userID = UUID()
+        let missed = StudySession(
+            id: UUID(),
+            taskID: taskID,
+            userID: userID,
+            scheduledDate: "2026-08-02",
+            plannedMinutes: 30
+        )
+        let firstMonday = StudySession(
+            id: UUID(),
+            taskID: taskID,
+            userID: userID,
+            scheduledDate: "2026-08-03",
+            plannedMinutes: 90
+        )
+        let secondMonday = StudySession(
+            id: UUID(),
+            taskID: UUID(),
+            userID: userID,
+            scheduledDate: "2026-08-03",
+            plannedMinutes: 90
+        )
+
+        let analysis = StudyRecoveryService.analyze(
+            sessions: [missed, firstMonday, secondMonday],
+            dueDateByTaskID: [:],
+            availability: StudyAvailability(dailyLimitMinutes: 120),
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: monday
+        )
+
+        #expect(analysis.missedSessionIDs == Set([try missed.requireID()]))
+        #expect(analysis.overloadedDates == ["2026-08-03"])
+        #expect(analysis.overloadedSessionIDs.count == 1)
     }
 
     @Test("Study session routes manage and automatically plan work")
@@ -83,6 +157,23 @@ struct StudySessionTests {
             )
             #expect(created.status == .created)
             let createdSession = try created.content.decode(StudySessionResponse.self)
+            #expect(createdSession.state == .planned)
+
+            let skipped = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/\(createdSession.id)/skip",
+                headers: ["Cookie": registered.cookie]
+            )
+            #expect(skipped.status == .ok)
+            #expect(try skipped.content.decode(StudySessionResponse.self).state == .skipped)
+
+            let restored = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/\(createdSession.id)/restore",
+                headers: ["Cookie": registered.cookie]
+            )
+            #expect(restored.status == .ok)
+            #expect(try restored.content.decode(StudySessionResponse.self).state == .planned)
 
             let updated = try await app.testing().sendRequest(
                 .PATCH,
@@ -96,6 +187,18 @@ struct StudySessionTests {
             )
             #expect(updated.status == .ok)
             #expect(try updated.content.decode(StudySessionResponse.self).plannedMinutes == 45)
+
+            let completed = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/\(createdSession.id)/complete",
+                headers: ["Cookie": registered.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(CompleteStudySessionRequest(actualMinutes: 40))
+                }
+            )
+            #expect(completed.status == .ok)
+            #expect(try completed.content.decode(StudySessionResponse.self).state == .completed)
+            #expect(try completed.content.decode(StudySessionResponse.self).actualMinutes == 40)
 
             let listed = try await app.testing().sendRequest(
                 .GET,

@@ -153,6 +153,43 @@
   white-space: nowrap;
 }
 
+.table-sort {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.table-sort.end {
+  justify-content: flex-end;
+}
+
+.table-sort span {
+  color: var(--text-tertiary);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+}
+
+th[aria-sort='ascending'] .table-sort,
+th[aria-sort='descending'] .table-sort {
+  color: var(--text);
+}
+
+.table-sort:focus-visible {
+  border-radius: var(--radius-small);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .data-table td {
   height: 48px;
   padding: 8px 16px;

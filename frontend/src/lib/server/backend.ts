@@ -22,11 +22,15 @@ export async function backendFetch(
   headers.set('x-forwarded-host', event.url.host);
   headers.set('x-forwarded-proto', event.url.protocol.replace(':', ''));
 
-  return fetch(`${baseURL}${path}`, {
-    ...init,
-    headers,
-    redirect: 'manual'
-  });
+  try {
+    return await fetch(`${baseURL}${path}`, {
+      ...init,
+      headers,
+      redirect: 'manual'
+    });
+  } catch {
+    error(503, 'The server is unavailable. Try again in a moment.');
+  }
 }
 
 /** Loads one complete workspace screen and converts backend failures into SvelteKit responses. */

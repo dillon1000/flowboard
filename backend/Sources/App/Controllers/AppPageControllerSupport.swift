@@ -46,6 +46,14 @@ extension AppPageController {
                 )
             )
         }
+        let searchAssignments = try boards
+            .filter { !$0.isArchived }
+            .flatMap { board in
+                try board.tasks
+                    .filter { !$0.isArchived }
+                    .map { try SearchAssignmentContext(task: $0, courseName: board.name) }
+            }
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         return CommonPageContext(
             userName: user.name,
             userEmail: user.email,
@@ -54,7 +62,8 @@ extension AppPageController {
             weeklyPlanningPromptEnabled: user.weeklyPlanningPromptEnabled,
             planningEmailHour: user.planningEmailHour,
             userAvatar: AvatarContext(user: user),
-            boards: boardContexts
+            boards: boardContexts,
+            searchAssignments: searchAssignments
         )
     }
 
@@ -68,6 +77,7 @@ extension AppPageController {
         tasks: TasksPageContext? = nil,
         taskDetail: TaskDetailPageContext? = nil,
         settings: SettingsPageContext? = nil,
+        availabilitySettings: StudySettingsResponse? = nil,
         apiKeys: APIKeysPageContext? = nil,
         integrations: CanvasIntegrationsPageContext? = nil,
         boardSettings: BoardSettingsPageContext? = nil
@@ -83,6 +93,7 @@ extension AppPageController {
                 tasks: tasks,
                 taskDetail: taskDetail,
                 settings: settings,
+                availabilitySettings: availabilitySettings,
                 apiKeys: apiKeys,
                 integrations: integrations,
                 boardSettings: boardSettings
@@ -273,6 +284,10 @@ extension AppPageController {
         let gridStart = calendar.date(byAdding: .day, value: -(firstWeekday - 1), to: monthStart) ?? monthStart
         let activeMonth = calendar.component(.month, from: monthStart)
         let todayKey = inputDate(Date())
+        let labelFormatter = DateFormatter()
+        labelFormatter.locale = Locale(identifier: "en_US_POSIX")
+        labelFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        labelFormatter.dateFormat = "EEEE, MMMM d, yyyy"
 
         return (0..<42).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: gridStart) else {
@@ -281,6 +296,8 @@ extension AppPageController {
             let key = inputDate(date)
             return CalendarDayContext(
                 day: String(calendar.component(.day, from: date)),
+                dateInput: key,
+                dateLabel: labelFormatter.string(from: date),
                 isMuted: calendar.component(.month, from: date) != activeMonth,
                 isToday: key == todayKey,
                 tasks: tasks.filter { $0.dueInput == key }

@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import type { BoardSettingsPageContext, TapActionContext, TapTaskOptionContext, TaskOptionContext } from '$lib/types';
   import { XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
@@ -22,8 +21,8 @@
   let requestError = $state('');
   let kind = $state<'create_task' | 'update_task'>('create_task');
   const kindOptions: SelectMenuOption[] = [
-    { value: 'create_task', label: 'Create task' },
-    { value: 'update_task', label: 'Update task' }
+    { value: 'create_task', label: 'Create assignment' },
+    { value: 'update_task', label: 'Update assignment' }
   ];
   const severityOptions = $derived<SelectMenuOption[]>(
     board.severities.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
@@ -32,7 +31,7 @@
     board.statuses.map((option: TaskOptionContext) => ({ value: option.value, label: option.name }))
   );
   const taskOptions = $derived<SelectMenuOption[]>([
-    { value: '', label: 'Select a task' },
+    { value: '', label: 'Select an assignment' },
     ...board.tapTasks.map((task: TapTaskOptionContext) => ({ value: task.id, label: task.title }))
   ]);
 
@@ -73,7 +72,7 @@
       );
       if (result.url) onprovision(result.url);
       open = false;
-      await invalidateAll();
+      await refreshAll();
     } catch (cause) {
       requestError = messageFor(cause);
     } finally {
@@ -93,10 +92,10 @@
           <div class="field"><label for="tap-kind">Action</label><SelectMenu id="tap-kind" name="kind" value={kind} options={kindOptions} ariaLabel="Action" onchange={selectKind} /></div>
           <div class="field wide"><label for="tap-description">Phone instructions</label><input class="input" id="tap-description" name="displayDescription" value={action?.displayDescription ?? ''} maxlength="280" /></div>
           {#if kind === 'create_task'}
-            <div class="field wide"><span class="field-label">Scanner input</span><span class="field-help">The person who scans this tag enters the task title, description, dates, labels, and board fields on their phone.</span></div>
-            <div class="field"><label for="tap-priority">Default severity</label><SelectMenu id="tap-priority" name="priority" value={action?.severity ?? board.defaultTapSeverity} options={severityOptions} ariaLabel="Default severity" /></div>
+            <div class="field wide"><span class="field-label">Scanner input</span><span class="field-help">The person who scans this tag enters the assignment title, description, dates, labels, and course fields on their phone.</span></div>
+            <div class="field"><label for="tap-priority">Default priority</label><SelectMenu id="tap-priority" name="priority" value={action?.severity ?? board.defaultTapSeverity} options={severityOptions} ariaLabel="Default priority" /></div>
           {:else}
-            <div class="field wide"><label for="tap-target">Target task</label><SelectMenu id="tap-target" name="targetTaskID" value={action?.targetTaskID ?? ''} options={taskOptions} ariaLabel="Target task" />{#if !board.hasTapTasks}<span class="field-help">Create a task before you select this action.</span>{/if}</div>
+            <div class="field wide"><label for="tap-target">Target assignment</label><SelectMenu id="tap-target" name="targetTaskID" value={action?.targetTaskID ?? ''} options={taskOptions} ariaLabel="Target assignment" />{#if !board.hasTapTasks}<span class="field-help">Create an assignment before you select this action.</span>{/if}</div>
           {/if}
           <div class="field"><label for="tap-status">Status</label><SelectMenu id="tap-status" name="status" value={action?.status ?? board.defaultTapStatus} options={statusOptions} ariaLabel="Status" /></div>
           <div class="field"><label for="tap-expiration">Expiration date</label><DatePicker id="tap-expiration" name="expiresAt" value={action?.expiresAtInput ?? ''} label="Expiration date" placeholder="Never" /></div>

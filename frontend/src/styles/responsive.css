@@ -2,14 +2,14 @@
    Responsive
    ========================================================================== */
 
-@media (width <= 1200px) {
+@media (--viewport-wide) {
   .overview-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 32px;
   }
 }
 
-@media (width <= 900px) {
+@media (--viewport-navigation) {
   .settings-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 28px;
@@ -44,7 +44,7 @@
   }
 }
 
-@media (width <= 820px) {
+@media (--viewport-shell) {
   /* Below the sidebar breakpoint the frame is dropped and the document
      scrolls again, so every page grows with its content. */
   .app-shell {
@@ -150,10 +150,13 @@
   }
 }
 
-@media (width <= 600px) {
-  .search-control,
-  .topbar .theme-button {
+@media (--viewport-compact) {
+  .topbar .search-control {
     display: none;
+  }
+
+  .topbar .mobile-search-button {
+    display: grid;
   }
 
   .page-header {
@@ -212,14 +215,15 @@
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
-  .toast {
+  .toast-stack {
     right: 12px;
     left: 12px;
+    width: auto;
     bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (--reduced-motion) {
   *,
   *::before,
   *::after {
@@ -230,6 +234,12 @@
   }
 
   .board-card:hover {
+    transform: none;
+  }
+
+  .route-progress[data-active='true']::before {
+    width: 100%;
+    animation: none;
     transform: none;
   }
 }

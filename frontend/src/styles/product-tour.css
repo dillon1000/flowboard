@@ -1,0 +1,151 @@
+/* ==========================================================================
+   Product tour
+
+   A spotlight ring cuts the highlighted element out of a dimmed page; the
+   card carries the explanation and the controls. One ring, one card, no
+   per-page markup: steps target existing selectors.
+   ========================================================================== */
+
+.tour-layer {
+  position: fixed;
+  z-index: 140;
+  inset: 0;
+}
+
+/* The ring's oversized shadow is the dimmer: everything but the target. */
+.tour-ring {
+  position: fixed;
+  border-radius: var(--radius-large);
+  box-shadow: 0 0 0 2px var(--ds-blue-700), 0 0 0 9999px rgb(0 0 0 / 45%);
+  pointer-events: none;
+  transition: top 240ms var(--ease-out), left 240ms var(--ease-out),
+    width 240ms var(--ease-out), height 240ms var(--ease-out);
+}
+
+.tour-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+.tour-card {
+  position: fixed;
+  display: grid;
+  width: min(370px, calc(100vw - 32px));
+  gap: 7px;
+  padding: 16px 16px 13px;
+  border-radius: var(--radius-large);
+  background: var(--surface);
+  box-shadow: var(--shadow-border), var(--shadow-modal);
+  outline: none;
+}
+
+.tour-card.centered {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tour-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ds-blue-900);
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-card h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.tour-card > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.tour-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.tour-skip {
+  padding: 0;
+  border: 0;
+  color: var(--text-tertiary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  transition: color var(--duration) var(--ease);
+}
+
+.tour-skip:hover {
+  color: var(--text);
+}
+
+.tour-dots {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 4px;
+}
+
+.tour-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ds-gray-alpha-300);
+  transition: background-color var(--duration) var(--ease);
+}
+
+.tour-dots span.active {
+  background: var(--ds-blue-700);
+}
+
+.tour-nav {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+:root[data-theme='dark'] .tour-ring,
+:root[data-theme='dark'] .tour-backdrop {
+  --tour-dim: rgb(0 0 0 / 58%);
+}
+
+:root[data-theme='dark'] .tour-ring {
+  box-shadow: 0 0 0 2px var(--ds-blue-600), 0 0 0 9999px var(--tour-dim);
+}
+
+:root[data-theme='dark'] .tour-backdrop {
+  background: var(--tour-dim);
+}
+
+@media (--viewport-compact) {
+  .tour-dots {
+    display: none;
+  }
+
+  .tour-footer {
+    justify-content: space-between;
+  }
+}
+
+@media (--reduced-motion) {
+  .tour-ring {
+    transition: none;
+  }
+}

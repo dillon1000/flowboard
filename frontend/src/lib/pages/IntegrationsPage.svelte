@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
+  import { api, messageFor, refreshAll } from '$lib/api';
   import SettingsNavigation from '$lib/components/SettingsNavigation.svelte';
+  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
   import type { CanvasIntegrationsPageContext, CreatedCanvasConnectionResponse } from '$lib/types';
   import { CheckIcon as Check, CopyIcon as Copy, PlugsConnectedIcon as PlugsConnected, PlusIcon as Plus } from 'phosphor-svelte';
   import { showToast } from '$lib/ui/toast';
@@ -12,6 +12,8 @@
   let pending = $state(false);
   let requestError = $state('');
   let copied = $state(false);
+  let rotateConnection = $state<{ id: string; origin: string } | null>(null);
+  let disconnectConnectionID = $state('');
 
   async function createConnection(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -27,7 +29,7 @@
       createdSecret = created.syncKey;
       createdOrigin = created.connection.canvasOrigin;
       form.reset();
-      await invalidateAll();
+      await refreshAll();
       showToast('Canvas connection created');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -36,38 +38,45 @@
     }
   }
 
-  async function rotate(connectionID: string, canvasOrigin: string): Promise<void> {
-    if (!confirm('Rotate this Canvas sync key? The current extension key will stop working.')) return;
+  async function rotate(connectionID: string, canvasOrigin: string): Promise<boolean> {
     pending = true;
     requestError = '';
     try {
       const created = await api<CreatedCanvasConnectionResponse>(`/api/v1/auth/canvas-connections/${connectionID}/rotate`, { method: 'POST' });
       createdSecret = created.syncKey;
       createdOrigin = canvasOrigin;
-      await invalidateAll();
+      await refreshAll();
       showToast('Canvas sync key rotated');
+      return true;
     } catch (cause) {
       requestError = messageFor(cause);
+      return false;
     } finally {
       pending = false;
     }
   }
 
-  async function disconnect(connectionID: string): Promise<void> {
-    if (!confirm('Disconnect Canvas? Imported courses and assignments will remain as local data.')) return;
+  async function disconnect(connectionID: string): Promise<boolean> {
     pending = true;
     requestError = '';
     try {
       await api(`/api/v1/auth/canvas-connections/${connectionID}`, { method: 'DELETE' });
       createdSecret = '';
       createdOrigin = '';
-      await invalidateAll();
+      await refreshAll();
       showToast('Canvas disconnected');
+      return true;
     } catch (cause) {
       requestError = messageFor(cause);
+      return false;
     } finally {
       pending = false;
     }
+  }
+
+  function confirmRotation(): Promise<boolean> {
+    if (!rotateConnection) return Promise.resolve(false);
+    return rotate(rotateConnection.id, rotateConnection.origin);
   }
 
   async function copySecret(): Promise<void> {
@@ -114,7 +123,7 @@
               <div class="panel-row canvas-connection-row">
                 <PlugsConnected size={17} />
                 <span class="panel-row-main"><strong>{connection.canvasOrigin}</strong><span><code>{connection.keyPrefix}…</code> · Last sync {connection.lastSyncDisplay}</span><span class:canvas-status-error={connection.hasError}>{connection.statusName}: {connection.statusDetail}</span></span>
-                <span class="canvas-connection-actions"><button class="button small" type="button" onclick={() => rotate(connection.id, connection.canvasOrigin)} disabled={pending}>Rotate key</button><button class="button danger small" type="button" onclick={() => disconnect(connection.id)} disabled={pending}>Disconnect</button></span>
+                <span class="canvas-connection-actions"><button class="button small" type="button" onclick={() => (rotateConnection = { id: connection.id, origin: connection.canvasOrigin })} disabled={pending}>Rotate key</button><button class="button danger small" type="button" onclick={() => (disconnectConnectionID = connection.id)} disabled={pending}>Disconnect</button></span>
               </div>
             {/each}
           </div>
@@ -133,3 +142,6 @@
     </div>
   </div>
 </div>
+
+<ConfirmDialog open={Boolean(rotateConnection)} title="Rotate this Canvas sync key?" description="The current extension key will stop working." confirmLabel="Rotate key" pendingLabel="Rotating…" tone="primary" oncancel={() => (rotateConnection = null)} onconfirm={confirmRotation} />
+<ConfirmDialog open={Boolean(disconnectConnectionID)} title="Disconnect Canvas?" description="Imported courses and assignments will remain as local data." confirmLabel="Disconnect" pendingLabel="Disconnecting…" oncancel={() => (disconnectConnectionID = '')} onconfirm={() => disconnect(disconnectConnectionID)} />

@@ -56,8 +56,12 @@ struct CalendarFeedTests {
             let calendar = feed.body.string
             #expect(calendar.contains("BEGIN:VCALENDAR\r\n"))
             #expect(calendar.contains("DTSTART:20260803T223000Z"))
+            #expect(calendar.contains("TRIGGER:-PT1H"))
+            #expect(calendar.contains("DESCRIPTION:Deadline: Review notes\\, chapters 1\\;2 \\\\ practice"))
             #expect(calendar.contains("SUMMARY:Due: Review notes\\, chapters 1\\;2 \\\\ practice"))
-            #expect(calendar.contains("DTSTART;VALUE=DATE:20260802"))
+            #expect(calendar.contains("DTSTART:20260802T230000Z"))
+            #expect(calendar.contains("DTEND:20260802T234500Z"))
+            #expect(!calendar.contains("DTSTART;VALUE=DATE:20260802"))
             #expect(calendar.contains("SUMMARY:Study: Review notes\\, chapters 1\\;2 \\\\ practice"))
 
             let rotatedResponse = try await app.testing().sendRequest(

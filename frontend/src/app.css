@@ -1,4 +1,5 @@
 @import 'flatpickr/dist/flatpickr.css';
+@import './styles/breakpoints.css';
 @import './styles/design-system.css';
 @import './styles/app-shell.css';
 @import './styles/topbar-buttons.css';
@@ -11,8 +12,11 @@
 @import './styles/settings-auth.css';
 @import './styles/not-found-preview.css';
 @import './styles/client-components.css';
+@import './styles/reveal.css';
+@import './styles/product-tour.css';
 @import './styles/responsive.css';
 @import './styles/study-planner.css';
+@import './styles/study-sessions.css';
 @import './styles/semester.css';
 @import './styles/course.css';
 @import './styles/course-views.css';

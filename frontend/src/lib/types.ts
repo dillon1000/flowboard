@@ -18,6 +18,14 @@ export interface BoardNavigationContext {
   canvasGradeDisplay: string;
 }
 
+export interface SearchAssignmentContext {
+  id: string;
+  title: string;
+  courseName: string;
+  href: string;
+  searchText: string;
+}
+
 export interface CommonPageContext {
   userName: string;
   userEmail: string;
@@ -27,6 +35,7 @@ export interface CommonPageContext {
   planningEmailHour: number;
   userAvatar: AvatarContext;
   boards: BoardNavigationContext[];
+  searchAssignments: SearchAssignmentContext[];
 }
 
 export interface CalendarFeedStatusResponse {
@@ -151,7 +160,82 @@ export interface StudyAssignmentContext {
   dueDisplay: string;
   description: string;
   studySessionID: string;
+  taskID: string;
+  scheduledDate: string;
   hasStudySession: boolean;
+  sessionState: '' | 'planned' | 'completed' | 'skipped';
+  actualMinutes: number | null;
+  completedAt: string | null;
+  isPlannedSession: boolean;
+}
+
+export interface StudyRecurringCommitment {
+  id: string;
+  title: string;
+  kind: 'class' | 'work';
+  weekdays: number[];
+  startTime: string;
+  endTime: string;
+}
+
+export interface StudyCalendarConflict {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface StudyEstimatePreset {
+  id: string;
+  name: string;
+  minutes: number;
+  keywords: string[];
+}
+
+export interface StudySettingsContext {
+  weekdayCapacityMinutes: Record<string, number>;
+  blockedDates: string[];
+  recurringCommitments: StudyRecurringCommitment[];
+  calendarConflicts: StudyCalendarConflict[];
+  estimatePresets: StudyEstimatePreset[];
+  timeZoneConfirmed: boolean;
+  availabilityConfigured: boolean;
+}
+
+export interface StudyRecoveryContext {
+  missedSessionCount: number;
+  deadlineChangeCount: number;
+  overloadedDayCount: number;
+  issueCount: number;
+  hasIssues: boolean;
+  summary: string;
+}
+
+export interface StudyEstimateInboxItemContext {
+  id: string;
+  title: string;
+  courseName: string;
+  dueDisplay: string;
+  typeName: string;
+  suggestedMinutes: number;
+  suggestedPresetID: string;
+}
+
+export interface StudyOnboardingStepContext {
+  key: 'canvas' | 'timezone' | 'availability' | 'estimates' | 'plan';
+  title: string;
+  description: string;
+  href: string;
+  isComplete: boolean;
+  isCurrent: boolean;
+}
+
+export interface StudyOnboardingContext {
+  steps: StudyOnboardingStepContext[];
+  completedStepCount: number;
+  isVisible: boolean;
+  nextStepKey: string;
 }
 
 export interface StudyPlanCandidateContext {
@@ -179,6 +263,10 @@ export interface StudyDayContext {
   unestimatedAssignmentCount: number;
   workloadLabel: string;
   workloadClass: string;
+  availableMinutes: number;
+  availableLabel: string;
+  isBlocked: boolean;
+  isOverloaded: boolean;
 }
 
 export interface StudyWorkloadDayContext {
@@ -208,6 +296,11 @@ export interface OverviewPageContext {
   unplannedFocusCount: number;
   hasUnplannedFocus: boolean;
   studyStreakDays: number;
+  studySettings: StudySettingsContext;
+  recovery: StudyRecoveryContext;
+  estimationInbox: StudyEstimateInboxItemContext[];
+  hasEstimationInbox: boolean;
+  onboarding: StudyOnboardingContext;
 }
 
 export interface AutoPlanStudySessionsResponse {
@@ -216,6 +309,10 @@ export interface AutoPlanStudySessionsResponse {
   plannedMinutes: number;
   remainingMinutes: number;
   unplannedTaskCount: number;
+}
+
+export interface RepairStudyWeekResponse extends AutoPlanStudySessionsResponse {
+  repairedSessionCount: number;
 }
 
 export interface SemesterAssignmentContext {
@@ -260,6 +357,8 @@ export interface TaskColumnContext {
 
 export interface CalendarDayContext {
   day: string;
+  dateInput: string;
+  dateLabel: string;
   isMuted: boolean;
   isToday: boolean;
   tasks: TaskCardContext[];
@@ -326,6 +425,26 @@ export interface BoardPageContext {
   canvasHasScore: boolean;
   canvasScorePercent: number;
   canvasLastSyncDisplay: string;
+  studySessions: StudySessionContext[];
+}
+
+export interface StudySessionContext {
+  id: string;
+  taskID: string;
+  taskTitle: string;
+  taskHref: string;
+  scheduledDate: string;
+  scheduledDisplay: string;
+  plannedMinutes: number;
+  plannedDisplay: string;
+  state: 'planned' | 'completed' | 'skipped';
+  stateName: string;
+  actualMinutes: number | null;
+  actualDisplay: string;
+  completedAt: string | null;
+  isPlanned: boolean;
+  isCompleted: boolean;
+  isSkipped: boolean;
 }
 
 export interface TasksPageContext {
@@ -418,6 +537,11 @@ export interface TaskDetailPageContext {
   hasProperties: boolean;
   reminders: TaskReminderContext[];
   notificationsEnabled: boolean;
+  studySessions: StudySessionContext[];
+  hasStudySessions: boolean;
+  remainingStudyMinutes: number;
+  canPlanStudy: boolean;
+  defaultStudyDate: string;
 }
 
 export interface APIKeyPageItemContext {
@@ -501,8 +625,16 @@ export interface TemplateContext {
 export interface PropertyDefinitionContext {
   id: string;
   name: string;
+  type: string;
   typeName: string;
   detail: string;
+  hasOptions: boolean;
+  options: PropertyDefinitionOptionContext[];
+}
+
+export interface PropertyDefinitionOptionContext {
+  value: string;
+  label: string;
 }
 
 export interface TapTaskOptionContext {
@@ -563,6 +695,7 @@ export interface BoardSettingsPageContext {
   members: BoardMemberContext[];
   templates: TemplateContext[];
   properties: PropertyDefinitionContext[];
+  filterLabels: string[];
   statuses: TaskOptionContext[];
   severities: TaskOptionContext[];
   defaultTapStatus: string;
@@ -596,6 +729,7 @@ export interface AppPageContext {
   isTaskDetail: boolean;
   isSettings: boolean;
   isProfileSettings: boolean;
+  isAvailabilitySettings: boolean;
   isAPIKeys: boolean;
   isIntegrations: boolean;
   isBoardSettings: boolean;
@@ -605,6 +739,7 @@ export interface AppPageContext {
   tasks: TasksPageContext | null;
   taskDetail: TaskDetailPageContext | null;
   settings: SettingsPageContext | null;
+  availabilitySettings: StudySettingsContext | null;
   apiKeys: APIKeysPageContext | null;
   integrations: CanvasIntegrationsPageContext | null;
   boardSettings: BoardSettingsPageContext | null;

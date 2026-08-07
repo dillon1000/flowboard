@@ -5,13 +5,13 @@
     SemesterWeekContext,
   } from '$lib/types';
   import {
-    ArrowCircleUpRightIcon as OpenAssignment,
     ArrowRightIcon as ArrowRight,
     CalendarDotsIcon as CalendarDays,
     ClockIcon as Clock,
     WarningIcon as Warning,
   } from 'phosphor-svelte';
-  import { scrollFades } from '$lib/actions/scrollFades';
+  import ContextPanelToggle from '$lib/components/ContextPanelToggle.svelte';
+  import { durationLabel } from '$lib/ui/deadline';
 
   interface SemesterWeekView {
     week: SemesterWeekContext;
@@ -30,8 +30,7 @@
   const assignments: SemesterAssignmentContext[] = $derived(
     semester.weeks.flatMap((week: SemesterWeekContext) => week.assignments),
   );
-  const nextAssignment = $derived(assignments[0]);
-  const followingAssignments = $derived(assignments.slice(1, 4));
+  const upcomingAssignments = $derived(assignments.slice(0, 4));
   const openWeeks = $derived(
     semester.weeks.filter((week: SemesterWeekContext) => week.assignmentCount === 0).length,
   );
@@ -95,14 +94,6 @@
     return () => observer.disconnect();
   });
 
-  function durationLabel(minutes: number): string {
-    if (minutes === 0) return '—';
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainder = minutes % 60;
-    return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
-  }
-
   function weekSummary(row: SemesterWeekView): string {
     if (row.week.assignmentCount === 0) return 'No deadlines';
     const deadlines = `${row.week.assignmentCount} deadline${row.week.assignmentCount === 1 ? '' : 's'}`;
@@ -142,6 +133,21 @@
         </div>
       </dl>
 
+      {#if upcomingAssignments.length}
+        <section class="semester-upcoming" aria-labelledby="semester-upcoming-title">
+          <h2 id="semester-upcoming-title">Up next</h2>
+          <div class="semester-upcoming-list">
+            {#each upcomingAssignments as assignment}
+              <a href={assignment.href}>
+                <span class={`semester-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>
+                <strong>{assignment.title}</strong>
+                <small>{assignment.dueLabel}</small>
+              </a>
+            {/each}
+          </div>
+        </section>
+      {/if}
+
       <nav class="semester-ladder" aria-label="Jump to a week">
         {#each ladder as row (row.index)}
           <button
@@ -167,43 +173,14 @@
 
     <section class="semester-term" aria-labelledby="semester-title">
       <header class="semester-term-header">
+        <ContextPanelToggle label="term panel" />
         <div class="semester-term-title">
           <h1 id="semester-title">Semester</h1>
           <p>Sixteen weeks of deadlines, from {semester.rangeLabel}.</p>
-          <div class="semester-term-actions">
-            <a class="button primary large" href="/app"><CalendarDays size={16} />This week</a>
-            <a class="button large" href="/app/tasks">All assignments</a>
-          </div>
         </div>
-
-        <div class="semester-insights">
-          {#if nextAssignment}
-            <a class={`semester-next ${nextAssignment.courseColorClass}`} href={nextAssignment.href}>
-              <h2>Next deadline</h2>
-              <span class="semester-next-course">{nextAssignment.courseName}</span>
-              <strong>{nextAssignment.title}</strong>
-              <span class="semester-next-meta">
-                <span><CalendarDays size={14} />{nextAssignment.dueLabel}</span>
-                <span class:muted={!nextAssignment.hasEstimate}><Clock size={14} />{nextAssignment.effortLabel}</span>
-                <OpenAssignment class="semester-next-open" size={15} aria-hidden="true" />
-              </span>
-            </a>
-          {/if}
-
-          {#if followingAssignments.length}
-            <section class="semester-upcoming" aria-labelledby="semester-upcoming-title">
-              <h2 id="semester-upcoming-title">Then</h2>
-              <div class="semester-upcoming-list">
-                {#each followingAssignments as assignment}
-                  <a href={assignment.href}>
-                    <span class={`semester-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>
-                    <strong>{assignment.title}</strong>
-                    <small>{assignment.dueLabel}</small>
-                  </a>
-                {/each}
-              </div>
-            </section>
-          {/if}
+        <div class="semester-term-actions">
+          <a class="button primary" href="/app"><CalendarDays size={15} />This week</a>
+          <a class="button" href="/app/tasks">All assignments</a>
         </div>
       </header>
 
@@ -221,31 +198,24 @@
               <span>Week {row.number}</span>
               <strong>{row.week.label}</strong>
               {#if row.index === 0}<small>This week</small>{/if}
+              <span class="semester-week-load">{row.week.workloadLabel}</span>
             </div>
 
             <div class="semester-week-content">
               {#if row.week.assignmentCount}
-                <div class="semester-assignment-scroller" use:scrollFades>
-                  <div class="semester-assignment-track">
-                    {#each row.week.assignments as assignment}
-                      <a class={`semester-assignment ${assignment.courseColorClass}`} href={assignment.href}>
-                        <span class="semester-assignment-course">{assignment.courseName}</span>
-                        <strong title={assignment.title}>{assignment.title}</strong>
-                        <span class="semester-assignment-meta">
-                          <span><CalendarDays size={13} />{assignment.dueLabel}</span>
-                          <span class:muted={!assignment.hasEstimate}><Clock size={13} />{assignment.effortLabel}</span>
-                          <OpenAssignment class="semester-assignment-open" size={14} aria-hidden="true" />
-                        </span>
-                      </a>
-                    {/each}
-                  </div>
+                <div class="semester-assignment-list">
+                  {#each row.week.assignments as assignment}
+                    <a class="semester-assignment" href={assignment.href} title={assignment.title}>
+                      <span class={`semester-course-dot ${assignment.courseColorClass}`} aria-hidden="true"></span>
+                      <strong>{assignment.title}</strong>
+                      <small class:muted={!assignment.hasEstimate}>{assignment.dueLabel}{#if assignment.hasEstimate} · {assignment.effortLabel}{/if}</small>
+                    </a>
+                  {/each}
                 </div>
               {:else}
                 <span class="semester-no-assignments">No deadlines</span>
               {/if}
             </div>
-
-            <span class="semester-week-load">{row.week.workloadLabel}</span>
           </article>
         {/each}
       </div>

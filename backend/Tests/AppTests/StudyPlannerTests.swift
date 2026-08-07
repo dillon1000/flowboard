@@ -80,7 +80,7 @@ struct StudyPlannerTests {
         #expect(planner.days.reduce(0) { $0 + $1.assignmentCount } == 3)
         #expect(planner.planCandidates.first?.remainingMinutes == 120)
         #expect(planner.unscheduledAssignmentCount == 1)
-        #expect(planner.studyStreakDays == 1)
+        #expect(planner.studyStreakDays == 0)
     }
 
     @Test("Local dates do not advance at the UTC boundary")
@@ -131,6 +131,16 @@ struct StudyPlannerTests {
             expectContains(response.body.string, #""courseFilters""#)
             expectContains(response.body.string, #""days""#)
             expectContains(response.body.string, #""name":"My board""#)
+
+            let availability = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/workspace/settings/availability",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(availability.status == .ok)
+            expectContains(availability.body.string, #""pageTitle":"Availability""#)
+            expectContains(availability.body.string, #""isAvailabilitySettings":true"#)
+            expectContains(availability.body.string, #""weekdayCapacityMinutes""#)
         }
     }
 

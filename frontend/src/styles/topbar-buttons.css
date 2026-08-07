@@ -80,10 +80,14 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px;
+  border: 0;
   border-radius: var(--radius-small);
   color: var(--text-tertiary);
   background: var(--surface);
   box-shadow: var(--shadow-border);
+  font: inherit;
+  text-align: left;
+  cursor: text;
   transition: box-shadow var(--duration) var(--ease);
 }
 
@@ -101,18 +105,15 @@
   flex: 0 0 auto;
 }
 
-.search-control input {
+.search-control-value {
+  display: block;
   min-width: 0;
   flex: 1;
-  border: 0;
-  outline: 0;
+  overflow: hidden;
   color: var(--text);
-  background: transparent;
   font-size: 13px;
-}
-
-.search-control input::placeholder {
-  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-control kbd {
@@ -123,6 +124,169 @@
   border-radius: 4px;
   color: var(--text-tertiary);
   background: var(--surface-hover);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.mobile-search-button {
+  display: none;
+}
+
+.command-palette-layer {
+  padding-top: min(14vh, 120px);
+}
+
+.command-palette {
+  width: min(620px, 100%);
+  overflow: hidden;
+}
+
+.command-palette-search {
+  display: flex;
+  height: 54px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-tertiary);
+}
+
+.command-palette-search > input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+}
+
+.command-palette-results {
+  display: grid;
+  max-height: min(480px, 58vh);
+  gap: 2px;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.command-palette-results > a {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  min-height: 48px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-medium);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.command-palette-results > a.active {
+  background: var(--surface-hover);
+}
+
+.command-palette-results > a > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.command-palette-results strong,
+.command-palette-results small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette-results strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.command-palette-results small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.command-palette-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: var(--radius-small);
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-border);
+}
+
+.command-palette-empty {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 44px 20px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.command-palette-empty strong {
+  color: var(--text-secondary);
+}
+
+.command-palette-footer {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-tertiary);
+  background: var(--surface-raised);
+  font-size: 10px;
+}
+
+.command-palette-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.command-palette-footer kbd {
+  min-width: 18px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  text-align: center;
+}
+
+.shortcut-list {
+  display: grid;
+  gap: 2px;
+}
+
+.shortcut-list > div {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.shortcut-list > div:last-child {
+  border-bottom: 0;
+}
+
+.shortcut-list kbd {
+  padding: 3px 7px;
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-border);
   font-size: 10px;
   white-space: nowrap;
 }
@@ -279,4 +443,3 @@
 :root[data-theme='dark'] .theme-icon-light {
   display: block;
 }
-

@@ -1,19 +1,49 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import { api, messageFor } from '$lib/api';
-  import type { TasksPageContext } from '$lib/types';
+  import { api, messageFor, refreshAll } from '$lib/api';
+  import type { TaskCardContext, TasksPageContext } from '$lib/types';
   import { ArchiveIcon as Archive, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, ClockIcon as Clock, MagnifyingGlassIcon as Search } from 'phosphor-svelte';
   import { previewFromTask, taskPreview } from '$lib/ui/taskPreview';
   import { showToast } from '$lib/ui/toast';
 
   let { tasks, archived } = $props<{ tasks: TasksPageContext; archived: boolean }>();
   let requestError = $state('');
+  type TaskSortField = 'title' | 'course' | 'status' | 'priority' | 'effort' | 'due';
+  let sortField = $state<TaskSortField | null>(null);
+  let sortAscending = $state(true);
+  const sortedTasks = $derived(sortField ? [...tasks.tasks].sort(compareTasks) : tasks.tasks);
+
+  function sortBy(field: TaskSortField): void {
+    if (sortField === field) sortAscending = !sortAscending;
+    else {
+      sortField = field;
+      sortAscending = true;
+    }
+  }
+
+  function ariaSort(field: TaskSortField): 'ascending' | 'descending' | 'none' {
+    if (sortField !== field) return 'none';
+    return sortAscending ? 'ascending' : 'descending';
+  }
+
+  /** Missing estimates and dates stay below useful values in both directions. */
+  function compareTasks(left: TaskCardContext, right: TaskCardContext): number {
+    if (!sortField) return 0;
+    const direction = sortAscending ? 1 : -1;
+    if (sortField === 'title') return direction * left.title.localeCompare(right.title);
+    if (sortField === 'course') return direction * left.boardName.localeCompare(right.boardName);
+    if (sortField === 'status') return direction * left.statusName.localeCompare(right.statusName);
+    if (sortField === 'priority') return direction * left.priorityName.localeCompare(right.priorityName);
+    const leftValue = sortField === 'effort' ? (left.hasEstimate ? left.estimatedMinutes : null) : (left.hasDueDate ? Date.parse(`${left.dueInput}T00:00:00`) : null);
+    const rightValue = sortField === 'effort' ? (right.hasEstimate ? right.estimatedMinutes : null) : (right.hasDueDate ? Date.parse(`${right.dueInput}T00:00:00`) : null);
+    if (leftValue === null || rightValue === null) return leftValue === rightValue ? 0 : leftValue === null ? 1 : -1;
+    return direction * (leftValue - rightValue);
+  }
 
   async function restore(taskID: string): Promise<void> {
     requestError = '';
     try {
       await api(`/api/v1/tasks/${taskID}`, { method: 'PATCH', body: JSON.stringify({ isArchived: false }) });
-      await invalidateAll();
+      await refreshAll();
       showToast('Assignment restored');
     } catch (cause) {
       requestError = messageFor(cause);
@@ -42,9 +72,17 @@
     {/if}
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Assignment</th><th>Course</th><th>Status</th><th>Severity</th><th>Plan</th><th>Due</th>{#if archived}<th>Action</th>{/if}</tr></thead>
+        <thead><tr>
+          <th scope="col" aria-sort={ariaSort('title')}><button class="table-sort" type="button" onclick={() => sortBy('title')}>Assignment<span aria-hidden="true">{sortField === 'title' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+          <th scope="col" aria-sort={ariaSort('course')}><button class="table-sort" type="button" onclick={() => sortBy('course')}>Course<span aria-hidden="true">{sortField === 'course' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+          <th scope="col" aria-sort={ariaSort('status')}><button class="table-sort" type="button" onclick={() => sortBy('status')}>Status<span aria-hidden="true">{sortField === 'status' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+          <th scope="col" aria-sort={ariaSort('priority')}><button class="table-sort" type="button" onclick={() => sortBy('priority')}>Priority<span aria-hidden="true">{sortField === 'priority' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+          <th scope="col" aria-sort={ariaSort('effort')}><button class="table-sort" type="button" onclick={() => sortBy('effort')}>Plan<span aria-hidden="true">{sortField === 'effort' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+          <th scope="col" aria-sort={ariaSort('due')}><button class="table-sort" type="button" onclick={() => sortBy('due')}>Due<span aria-hidden="true">{sortField === 'due' ? sortAscending ? '↑' : '↓' : '↕'}</span></button></th>
+          {#if archived}<th scope="col">Action</th>{/if}
+        </tr></thead>
         <tbody>
-          {#each tasks.tasks as task (task.id)}
+          {#each sortedTasks as task (task.id)}
             <tr>
               <td><a href={task.href} use:taskPreview={previewFromTask(task)}>{task.title}</a></td><td>{task.boardName}</td>
               <td><span class={`badge status ${task.statusColorClass}`} style={task.statusColorStyle}>{task.statusName}</span></td>

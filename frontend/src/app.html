@@ -17,6 +17,8 @@
               : 'light';
         document.documentElement.dataset.sidebar =
           localStorage.getItem('flowboard-sidebar') === 'collapsed' ? 'collapsed' : 'expanded';
+        document.documentElement.dataset.panel =
+          localStorage.getItem('flowboard-panel') === 'collapsed' ? 'collapsed' : 'expanded';
       } catch {}
     </script>
     %sveltekit.head%

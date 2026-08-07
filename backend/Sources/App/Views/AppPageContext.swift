@@ -8,6 +8,7 @@ enum AppPageKind {
     case archivedTasks
     case taskDetail
     case settings
+    case availabilitySettings
     case apiKeys
     case integrations
     case boardSettings
@@ -26,6 +27,7 @@ struct AppPageContext: Encodable {
     let isTaskDetail: Bool
     let isSettings: Bool
     let isProfileSettings: Bool
+    let isAvailabilitySettings: Bool
     let isAPIKeys: Bool
     let isIntegrations: Bool
     let isBoardSettings: Bool
@@ -35,6 +37,7 @@ struct AppPageContext: Encodable {
     let tasks: TasksPageContext?
     let taskDetail: TaskDetailPageContext?
     let settings: SettingsPageContext?
+    let availabilitySettings: StudySettingsResponse?
     let apiKeys: APIKeysPageContext?
     let integrations: CanvasIntegrationsPageContext?
     let boardSettings: BoardSettingsPageContext?
@@ -49,6 +52,7 @@ struct AppPageContext: Encodable {
         tasks: TasksPageContext?,
         taskDetail: TaskDetailPageContext?,
         settings: SettingsPageContext?,
+        availabilitySettings: StudySettingsResponse?,
         apiKeys: APIKeysPageContext?,
         integrations: CanvasIntegrationsPageContext?,
         boardSettings: BoardSettingsPageContext?
@@ -63,8 +67,9 @@ struct AppPageContext: Encodable {
         self.isActiveTasks = pageKind == .tasks
         self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
-        self.isSettings = pageKind == .settings || pageKind == .apiKeys || pageKind == .integrations
+        self.isSettings = pageKind == .settings || pageKind == .availabilitySettings || pageKind == .apiKeys || pageKind == .integrations
         self.isProfileSettings = pageKind == .settings
+        self.isAvailabilitySettings = pageKind == .availabilitySettings
         self.isAPIKeys = pageKind == .apiKeys
         self.isIntegrations = pageKind == .integrations
         self.isBoardSettings = pageKind == .boardSettings
@@ -74,6 +79,7 @@ struct AppPageContext: Encodable {
         self.tasks = tasks
         self.taskDetail = taskDetail
         self.settings = settings
+        self.availabilitySettings = availabilitySettings
         self.apiKeys = apiKeys
         self.integrations = integrations
         self.boardSettings = boardSettings
@@ -89,6 +95,25 @@ struct CommonPageContext: Encodable {
     let planningEmailHour: Int
     let userAvatar: AvatarContext
     let boards: [BoardNavigationContext]
+    let searchAssignments: [SearchAssignmentContext]
+}
+
+/// Carries only the assignment fields needed by the global finder. Keeping this
+/// payload small lets every page offer the same results without another request.
+struct SearchAssignmentContext: Encodable {
+    let id: UUID
+    let title: String
+    let courseName: String
+    let href: String
+    let searchText: String
+
+    init(task: Task, courseName: String) throws {
+        self.id = try task.requireID()
+        self.title = task.title
+        self.courseName = courseName
+        self.href = task.browserPath
+        self.searchText = ([task.description ?? ""] + task.labels).joined(separator: " ")
+    }
 }
 
 /// Supplies one image-or-initials choice wherever a user identity appears.
@@ -166,12 +191,19 @@ struct OverviewPageContext: Encodable {
     let unplannedFocusCount: Int
     let hasUnplannedFocus: Bool
     let studyStreakDays: Int
+    let studySettings: StudySettingsResponse
+    let recovery: StudyRecoveryContext
+    let estimationInbox: [StudyEstimateInboxItemContext]
+    let hasEstimationInbox: Bool
+    let onboarding: StudyOnboardingContext
 
     init(
         tasks: [TaskCardContext],
         courses: [BoardNavigationContext],
         selectedCourseID: UUID?,
         studySessions: [StudySession] = [],
+        settings: StudySettings? = nil,
+        hasCanvasConnection: Bool = false,
         timeZoneIdentifier: String = "UTC",
         referenceDate: Date = Date()
     ) {
@@ -195,6 +227,8 @@ struct OverviewPageContext: Encodable {
         let taskSessions = studySessions.filter { taskByID[$0.$task.id] != nil }
         let activeTaskSessions = taskSessions.filter { activeTaskByID[$0.$task.id] != nil }
         let sessionTaskIDs = Set(activeTaskSessions.map(\.$task.id))
+        let availability = StudyAvailability(settings: settings)
+        let settingsContext = StudySettingsResponse(settings: settings)
 
         self.weekLabel = studyWeekLabel(start: weekStart, calendar: calendar)
         self.courseFilters = activeCourses.map {
@@ -228,6 +262,7 @@ struct OverviewPageContext: Encodable {
                 studySessions: sessionsOnDate,
                 legacyFocusTasks: legacyFocusTasks,
                 courseColors: courseColors,
+                availability: availability,
                 calendar: calendar
             )
         }
@@ -251,8 +286,13 @@ struct OverviewPageContext: Encodable {
         self.hasUnscheduledAssignments = unscheduledAssignmentCount > 0
         self.unestimatedAssignmentCount = days.reduce(0) { $0 + $1.unestimatedAssignmentCount }
         self.hasUnestimatedAssignments = unestimatedAssignmentCount > 0
+        let todayKey = planningDateKey(today, calendar: calendar)
         let plannedMinutesByTask = Dictionary(grouping: activeTaskSessions, by: \.$task.id)
-        .mapValues { sessions in sessions.reduce(0) { $0 + $1.plannedMinutes } }
+            .mapValues { sessions in
+                sessions.reduce(0) { total, session in
+                    total + studySessionCountedMinutes(session, todayKey: todayKey)
+                }
+            }
         self.planCandidates = activeTaskContexts
             .sorted(by: studyTaskOrder)
             .compactMap { task in
@@ -270,13 +310,45 @@ struct OverviewPageContext: Encodable {
         self.hasPlanCandidates = !planCandidates.isEmpty
         self.unplannedFocusCount = planCandidates.count
         self.hasUnplannedFocus = unplannedFocusCount > 0
-        self.studyStreakDays = studyPlanningStreakDays(
-            plannedDates: Set(
-                taskSessions.map(\.scheduledDate)
-                    + taskContexts.map(\.startInput).filter { !$0.isEmpty }
+        self.studyStreakDays = studyCompletionStreakDays(
+            completedDates: Set(
+                taskSessions.filter { $0.state == .completed }.map(\.scheduledDate)
             ),
             referenceDate: today,
             calendar: calendar
+        )
+        self.studySettings = settingsContext
+        let dueDateByTaskID = Dictionary(
+            uniqueKeysWithValues: activeTaskContexts.compactMap { task in
+                task.dueInput.isEmpty ? nil : (task.id, task.dueInput)
+            }
+        )
+        self.recovery = StudyRecoveryContext(
+            analysis: StudyRecoveryService.analyze(
+                sessions: activeTaskSessions,
+                dueDateByTaskID: dueDateByTaskID,
+                availability: availability,
+                timeZoneIdentifier: timeZoneIdentifier,
+                referenceDate: referenceDate
+            )
+        )
+        self.estimationInbox = activeTaskContexts
+            .filter { !$0.hasEstimate }
+            .sorted(by: studyTaskOrder)
+            .map { task in
+                StudyEstimateInboxItemContext(
+                    task: task,
+                    presets: settingsContext.estimatePresets
+                )
+            }
+        self.hasEstimationInbox = !estimationInbox.isEmpty
+        self.onboarding = StudyOnboardingContext(
+            hasCanvasConnection: hasCanvasConnection,
+            timeZoneConfirmed: settingsContext.timeZoneConfirmed,
+            availabilityConfigured: settingsContext.availabilityConfigured,
+            hasAssignments: !activeTaskContexts.isEmpty,
+            hasMissingEstimates: !estimationInbox.isEmpty,
+            hasStudyPlan: activeTaskSessions.contains { $0.state != .skipped }
         )
     }
 }
@@ -324,6 +396,10 @@ struct StudyDayContext: Encodable {
     let unestimatedAssignmentCount: Int
     let workloadLabel: String
     let workloadClass: String
+    let availableMinutes: Int
+    let availableLabel: String
+    let isBlocked: Bool
+    let isOverloaded: Bool
 
     init(
         date: Date,
@@ -332,6 +408,7 @@ struct StudyDayContext: Encodable {
         studySessions: [(session: StudySession, task: TaskCardContext)],
         legacyFocusTasks: [TaskCardContext],
         courseColors: [UUID: String],
+        availability: StudyAvailability,
         calendar: Calendar
     ) {
         self.weekdayLabel = planningDateLabel(date, format: "EEE", calendar: calendar)
@@ -351,7 +428,11 @@ struct StudyDayContext: Encodable {
                 task: value.task,
                 courseColorClass: courseColors[value.task.boardID] ?? "course-blue",
                 plannedMinutes: value.session.plannedMinutes,
-                studySessionID: value.session.id
+                studySessionID: value.session.id,
+                scheduledDate: value.session.scheduledDate,
+                sessionState: value.session.state,
+                actualMinutes: value.session.actualMinutes,
+                completedAt: value.session.completedAt
             )
         }
         let legacyBlocks = legacyFocusTasks.map {
@@ -364,6 +445,14 @@ struct StudyDayContext: Encodable {
         self.focusBlockCount = focusBlocks.count
         self.hasFocusBlocks = !focusBlocks.isEmpty
         self.workloadMinutes = focusBlocks.reduce(0) { $0 + $1.estimatedMinutes }
+        self.availableMinutes = availability.availableMinutes(
+            on: date,
+            dateKey: dateInput,
+            calendar: calendar
+        )
+        self.availableLabel = displayDuration(availableMinutes)
+        self.isBlocked = availability.blockedDates.contains(dateInput)
+        self.isOverloaded = workloadMinutes > availableMinutes
         self.unestimatedAssignmentCount = dueTasks.filter { !$0.hasEstimate }.count
         switch workloadMinutes {
         case 0:
@@ -404,6 +493,103 @@ struct StudyPlanCandidateContext: Encodable {
     }
 }
 
+struct StudyRecoveryContext: Encodable {
+    let missedSessionCount: Int
+    let deadlineChangeCount: Int
+    let overloadedDayCount: Int
+    let issueCount: Int
+    let hasIssues: Bool
+    let summary: String
+
+    init(analysis: StudyRecoveryAnalysis) {
+        self.missedSessionCount = analysis.missedSessionIDs.count
+        self.deadlineChangeCount = analysis.deadlineChangedSessionIDs.count
+        self.overloadedDayCount = analysis.overloadedDates.count
+        self.issueCount = analysis.issueCount
+        self.hasIssues = issueCount > 0
+        let parts = [
+            missedSessionCount > 0 ? "\(missedSessionCount) missed" : nil,
+            deadlineChangeCount > 0 ? "\(deadlineChangeCount) after a changed deadline" : nil,
+            overloadedDayCount > 0 ? "\(overloadedDayCount) overloaded" : nil,
+        ].compactMap { $0 }
+        self.summary = parts.isEmpty
+            ? "Your current week still fits."
+            : parts.joined(separator: ", ") + "."
+    }
+}
+
+struct StudyEstimateInboxItemContext: Encodable {
+    let id: UUID
+    let title: String
+    let courseName: String
+    let dueDisplay: String
+    let typeName: String
+    let suggestedMinutes: Int
+    let suggestedPresetID: String
+
+    init(task: TaskCardContext, presets: [StudyEstimatePreset]) {
+        let assignmentType = studyAssignmentType(title: task.title, labels: task.labels)
+        let searchText = ([task.title] + task.labels).joined(separator: " ").lowercased()
+        let preset = presets.first { preset in
+            preset.keywords.contains { searchText.contains($0.lowercased()) }
+        }
+        self.id = task.id
+        self.title = task.title
+        self.courseName = task.boardName
+        self.dueDisplay = task.dueDisplay
+        self.typeName = assignmentType.name
+        self.suggestedMinutes = preset?.minutes ?? 60
+        self.suggestedPresetID = preset?.id ?? ""
+    }
+}
+
+struct StudyOnboardingStepContext: Encodable {
+    let key: String
+    let title: String
+    let description: String
+    let href: String
+    let isComplete: Bool
+    let isCurrent: Bool
+}
+
+struct StudyOnboardingContext: Encodable {
+    let steps: [StudyOnboardingStepContext]
+    let completedStepCount: Int
+    let isVisible: Bool
+    let nextStepKey: String
+
+    init(
+        hasCanvasConnection: Bool,
+        timeZoneConfirmed: Bool,
+        availabilityConfigured: Bool,
+        hasAssignments: Bool,
+        hasMissingEstimates: Bool,
+        hasStudyPlan: Bool
+    ) {
+        let values = [
+            ("canvas", "Connect Canvas", "Bring in courses and deadlines.", "/app/settings/integrations", hasCanvasConnection),
+            ("timezone", "Confirm your time zone", "Keep deadlines and study days local.", "", timeZoneConfirmed),
+            ("availability", "Set your real week", "Add study capacity, classes, work, and blocked dates.", "", availabilityConfigured),
+            ("estimates", "Estimate assignments", "Give every deadline enough study time.", "", hasAssignments && !hasMissingEstimates),
+            ("plan", "Build your first week", "Place estimated work into available time.", "", hasStudyPlan),
+        ]
+        let currentKey = values.first { !$0.4 }?.0 ?? ""
+        self.steps = values.map { value in
+            StudyOnboardingStepContext(
+                key: value.0,
+                title: value.1,
+                description: value.2,
+                href: value.3,
+                isComplete: value.4,
+                isCurrent: value.0 == currentKey
+            )
+        }
+        self.completedStepCount = values.filter { $0.4 }.count
+        self.isVisible = completedStepCount < values.count
+        self.nextStepKey = currentKey
+    }
+}
+
 struct StudyAssignmentContext: Encodable {
     let href: String
     let title: String
@@ -427,13 +613,23 @@ struct StudyAssignmentContext: Encodable {
     let dueDisplay: String
     let description: String
     let studySessionID: String
+    let taskID: String
+    let scheduledDate: String
     let hasStudySession: Bool
+    let sessionState: String
+    let actualMinutes: Int?
+    let completedAt: Date?
+    let isPlannedSession: Bool
 
     init(
         task: TaskCardContext,
         courseColorClass: String,
         plannedMinutes: Int? = nil,
-        studySessionID: UUID? = nil
+        studySessionID: UUID? = nil,
+        scheduledDate: String = "",
+        sessionState: StudySessionState = .planned,
+        actualMinutes: Int? = nil,
+        completedAt: Date? = nil
     ) {
         let assignmentType = studyAssignmentType(title: task.title, labels: task.labels)
         self.href = task.href
@@ -443,8 +639,17 @@ struct StudyAssignmentContext: Encodable {
         self.dueTime = task.dueTimeDisplay
         self.typeName = assignmentType.name
         self.typeIcon = assignmentType.icon
-        self.estimatedMinutes = plannedMinutes ?? task.estimatedMinutes
-        self.effortLabel = plannedMinutes.map(displayDuration) ?? task.estimatedDisplay
+        let sessionMinutes = if studySessionID == nil {
+            plannedMinutes
+        } else if sessionState == .skipped {
+            0
+        } else if sessionState == .completed {
+            actualMinutes ?? plannedMinutes
+        } else {
+            plannedMinutes
+        }
+        self.estimatedMinutes = sessionMinutes ?? task.estimatedMinutes
+        self.effortLabel = sessionMinutes.map(displayDuration) ?? task.estimatedDisplay
         self.hasEstimate = plannedMinutes != nil || task.hasEstimate
         self.statusName = task.statusName
         self.statusValue = task.statusValue
@@ -458,7 +663,13 @@ struct StudyAssignmentContext: Encodable {
         self.dueDisplay = task.dueDisplay
         self.description = task.description
         self.studySessionID = studySessionID?.uuidString ?? ""
+        self.taskID = task.id.uuidString
+        self.scheduledDate = scheduledDate
         self.hasStudySession = studySessionID != nil
+        self.sessionState = studySessionID == nil ? "" : sessionState.rawValue
+        self.actualMinutes = actualMinutes
+        self.completedAt = completedAt
+        self.isPlannedSession = studySessionID != nil && sessionState == .planned
     }
 }
 
@@ -506,20 +717,19 @@ private func studyTaskIsCompleted(_ task: TaskCardContext) -> Bool {
     task.completionStatuses.split(separator: ",").contains(Substring(task.statusValue))
 }
 
-/// Counts consecutive planned study days ending today, or yesterday when the
-/// user has not planned today's work yet. Empty and future dates do not extend
-/// the streak, and completed tasks remain valid evidence of past study plans.
-private func studyPlanningStreakDays(
-    plannedDates: Set<String>,
+/// Counts consecutive completed study days ending today, or yesterday when the
+/// student has not completed today's work yet. Plans and skips never add credit.
+private func studyCompletionStreakDays(
+    completedDates: Set<String>,
     referenceDate: Date,
     calendar: Calendar
 ) -> Int {
     let today = calendar.startOfDay(for: referenceDate)
     let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-    var cursor = plannedDates.contains(planningDateKey(today, calendar: calendar)) ? today : yesterday
+    var cursor = completedDates.contains(planningDateKey(today, calendar: calendar)) ? today : yesterday
     var streak = 0
 
-    while plannedDates.contains(planningDateKey(cursor, calendar: calendar)) {
+    while completedDates.contains(planningDateKey(cursor, calendar: calendar)) {
         streak += 1
         guard let previousDay = calendar.date(byAdding: .day, value: -1, to: cursor) else {
             break
@@ -528,6 +738,19 @@ private func studyPlanningStreakDays(
     }
 
     return streak
+}
+
+/// Completed minutes and current plans reduce the remaining estimate. Past plans
+/// and skipped blocks contribute zero, so missed work returns to the plan queue.
+private func studySessionCountedMinutes(_ session: StudySession, todayKey: String) -> Int {
+    switch session.state {
+    case .completed:
+        session.actualMinutes ?? session.plannedMinutes
+    case .planned where session.scheduledDate >= todayKey:
+        session.plannedMinutes
+    default:
+        0
+    }
 }
 
 private func studyAssignmentType(title: String, labels: [String]) -> (name: String, icon: String) {
@@ -597,6 +820,7 @@ struct BoardPageContext: Encodable {
     let canvasHasScore: Bool
     let canvasScorePercent: Double
     let canvasLastSyncDisplay: String
+    let studySessions: [StudySessionPageContext]
 
     init(
         board: Board,
@@ -610,6 +834,9 @@ struct BoardPageContext: Encodable {
         nextMonthHref: String,
         todayMonthHref: String,
         defaultTemplate: TaskTemplate?,
+        studySessions: [StudySession],
+        studyTasks: [TaskCardContext],
+        timeZoneIdentifier: String,
         canvasLink: CanvasCourseLink? = nil,
         canvasConnection: CanvasConnection? = nil
     ) throws {
@@ -632,7 +859,7 @@ struct BoardPageContext: Encodable {
         self.hasTasks = !tasks.isEmpty
         let configuration = activeView.configuration
         let groupBy = configuration?.groupBy ?? "status"
-        self.groupByName = groupBy == "priority" ? "Severity" : "Status"
+        self.groupByName = groupBy == "priority" ? "Priority" : "Status"
         self.hasFilters = !(configuration?.filters.isEmpty ?? true)
         self.filterSummary = configuration?.filters.first.map {
             "\($0.field.replacingOccurrences(of: "_", with: " ").capitalized): \($0.value)"
@@ -701,6 +928,15 @@ struct BoardPageContext: Encodable {
         self.canvasHasScore = canvasLink?.currentScore != nil
         self.canvasScorePercent = min(100, max(0, canvasLink?.currentScore ?? 0))
         self.canvasLastSyncDisplay = canvasConnection?.lastSuccessfulSyncAt.map(displayDate) ?? "Not synced yet"
+        let taskByID = Dictionary(uniqueKeysWithValues: studyTasks.map { ($0.id, $0) })
+        let calendar = planningCalendar(timeZoneIdentifier: timeZoneIdentifier)
+        self.studySessions = try studySessions
+            .filter { $0.state == .planned }
+            .sorted { $0.scheduledDate < $1.scheduledDate }
+            .compactMap { session in
+                guard let task = taskByID[session.$task.id] else { return nil }
+                return try StudySessionPageContext(session: session, task: task, calendar: calendar)
+            }
     }
 }
 

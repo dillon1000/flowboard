@@ -9,6 +9,7 @@ struct AppPageController: RouteCollection {
         routes.get("tasks", use: allTasks)
         routes.get("tasks", "archived", use: archivedTasks)
         routes.get("settings", use: settings)
+        routes.get("settings", "availability", use: availabilitySettings)
         routes.get("settings", "api-keys", use: apiKeys)
         routes.get("settings", "integrations", use: integrations)
         routes.get("boards", ":boardID", use: boardDefault)
@@ -30,14 +31,21 @@ struct AppPageController: RouteCollection {
             .all()
         let taskContexts = try await makeTaskContexts(tasks, on: req.db)
         let taskIDs = taskContexts.map(\.id)
+        let userID = try req.auth.require(User.self).requireID()
         let studySessions = if taskIDs.isEmpty {
             [StudySession]()
         } else {
             try await StudySession.query(on: req.db)
-                .filter(\.$user.$id == req.auth.require(User.self).requireID())
+                .filter(\.$user.$id == userID)
                 .filter(\.$task.$id ~~ taskIDs)
                 .all()
         }
+        let settings = try await StudySettings.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
+        let hasCanvasConnection = try await CanvasConnection.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first() != nil
 
         return try respond(
             common: common,
@@ -48,6 +56,8 @@ struct AppPageController: RouteCollection {
                 courses: common.boards,
                 selectedCourseID: selectedCourseID,
                 studySessions: studySessions,
+                settings: settings,
+                hasCanvasConnection: hasCanvasConnection,
                 timeZoneIdentifier: common.userTimeZone
             ),
         )
@@ -132,6 +142,20 @@ struct AppPageController: RouteCollection {
                 notificationsAvailable: req.application.notificationConfiguration != nil,
                 calendarFeed: CalendarFeedStatusResponse(credential: calendarFeed)
             ),
+        )
+    }
+
+    func availabilitySettings(req: Request) async throws -> Response {
+        let common = try await commonContext(for: req)
+        let userID = try req.auth.require(User.self).requireID()
+        let settings = try await StudySettings.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .first()
+        return try respond(
+            common: common,
+            pageTitle: "Availability",
+            pageKind: .availabilitySettings,
+            availabilitySettings: StudySettingsResponse(settings: settings)
         )
     }
 
@@ -248,7 +272,17 @@ struct AppPageController: RouteCollection {
             .with(\.$connection)
             .first()
         let filteredTasks = apply(activeView.configuration, to: tasks, board: access.board)
-        let taskContexts = try await makeTaskContexts(filteredTasks, on: req.db)
+        let allTaskContexts = try await makeTaskContexts(tasks, on: req.db)
+        let taskContextByID = Dictionary(uniqueKeysWithValues: allTaskContexts.map { ($0.id, $0) })
+        let taskContexts = try filteredTasks.compactMap { task in
+            taskContextByID[try task.requireID()]
+        }
+        let taskIDs = try tasks.map { try $0.requireID() }
+        let currentUserID = try req.auth.require(User.self).requireID()
+        let studySessions = taskIDs.isEmpty ? [] : try await StudySession.query(on: req.db)
+            .filter(\.$user.$id == currentUserID)
+            .filter(\.$task.$id ~~ taskIDs)
+            .all()
         let calendarMonth = requestedCalendarMonth(from: req)
         let viewPath = "/app/boards/\(boardID)/views/\(viewID)"
         let boardContext = try BoardPageContext(
@@ -269,6 +303,9 @@ struct AppPageController: RouteCollection {
             ),
             todayMonthHref: calendarHref(path: viewPath, month: calendarDate()),
             defaultTemplate: defaultTemplate,
+            studySessions: studySessions,
+            studyTasks: allTaskContexts,
+            timeZoneIdentifier: common.userTimeZone,
             canvasLink: canvasLink,
             canvasConnection: canvasLink?.connection
         )
@@ -394,6 +431,11 @@ struct AppPageController: RouteCollection {
             .filter(\.$queuedAt == nil)
             .sort(\.$remindAt, .ascending)
             .all()
+        let studySessions = try await StudySession.query(on: req.db)
+            .filter(\.$task.$id == task.requireID())
+            .filter(\.$user.$id == currentUserID)
+            .sort(\.$scheduledDate, .ascending)
+            .all()
         let members = try await boardUsers(board: access.board, on: req.db)
         let creator: User? = if let creatorID = task.$creator.id {
             try await User.find(creatorID, on: req.db)
@@ -419,6 +461,8 @@ struct AppPageController: RouteCollection {
             reminders: reminders,
             notificationsEnabled: req.application.notificationConfiguration != nil,
             currentUserID: currentUserID,
+            studySessions: studySessions,
+            timeZoneIdentifier: common.userTimeZone,
             canvasLink: canvasLink,
             canvasConnection: canvasLink?.courseLink.connection
         )
