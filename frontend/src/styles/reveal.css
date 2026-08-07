@@ -1,0 +1,92 @@
+/* ==========================================================================
+   Reveal highlight
+
+   The rim of the surface under the pointer catches light, and so do the rims of
+   its close neighbours. Windows called this Reveal; the neighbours are what make
+   a lane read as panes lit from one moving source instead of a row of :hover.
+
+   $lib/actions/pointerReveal.ts writes --reveal-x / --reveal-y and the
+   data-reveal attribute. Keep its selector list in step with this one.
+   ========================================================================== */
+
+.button,
+.card,
+.panel,
+.stat,
+.lane-card,
+.board-card,
+.study-assignment,
+.study-focus-chip,
+.study-unplanned,
+.study-unplanned-list button,
+.study-workflow-band,
+.settings-menu .nav-link,
+.user-row {
+  position: relative;
+}
+
+/* A one-pixel gradient border, drawn by masking the padding box out of a
+   full-bleed gradient. Pure light: it must never eat a click or shift its box.
+   Falloff alone makes the hovered rim the brightest one, so nothing here needs
+   to know whether this surface is the hovered one or a neighbour. */
+[data-reveal]::after {
+  position: absolute;
+  z-index: 1;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--reveal-size) circle at var(--reveal-x) var(--reveal-y),
+    var(--reveal-rim),
+    transparent 72%
+  );
+  content: '';
+  inset: 0;
+  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  mask-clip: content-box, border-box;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Pills and small chips need a tighter pool of light, or the whole rim lights
+   at once instead of the light tracking the pointer around it. */
+.button,
+.study-focus-chip,
+.settings-menu .nav-link,
+.study-unplanned-list button {
+  --reveal-size: 130px;
+}
+
+/* Dark buttons sit below the page in luminance, so they take white light in
+   both themes; the shared black-on-light highlight would vanish on them. */
+.button.primary,
+.button.danger {
+  --reveal-rim: rgb(255 255 255 / 50%);
+}
+
+/* Ghost buttons have no surface of their own, so there is no edge to light. */
+.button.ghost {
+  --reveal-rim: transparent;
+}
+
+/* The drag indicator owns ::after on a lane card and wins on specificity, so
+   it has to release the edges the rim layer stretched across. */
+.lane-card.drop-before::after {
+  bottom: auto;
+  padding: 0;
+  mask-image: none;
+}
+
+.lane-card.drop-after::after {
+  top: auto;
+  padding: 0;
+  mask-image: none;
+}
+
+/* A pointer-tracking glow is motion. The manager never starts under reduced
+   motion, but the layer is removed here too so a mid-session preference change
+   cannot leave one painted. */
+@media (--reduced-motion) {
+  [data-reveal]::after {
+    display: none;
+  }
+}

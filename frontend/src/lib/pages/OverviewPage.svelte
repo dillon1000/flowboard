@@ -3,6 +3,7 @@
   import { api, messageFor, refreshAll } from '$lib/api';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { scrollFades } from '$lib/actions/scrollFades';
+  import ContextPanelToggle from '$lib/components/ContextPanelToggle.svelte';
   import CreateBoardDialog from '$lib/components/CreateBoardDialog.svelte';
   import DatePicker from '$lib/components/DatePicker.svelte';
   import LabelsField from '$lib/components/LabelsField.svelte';
@@ -29,6 +30,7 @@
   import { estimateMinutes, parseLabels } from '$lib/ui/formValues';
   import {
     ArrowCircleUpRightIcon as OpenAssignment,
+    CaretDownIcon as CaretDown,
     CalendarDotsIcon as CalendarDays,
     ClockIcon as Clock3,
     FileTextIcon as FileText,
@@ -50,6 +52,8 @@
   let moveOpen = $state(false);
   let planSelection = $state('');
   let planMinutes = $state(60);
+  let planDate = $state('');
+  const planQuickMinutes = [25, 45, 60, 90];
   let pendingCount = $state(0);
   const pending = $derived(pendingCount > 0);
   let pageError = $state('');
@@ -141,7 +145,16 @@
     planSelection = assignmentID;
     const assignment = overview.planCandidates.find((candidate: StudyPlanCandidateContext) => candidate.id === assignmentID);
     planMinutes = Math.min(60, assignment?.remainingMinutes ?? 60);
+    planDate = overview.days.find((day: StudyDayContext) => !planDayDisabled(day))?.dateInput ?? todayDateInput;
     planOpen = true;
+  }
+
+  function planDayFreeMinutes(day: StudyDayContext): number {
+    return Math.max(0, day.availableMinutes - day.workloadMinutes);
+  }
+
+  function planDayDisabled(day: StudyDayContext): boolean {
+    return day.isBlocked || day.dateInput < todayDateInput;
   }
 
   function selectPlan(assignmentID: string): void {
@@ -432,6 +445,15 @@
           <a class:active={course.isSelected} class="study-course-link" href={course.href} aria-current={course.isSelected ? 'page' : undefined}><span class={`study-course-accent ${course.colorClass}`} aria-hidden="true"></span><span>{course.name}</span><small class:muted={!course.hasGrade}>{course.gradeDisplay}</small></a>
         {/each}
       </nav>
+      <section class="study-unplanned" aria-labelledby="study-unplanned-title">
+        <h2 id="study-unplanned-title">Needs study time</h2>
+        {#if unplannedPreview.length}
+          <div class="study-unplanned-list">
+            {#each unplannedPreview as assignment (assignment.id)}<button type="button" onclick={() => openPlan(assignment.id)}><strong>{assignment.title}</strong><small>{assignment.courseName} · {assignment.remainingDisplay} left · {assignment.dueDisplay}</small></button>{/each}
+          </div>
+          {#if overview.planCandidates.length > unplannedPreview.length}<span class="study-unplanned-rest">{overview.planCandidates.length - unplannedPreview.length} more waiting</span>{/if}
+        {:else}<p class="study-unplanned-empty">Every estimated assignment is fully planned.</p>{/if}
+      </section>
       <div class="study-availability-summary">
         <a href="/app/settings/availability">
           <span><Clock3 size={14} />Availability</span>
@@ -443,24 +465,16 @@
 
     <section class="study-week" aria-labelledby="study-week-title">
       <header class="study-week-header">
+        <ContextPanelToggle label="week panel" />
         <div class="study-week-title">
           <h1 id="study-week-title">This week</h1>
           <p>{weekState}</p>
-          <div class="study-week-actions">
-            <button class="button primary large" type="button" disabled={!overview.hasPlanCandidates || pending} onclick={autoPlanWeek}><Strategy size={16} />{pending ? 'Working…' : 'Plan this week'}</button>
-            <button class="button large" type="button" disabled={!overview.hasCourses} onclick={() => (createTaskOpen = true)}><Plus size={16} />Add assignment</button>
-          </div>
           {#if pageError}<p class="error-message" role="alert">{pageError}</p>{/if}
         </div>
-        <section class="study-unplanned" aria-labelledby="study-unplanned-title">
-          <h2 id="study-unplanned-title">Needs study time</h2>
-          {#if unplannedPreview.length}
-            <div class="study-unplanned-list">
-              {#each unplannedPreview as assignment (assignment.id)}<button type="button" onclick={() => openPlan(assignment.id)}><strong>{assignment.title}</strong><small>{assignment.courseName} · {assignment.remainingDisplay} left · {assignment.dueDisplay}</small></button>{/each}
-            </div>
-            {#if overview.planCandidates.length > unplannedPreview.length}<span class="study-unplanned-rest">{overview.planCandidates.length - unplannedPreview.length} more waiting</span>{/if}
-          {:else}<p class="study-unplanned-empty">Every estimated assignment is fully planned.</p>{/if}
-        </section>
+        <div class="study-week-actions">
+          <button class="button primary" type="button" disabled={!overview.hasPlanCandidates || pending} onclick={autoPlanWeek}><Strategy size={15} />{pending ? 'Working…' : 'Plan this week'}</button>
+          <button class="button" type="button" disabled={!overview.hasCourses} onclick={() => (createTaskOpen = true)}><Plus size={15} />Add assignment</button>
+        </div>
       </header>
 
       {#if overview.recovery.hasIssues}
@@ -544,11 +558,11 @@
 <CreateBoardDialog bind:open={createBoardOpen} />
 
 {#if createTaskOpen}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="new-assignment-title" tabindex="-1" use:dialogLayer={{ close: () => (createTaskOpen = false) }}><form class="dialog wide" onsubmit={createAssignment}><div class="dialog-header"><div><h2 id="new-assignment-title">Add assignment</h2><p>Put the deadline on your week, then add details when you need them.</p></div><button class="icon-button" type="button" onclick={() => (createTaskOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body">{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}<div class="form-grid"><div class="field wide"><label for="assignment-title">Title</label><input class="input" id="assignment-title" name="title" maxlength="120" required data-dialog-focus /></div><div class="field"><label for="assignment-course">Course</label><SelectMenu id="assignment-course" name="boardID" value={overview.defaultCourseID} options={courseOptions} ariaLabel="Course" /></div><div class="field"><label for="assignment-due">Due date</label><DatePicker id="assignment-due" name="dueAt" label="Due date" /></div><div class="field"><label for="assignment-time">Due time</label><TimePicker id="assignment-time" name="dueTime" label="Due time" /></div><div class="field"><label for="assignment-estimate">Time estimate</label><input class="input" id="assignment-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div><div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="5000"></textarea></div><LabelsField id="assignment-labels" label="Labels" placeholder="Exam, Reading, Lab" /></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (createTaskOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Adding…' : 'Add assignment'}</button></div></form></div>
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="new-assignment-title" tabindex="-1" use:dialogLayer={{ close: () => (createTaskOpen = false) }}><form class="dialog wide" onsubmit={createAssignment}><div class="dialog-header"><div><h2 id="new-assignment-title">Add assignment</h2><p>Put the deadline on your week, then add details when you need them.</p></div><button class="icon-button" type="button" onclick={() => (createTaskOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body">{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}<div class="form-grid"><div class="field wide"><label for="assignment-title">Title</label><input class="input" id="assignment-title" name="title" maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="assignment-course">Course</label><SelectMenu id="assignment-course" name="boardID" value={overview.defaultCourseID} options={courseOptions} ariaLabel="Course" /></div><div class="field"><label for="assignment-due">Due date</label><DatePicker id="assignment-due" name="dueAt" label="Due date" /></div><div class="field"><label for="assignment-time">Due time</label><TimePicker id="assignment-time" name="dueTime" label="Due time" /></div><div class="field wide"><label for="assignment-estimate">Time estimate <small class="field-optional">Minutes</small></label><input class="input" id="assignment-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="45" /><span class="field-help">An estimate lets the planner give this assignment study time.</span></div></div><details class="dialog-more"><summary><CaretDown size={14} aria-hidden="true" />More options<small>notes, labels</small></summary><div class="dialog-more-body"><div class="form-grid"><div class="field wide"><label for="assignment-description">Notes</label><textarea class="textarea" id="assignment-description" name="description" maxlength="5000"></textarea></div><LabelsField id="assignment-labels" label="Labels" placeholder="Exam, Reading, Lab" /></div></div></details></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (createTaskOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Adding…' : 'Add assignment'}</button></div></form></div>
 {/if}
 
 {#if planOpen}
-  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="plan-week-title" tabindex="-1" use:dialogLayer={{ close: () => (planOpen = false) }}><form class="dialog" onsubmit={planAssignment}><div class="dialog-header"><div><h2 id="plan-week-title">Add study time</h2><p>Choose an assignment, date, and amount. Its deadline stays unchanged.</p></div><button class="icon-button" type="button" onclick={() => (planOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body">{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}<div class="form-grid"><div class="field wide"><label for="plan-assignment">Assignment</label><SelectMenu id="plan-assignment" name="taskID" bind:value={planSelection} options={planOptions} ariaLabel="Assignment to plan" onchange={selectPlan} initialFocus /></div><div class="field"><label for="plan-date">Work on</label><DatePicker id="plan-date" name="focusDate" value={todayDateInput} label="Work on" required /></div><div class="field"><label for="plan-minutes">Planned minutes</label><input class="input" id="plan-minutes" name="plannedMinutes" type="number" min="5" max={planRemainingMinutes} step="5" bind:value={planMinutes} required /><span class="field-help">{durationLabel(planRemainingMinutes)} remains in the estimate.</span></div></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (planOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Planning…' : 'Add study session'}</button></div></form></div>
+  <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="plan-week-title" tabindex="-1" use:dialogLayer={{ close: () => (planOpen = false) }}><form class="dialog" onsubmit={planAssignment}><div class="dialog-header"><div><h2 id="plan-week-title">Add study time</h2><p>Choose an assignment, date, and amount. Its deadline stays unchanged.</p></div><button class="icon-button" type="button" onclick={() => (planOpen = false)} aria-label="Close"><X size={16} /></button></div><div class="dialog-body">{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}<div class="form-grid"><div class="field wide"><label for="plan-assignment">Assignment</label><SelectMenu id="plan-assignment" name="taskID" bind:value={planSelection} options={planOptions} ariaLabel="Assignment to plan" onchange={selectPlan} initialFocus /></div><div class="field wide"><span class="field-label">Work on</span><div class="plan-day-grid" role="group" aria-label="Choose a day this week">{#each overview.days as day (day.dateInput)}<button class="plan-day" type="button" aria-pressed={planDate === day.dateInput} disabled={planDayDisabled(day)} onclick={() => (planDate = day.dateInput)}><strong>{day.weekdayLabel}</strong><small>{day.isBlocked ? 'Blocked' : `${durationLabel(planDayFreeMinutes(day))} free`}</small></button>{/each}</div><input type="hidden" name="focusDate" value={planDate} /></div><div class="field wide"><label for="plan-minutes">How long?</label><div class="duration-chips">{#each planQuickMinutes as quick (quick)}{#if quick <= planRemainingMinutes}<button type="button" aria-pressed={planMinutes === quick} onclick={() => (planMinutes = quick)}>{durationLabel(quick)}</button>{/if}{/each}</div><input class="input" id="plan-minutes" name="plannedMinutes" type="number" min="5" max={planRemainingMinutes} step="5" bind:value={planMinutes} required /><span class="field-help">{durationLabel(planRemainingMinutes)} remains in the estimate.</span></div></div></div><div class="dialog-footer"><button class="button" type="button" onclick={() => (planOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Planning…' : 'Add study session'}</button></div></form></div>
 {/if}
 
 {#if completeOpen && activeSession}

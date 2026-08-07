@@ -8,7 +8,7 @@
 }
 
 .field + .field {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .field > label,
@@ -34,13 +34,13 @@
 
 .input,
 .select-trigger {
-  height: 36px;
+  height: 32px;
   padding: 0 10px;
 }
 
 .textarea {
-  min-height: 96px;
-  padding: 9px 10px;
+  min-height: 76px;
+  padding: 7px 10px;
   line-height: 1.55;
   resize: vertical;
 }
@@ -88,13 +88,35 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
 .field-help {
   color: var(--text-tertiary);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.field-optional {
+  margin-left: 4px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.dialog-hint {
+  padding: 9px 11px;
+  margin: 14px 0 0;
+  border-radius: var(--radius-medium);
+  color: var(--text-tertiary);
+  background: var(--surface-sunken);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dialog-hint a {
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .inline-button {
@@ -556,4 +578,172 @@
   border-top: 1px solid var(--border);
   background: var(--surface-sunken);
   border-radius: 0 0 var(--radius-large) var(--radius-large);
+}
+
+/* ==========================================================================
+   Dialog flows
+
+   Create flows show the fast path only; everything optional sits one fold
+   away. Edit flows group fields under quiet section labels instead.
+   ========================================================================== */
+
+.dialog-more {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.dialog-more > summary {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  list-style: none;
+}
+
+.dialog-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dialog-more > summary:hover {
+  color: var(--text);
+}
+
+.dialog-more > summary svg {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
+  transition: transform 160ms var(--ease-out);
+}
+
+.dialog-more[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.dialog-more > summary small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.dialog-more-body {
+  padding: 4px 0 6px;
+}
+
+.dialog-section {
+  padding-top: 14px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.dialog-section:first-child {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: 0;
+}
+
+.dialog-section > h3 {
+  margin: 0 0 10px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Quick duration values; the input below stays for anything else. */
+.duration-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.duration-chips button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.duration-chips button:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.duration-chips button[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--surface-active);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  font-weight: 500;
+}
+
+/* The week is the date picker: each day carries its remaining free time, so
+   the allocation decision is made where the information is. */
+.plan-day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.plan-day {
+  display: grid;
+  min-height: 54px;
+  align-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: var(--radius-medium);
+  color: var(--text-secondary);
+  background: var(--surface);
+  box-shadow: var(--shadow-border);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+
+.plan-day:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.plan-day[aria-pressed='true'] {
+  color: var(--text);
+  box-shadow: 0 0 0 1.5px var(--ds-blue-700);
+  background: color-mix(in srgb, var(--ds-blue-100) 60%, var(--surface));
+}
+
+.plan-day:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.plan-day strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.plan-day small {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (--viewport-compact) {
+  .plan-day-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

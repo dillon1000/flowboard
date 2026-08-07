@@ -270,16 +270,16 @@
 }
 
 .avatar.large {
-  width: 48px;
-  height: 48px;
-  font-size: 14px;
+  width: 40px;
+  height: 40px;
+  font-size: 13px;
 }
 
 .profile-identity {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .profile-identity > span:last-child {

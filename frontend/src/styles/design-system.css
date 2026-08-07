@@ -132,6 +132,12 @@
   --scrollbar-thumb: var(--ds-gray-alpha-500);
   --scrollbar-thumb-hover: var(--ds-gray-alpha-600);
 
+  /* ---- Materials: reveal highlight ----
+     Light pools on the rim nearest the pointer. On a light canvas the surfaces
+     are already near white, so the "light" has to read as a shadow instead. */
+  --reveal-rim: rgb(0 0 0 / 30%);
+  --reveal-size: 260px;
+
   /* ---- Motion ---- */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -272,6 +278,8 @@
   --shadow-menu: 0 1px 1px rgb(0 0 0 / 40%), 0 4px 8px -4px rgb(0 0 0 / 40%),
     0 16px 24px -8px rgb(0 0 0 / 50%);
   --shadow-modal: 0 8px 12px -4px rgb(0 0 0 / 50%), 0 24px 48px -12px rgb(0 0 0 / 70%);
+
+  --reveal-rim: rgb(255 255 255 / 45%);
 
   /* In dark mode a well cannot be darker than the canvas without going to pure
      black, so wells step *up* instead: canvas → sunken → raised. */

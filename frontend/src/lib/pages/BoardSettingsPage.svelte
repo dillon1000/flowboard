@@ -22,18 +22,20 @@
   import { showToast } from '$lib/ui/toast';
   import {
     ArchiveIcon as Archive,
-    CaretDownIcon as CaretDown,
     CheckIcon as Check,
     CaretLeftIcon as ChevronLeft,
     ColumnsIcon as Columns3,
     CopyIcon as Copy,
     DownloadIcon as Download,
     DotsThreeIcon as DotsThree,
+    ListChecksIcon as ListChecks,
     PlusIcon as Plus,
     GearIcon as Settings,
     TagIcon as Tag,
+    TextTIcon as TextT,
     TrashIcon as Trash2,
     UploadIcon as Upload,
+    UsersIcon as Users,
     XIcon as X
   } from 'phosphor-svelte';
   import { onMount } from 'svelte';
@@ -485,12 +487,12 @@
   }
 </script>
 
-<div class="page">
+<div class="page narrow">
   <header class="page-header">
     <div class="page-title">
       <a class="page-eyebrow" href={board.firstViewHref}><ChevronLeft size={14} />{board.name}</a>
       <h1>Course settings</h1>
-      <p>Manage the course basics. Open advanced tools only when you need them.</p>
+      <p>Everything this course owns — basics, layout, workflow, sharing, and data.</p>
     </div>
   </header>
 
@@ -501,6 +503,13 @@
   <div class="settings-grid">
     <nav class="settings-menu" aria-label="Course settings sections">
       <a class="nav-link" href="#general"><Settings size={15} /><span>General</span></a>
+      <a class="nav-link" href="#views"><Columns3 size={15} /><span>Views</span></a>
+      <a class="nav-link" href="#workflow"><ListChecks size={15} /><span>Workflow</span></a>
+      <a class="nav-link" href="#fields"><TextT size={15} /><span>Custom fields</span></a>
+      <a class="nav-link" href="#members"><Users size={15} /><span>Members</span></a>
+      <a class="nav-link" href="#templates"><Copy size={15} /><span>Templates</span></a>
+      <a class="nav-link" href="#tap-actions"><Tag size={15} /><span>Tap actions</span></a>
+      <a class="nav-link" href="#data"><Download size={15} /><span>Data</span></a>
       <a class="nav-link" href="#danger"><Archive size={15} /><span>Course actions</span></a>
     </nav>
 
@@ -514,12 +523,6 @@
         </form>
       </section>
 
-      <details class="advanced-settings">
-        <summary>
-          <span><strong>Advanced course tools</strong><small>Views, workflow, custom fields, sharing, templates, Tap actions, and data.</small></span>
-          <CaretDown size={16} aria-hidden="true" />
-        </summary>
-        <div class="advanced-settings-body">
       <section class="section" id="views">
         <div class="section-heading"><div><h2>Views</h2><p>Saved layouts can keep their own filters and sorting.</p></div></div>
         <div class="panel">
@@ -667,8 +670,6 @@
           <form class="panel-row" onsubmit={importBoard}><span class="panel-row-main"><strong>Import course</strong><span>Add assignments from a Flowboard JSON export.</span></span><label class="button"><Upload size={14} />Choose file<input class="sr-only" type="file" name="file" accept="application/json" required /></label><button class="button" type="submit" disabled={pending}>Import</button></form>
         </div>
       </section>
-        </div>
-      </details>
 
       <section class="section" id="danger">
         <div class="section-heading"><h2>Course actions</h2></div>

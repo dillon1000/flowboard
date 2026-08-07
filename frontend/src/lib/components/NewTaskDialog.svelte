@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api, messageFor, refreshAll } from '$lib/api';
   import type { BoardPageContext, TaskOptionContext, TaskResponse } from '$lib/types';
-  import { XIcon as X } from 'phosphor-svelte';
+  import { CaretDownIcon as CaretDown, XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
   import { showToast } from '$lib/ui/toast';
   import { estimateMinutes, parseLabels } from '$lib/ui/formValues';
@@ -70,15 +70,22 @@
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
         <div class="form-grid">
           <div class="field wide"><label for="new-task-name">Title</label><input class="input" id="new-task-name" name="title" value={board.newTaskTitle} maxlength="120" required data-dialog-focus /></div>
-          <div class="field wide"><label for="new-task-description">Description</label><textarea class="textarea" id="new-task-description" name="description" maxlength="5000">{board.newTaskDescription}</textarea></div>
-          <div class="field"><label for="new-task-status">Status</label><SelectMenu id="new-task-status" name="status" value={board.newTaskStatus} options={statusOptions} ariaLabel="Status" /></div>
-          <div class="field"><label for="new-task-priority">Priority</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Priority" /></div>
-          <div class="field"><label for="new-task-start">Start date</label><DatePicker id="new-task-start" name="startAt" label="Start date" /></div>
           <div class="field"><label for="new-task-due">Due date</label><DatePicker id="new-task-due" name="dueAt" label="Due date" /></div>
           <div class="field"><label for="new-task-time">Due time</label><TimePicker id="new-task-time" name="dueTime" label="Due time" /></div>
-          <div class="field"><label for="new-task-estimate">Time estimate</label><input class="input" id="new-task-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="Minutes" /><span class="field-help">Use minutes, such as 45 or 120.</span></div>
-          <LabelsField id="new-task-labels" label="Labels" value={board.newTaskLabels} placeholder="Exam, Reading, Lab" />
+          <div class="field wide"><label for="new-task-estimate">Time estimate <small class="field-optional">Minutes</small></label><input class="input" id="new-task-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" placeholder="45" /><span class="field-help">An estimate lets the planner give this assignment study time.</span></div>
         </div>
+        <details class="dialog-more">
+          <summary><CaretDown size={14} aria-hidden="true" />More options<small>notes, workflow, start date, labels</small></summary>
+          <div class="dialog-more-body">
+            <div class="form-grid">
+              <div class="field wide"><label for="new-task-description">Description</label><textarea class="textarea" id="new-task-description" name="description" maxlength="5000">{board.newTaskDescription}</textarea></div>
+              <div class="field"><label for="new-task-status">Status</label><SelectMenu id="new-task-status" name="status" value={board.newTaskStatus} options={statusOptions} ariaLabel="Status" /></div>
+              <div class="field"><label for="new-task-priority">Priority</label><SelectMenu id="new-task-priority" name="priority" value={board.newTaskPriority} options={severityOptions} ariaLabel="Priority" /></div>
+              <div class="field"><label for="new-task-start">Start date</label><DatePicker id="new-task-start" name="startAt" label="Start date" /></div>
+              <LabelsField id="new-task-labels" label="Labels" value={board.newTaskLabels} placeholder="Exam, Reading, Lab" />
+            </div>
+          </div>
+        </details>
       </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (open = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>{pending ? 'Creating…' : 'Create assignment'}</button></div>
     </form>

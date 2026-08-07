@@ -3,13 +3,16 @@
   import type { AppPageContext, BoardNavigationContext } from '$lib/types';
   import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
-  import { ArchiveIcon as Archive, CalendarBlankIcon as SemesterCalendar, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, KeyboardIcon as Keyboard, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings, XIcon as X } from 'phosphor-svelte';
+  import { ArchiveIcon as Archive, CalendarBlankIcon as SemesterCalendar, CalendarDotsIcon as CalendarDays, CheckSquareIcon as CheckSquare, FolderIcon as Folder, KeyboardIcon as Keyboard, SidebarSimpleIcon as PanelLeft, PlusIcon as Plus, MagnifyingGlassIcon as Search, GearIcon as Settings, SparkleIcon as Sparkle, XIcon as X } from 'phosphor-svelte';
   import { dialogLayer } from '$lib/actions/dialogLayer';
+  import { startPointerReveal } from '$lib/actions/pointerReveal';
   import { activityCount } from '$lib/ui/progress';
   import Avatar from './Avatar.svelte';
   import BuildSignature from './BuildSignature.svelte';
   import CommandPalette from './CommandPalette.svelte';
   import CreateBoardDialog from './CreateBoardDialog.svelte';
+  import ProductTour from './ProductTour.svelte';
+  import { startTour } from '$lib/ui/tour.svelte';
   import ThemeToggle from './ThemeToggle.svelte';
   import TaskPreview from './TaskPreview.svelte';
   import Toast from './Toast.svelte';
@@ -38,7 +41,11 @@
       document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'expanded';
     };
     window.addEventListener('storage', syncSidebar);
-    return () => window.removeEventListener('storage', syncSidebar);
+    const stopReveal = startPointerReveal();
+    return () => {
+      window.removeEventListener('storage', syncSidebar);
+      stopReveal();
+    };
   });
 
   function toggleSidebar(): void {
@@ -76,12 +83,12 @@
 
 <svelte:window onkeydown={handleShortcut} />
 
-<div class:study-overview-page={context.isOverview} class="app-shell" data-hydrated={hydrated ? 'true' : undefined}>
+<div class="app-shell" data-hydrated={hydrated ? 'true' : undefined}>
   <div class="route-progress" data-active={shellBusy ? 'true' : undefined} role="progressbar" aria-label="Loading" aria-hidden={!shellBusy}></div>
   <aside class="sidebar" data-open={sidebarOpen ? 'true' : undefined}>
     <div class="brand-row">
       <a class="brand" href="/app" aria-label="Flowboard home">
-        <img class="brand-logo" src={context.isOverview || collapsed ? '/focalboard-fb-abbreviation-tp.webp' : '/focalboard-wordmark.webp'} alt="" width="104" height="14" />
+        <img class="brand-logo" src={collapsed ? '/focalboard-fb-abbreviation-tp.webp' : '/focalboard-wordmark.webp'} alt="" width="104" height="14" />
       </a>
     </div>
 
@@ -121,6 +128,9 @@
     <div class="sidebar-spacer"></div>
     <BuildSignature />
     <nav class="settings-nav">
+      <button class="nav-link nav-button" type="button" onclick={() => { sidebarOpen = false; startTour(); }} title="Product tour">
+        <Sparkle size={16} /><span>Product tour</span>
+      </button>
       <button class="nav-link nav-button" type="button" onclick={() => { sidebarOpen = false; shortcutsOpen = true; }} title="Keyboard shortcuts">
         <Keyboard size={16} /><span>Keyboard shortcuts</span><small>{shortcutModifier} /</small>
       </button>
@@ -164,6 +174,7 @@
 <CommandPalette bind:open={searchOpen} common={context.common} initialQuery={searchQuery} />
 <TaskPreview />
 <Toast />
+<ProductTour boards={context.common.boards} />
 
 {#if shortcutsOpen}
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" tabindex="-1" use:dialogLayer={{ close: () => (shortcutsOpen = false) }}>
