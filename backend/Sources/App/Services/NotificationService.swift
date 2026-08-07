@@ -562,6 +562,8 @@ enum PlanningBriefService {
         }
     }
 
+    /// Counts only planned work that remains actionable and completed work that
+    /// has already consumed an estimate. Skipped and missed plans return to the queue.
     private static func briefData(
         user: User,
         dateKey: String,
@@ -587,9 +589,22 @@ enum PlanningBriefService {
                 .filter(\.$task.$id ~~ taskIDs)
                 .all()
         }
-        let sessionsToday = sessions.filter { $0.scheduledDate == dateKey }
+        let sessionsToday = sessions.filter {
+            $0.scheduledDate == dateKey && $0.state == .planned
+        }
         let plannedMinutesByTask = Dictionary(grouping: sessions, by: \.$task.id)
-            .mapValues { values in values.reduce(0) { $0 + $1.plannedMinutes } }
+            .mapValues { values in
+                values.reduce(0) { total, session in
+                    switch session.state {
+                    case .completed:
+                        total + (session.actualMinutes ?? session.plannedMinutes)
+                    case .planned where session.scheduledDate >= dateKey:
+                        total + session.plannedMinutes
+                    default:
+                        total
+                    }
+                }
+            }
         var unplannedTaskCount = 0
         var remainingMinutes = 0
         for task in tasks where !task.board.isCompleted(task.status) {

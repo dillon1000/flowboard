@@ -220,34 +220,7 @@ struct StudySessionController: RouteCollection {
                 priority: task.priorityValue
             )
         }
-        let sessionTaskIDs = Set(sessions.map(\.$task.id))
-        let planningSessions = sessions.map {
-            StudyPlanningSession(
-                taskID: $0.$task.id,
-                scheduledDate: $0.scheduledDate,
-                plannedMinutes: $0.plannedMinutes,
-                state: $0.state,
-                actualMinutes: $0.actualMinutes
-            )
-        } + allTasks.compactMap { task -> StudyPlanningSession? in
-            guard
-                let taskID = task.id,
-                let startAt = task.startAt,
-                let estimatedMinutes = task.estimatedMinutes,
-                !sessionTaskIDs.contains(taskID)
-            else {
-                return nil
-            }
-            // Before study sessions existed, the weekly planner stored one work
-            // day in startAt. Count that legacy plan until the task is rescheduled.
-            return StudyPlanningSession(
-                taskID: taskID,
-                scheduledDate: inputDate(startAt),
-                plannedMinutes: estimatedMinutes,
-                state: .planned,
-                actualMinutes: nil
-            )
-        }
+        let planningSessions = studyPlanningSessions(sessions: sessions, tasks: allTasks)
         let settings = try await StudySettings.query(on: req.db)
             .filter(\.$user.$id == userID)
             .first()
@@ -317,13 +290,6 @@ struct StudySessionController: RouteCollection {
             session.actualMinutes = nil
             session.completedAt = nil
         }
-        if !analysis.affectedSessionIDs.isEmpty {
-            try await req.db.transaction { database in
-                for session in affectedSessions {
-                    try await session.update(on: database)
-                }
-            }
-        }
 
         let planningTasks = allTasks.compactMap { task -> StudyPlanningTask? in
             guard let taskID = task.id, let estimatedMinutes = task.estimatedMinutes else { return nil }
@@ -334,15 +300,7 @@ struct StudySessionController: RouteCollection {
                 priority: task.priorityValue
             )
         }
-        let planningSessions = sessions.map {
-            StudyPlanningSession(
-                taskID: $0.$task.id,
-                scheduledDate: $0.scheduledDate,
-                plannedMinutes: $0.plannedMinutes,
-                state: $0.state,
-                actualMinutes: $0.actualMinutes
-            )
-        }
+        let planningSessions = studyPlanningSessions(sessions: sessions, tasks: allTasks)
         let result = StudyPlanningService.plan(
             tasks: planningTasks,
             sessions: planningSessions,
@@ -350,7 +308,10 @@ struct StudySessionController: RouteCollection {
             timeZoneIdentifier: user.timeZoneIdentifier
         )
         let (createdCount, updatedCount) = try await req.db.transaction { database in
-            try await persist(allocations: result.allocations, userID: userID, on: database)
+            for session in affectedSessions {
+                try await session.update(on: database)
+            }
+            return try await persist(allocations: result.allocations, userID: userID, on: database)
         }
         return RepairStudyWeekResponse(
             repairedSessionCount: analysis.affectedSessionIDs.count,
@@ -360,6 +321,40 @@ struct StudySessionController: RouteCollection {
             remainingMinutes: result.remainingMinutes,
             unplannedTaskCount: result.unplannedTaskCount
         )
+    }
+
+    /// Converts stored sessions and legacy task start dates into one allocator
+    /// input. A legacy date counts only until the task has a saved study session.
+    private func studyPlanningSessions(
+        sessions: [StudySession],
+        tasks: [Task]
+    ) -> [StudyPlanningSession] {
+        let sessionTaskIDs = Set(sessions.map(\.$task.id))
+        return sessions.map {
+            StudyPlanningSession(
+                taskID: $0.$task.id,
+                scheduledDate: $0.scheduledDate,
+                plannedMinutes: $0.plannedMinutes,
+                state: $0.state,
+                actualMinutes: $0.actualMinutes
+            )
+        } + tasks.compactMap { task -> StudyPlanningSession? in
+            guard
+                let taskID = task.id,
+                let startAt = task.startAt,
+                let estimatedMinutes = task.estimatedMinutes,
+                !sessionTaskIDs.contains(taskID)
+            else {
+                return nil
+            }
+            return StudyPlanningSession(
+                taskID: taskID,
+                scheduledDate: inputDate(startAt),
+                plannedMinutes: estimatedMinutes,
+                state: .planned,
+                actualMinutes: nil
+            )
+        }
     }
 
     /// Reuses skipped rows because the task-user-date key is unique. Completed

@@ -203,7 +203,6 @@ struct OverviewPageContext: Encodable {
         selectedCourseID: UUID?,
         studySessions: [StudySession] = [],
         settings: StudySettings? = nil,
-        hasCanvasConnection: Bool = false,
         timeZoneIdentifier: String = "UTC",
         referenceDate: Date = Date()
     ) {
@@ -343,7 +342,7 @@ struct OverviewPageContext: Encodable {
             }
         self.hasEstimationInbox = !estimationInbox.isEmpty
         self.onboarding = StudyOnboardingContext(
-            hasCanvasConnection: hasCanvasConnection,
+            hasCourses: !activeCourses.isEmpty,
             timeZoneConfirmed: settingsContext.timeZoneConfirmed,
             availabilityConfigured: settingsContext.availabilityConfigured,
             hasAssignments: !activeTaskContexts.isEmpty,
@@ -559,7 +558,7 @@ struct StudyOnboardingContext: Encodable {
     let nextStepKey: String
 
     init(
-        hasCanvasConnection: Bool,
+        hasCourses: Bool,
         timeZoneConfirmed: Bool,
         availabilityConfigured: Bool,
         hasAssignments: Bool,
@@ -567,7 +566,7 @@ struct StudyOnboardingContext: Encodable {
         hasStudyPlan: Bool
     ) {
         let values = [
-            ("canvas", "Connect Canvas", "Bring in courses and deadlines.", "/app/settings/integrations", hasCanvasConnection),
+            ("courses", "Add a course", "Create a course manually, then add deadlines.", "", hasCourses),
             ("timezone", "Confirm your time zone", "Keep deadlines and study days local.", "", timeZoneConfirmed),
             ("availability", "Set your real week", "Add study capacity, classes, work, and blocked dates.", "", availabilityConfigured),
             ("estimates", "Estimate assignments", "Give every deadline enough study time.", "", hasAssignments && !hasMissingEstimates),

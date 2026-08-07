@@ -68,6 +68,7 @@ enum CalendarFeedService {
             try await StudySession.query(on: database)
                 .filter(\.$user.$id == userID)
                 .filter(\.$task.$id ~~ taskIDs)
+                .filter(\.$stateValue == StudySessionState.planned.rawValue)
                 .all()
         }
         let taskByID = Dictionary(uniqueKeysWithValues: try tasks.map { (try $0.requireID(), $0) })

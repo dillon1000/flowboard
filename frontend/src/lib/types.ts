@@ -223,7 +223,7 @@ export interface StudyEstimateInboxItemContext {
 }
 
 export interface StudyOnboardingStepContext {
-  key: 'canvas' | 'timezone' | 'availability' | 'estimates' | 'plan';
+  key: 'courses' | 'timezone' | 'availability' | 'estimates' | 'plan';
   title: string;
   description: string;
   href: string;

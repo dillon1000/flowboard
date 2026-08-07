@@ -125,6 +125,91 @@ struct StudySessionTests {
         #expect(analysis.overloadedSessionIDs.count == 1)
     }
 
+    @Test("Recovery keeps earlier work on an overloaded day")
+    func recoveryKeepsEarlierWork() throws {
+        let monday = try #require(studySessionDate("2026-08-03"))
+        let userID = UUID()
+        let earlier = StudySession(
+            id: UUID(),
+            taskID: UUID(),
+            userID: userID,
+            scheduledDate: "2026-08-03",
+            plannedMinutes: 90
+        )
+        earlier.createdAt = Date(timeIntervalSince1970: 1)
+        let later = StudySession(
+            id: UUID(),
+            taskID: UUID(),
+            userID: userID,
+            scheduledDate: "2026-08-03",
+            plannedMinutes: 60
+        )
+        later.createdAt = Date(timeIntervalSince1970: 2)
+
+        let analysis = StudyRecoveryService.analyze(
+            sessions: [later, earlier],
+            dueDateByTaskID: [:],
+            availability: StudyAvailability(dailyLimitMinutes: 120),
+            timeZoneIdentifier: "America/Chicago",
+            referenceDate: monday
+        )
+
+        #expect(analysis.overloadedSessionIDs == Set([try later.requireID()]))
+    }
+
+    @Test("Repair preserves legacy start-date plans")
+    func repairPreservesLegacyPlans() async throws {
+        try await withApp(configure: configure) { app in
+            let registered = try await register(on: app)
+            let now = Date()
+            let missedTask = Task(
+                boardID: registered.boardID,
+                title: "Missed reading",
+                position: 1_000,
+                dueAt: now.addingTimeInterval(2 * 86_400),
+                estimatedMinutes: 30,
+                creatorID: registered.userID
+            )
+            let legacyTask = Task(
+                boardID: registered.boardID,
+                title: "Legacy plan",
+                position: 2_000,
+                startAt: now,
+                dueAt: now.addingTimeInterval(2 * 86_400),
+                estimatedMinutes: 60,
+                creatorID: registered.userID
+            )
+            try await missedTask.create(on: app.db)
+            try await legacyTask.create(on: app.db)
+            try await StudySession(
+                taskID: missedTask.requireID(),
+                userID: registered.userID,
+                scheduledDate: inputDate(now.addingTimeInterval(-86_400)),
+                plannedMinutes: 30
+            ).create(on: app.db)
+
+            let response = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-sessions/repair",
+                headers: ["Cookie": registered.cookie]
+            )
+
+            #expect(response.status == .ok)
+            #expect(
+                try await StudySession.query(on: app.db)
+                    .filter(\.$task.$id == missedTask.requireID())
+                    .filter(\.$stateValue == StudySessionState.planned.rawValue)
+                    .all()
+                    .reduce(0) { $0 + $1.plannedMinutes } == 30
+            )
+            #expect(
+                try await StudySession.query(on: app.db)
+                    .filter(\.$task.$id == legacyTask.requireID())
+                    .count() == 0
+            )
+        }
+    }
+
     @Test("Study session routes manage and automatically plan work")
     func lifecycleAndAutoPlan() async throws {
         try await withApp(configure: configure) { app in
