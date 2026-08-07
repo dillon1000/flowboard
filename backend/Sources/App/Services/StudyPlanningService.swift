@@ -132,7 +132,14 @@ enum StudyRecoveryService {
             var total = dateSessions.reduce(0) { $0 + $1.plannedMinutes }
             guard total > capacity else { continue }
             overloadedDates.append(dateKey)
-            for session in dateSessions.sorted(by: { $0.plannedMinutes > $1.plannedMinutes }) {
+            for session in dateSessions.sorted(by: { left, right in
+                let leftCreatedAt = left.createdAt ?? .distantPast
+                let rightCreatedAt = right.createdAt ?? .distantPast
+                if leftCreatedAt != rightCreatedAt {
+                    return leftCreatedAt > rightCreatedAt
+                }
+                return (left.id?.uuidString ?? "") > (right.id?.uuidString ?? "")
+            }) {
                 guard total > capacity, let sessionID = session.id else { break }
                 overloadedSessionIDs.insert(sessionID)
                 total -= session.plannedMinutes

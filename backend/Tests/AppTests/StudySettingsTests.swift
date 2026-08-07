@@ -94,4 +94,43 @@ struct StudySettingsTests {
             #expect(try await Task.find(task.requireID(), on: app.db)?.estimatedMinutes == 45)
         }
     }
+
+    @Test("Bulk estimates require edit permission")
+    func bulkEstimatesRequireEditPermission() async throws {
+        try await withApp(configure: configure) { app in
+            let owner = try await register(on: app)
+            let viewer = try await register(on: app)
+            try await BoardMember(
+                boardID: owner.boardID,
+                userID: viewer.userID,
+                role: .viewer
+            ).create(on: app.db)
+            let task = Task(
+                boardID: owner.boardID,
+                title: "Read chapter 4",
+                position: 1_000,
+                estimatedMinutes: 30,
+                creatorID: owner.userID
+            )
+            try await task.create(on: app.db)
+            let taskID = try task.requireID()
+
+            let response = try await app.testing().sendRequest(
+                .POST,
+                "api/v1/study-settings/estimates",
+                headers: ["Cookie": viewer.cookie],
+                beforeRequest: { request in
+                    try request.content.encode(
+                        BulkTaskEstimatesRequest(
+                            estimates: [BulkTaskEstimate(taskID: taskID, estimatedMinutes: 45)],
+                            estimatePresets: nil
+                        )
+                    )
+                }
+            )
+
+            #expect(response.status == .notFound)
+            #expect(try await Task.find(taskID, on: app.db)?.estimatedMinutes == 30)
+        }
+    }
 }

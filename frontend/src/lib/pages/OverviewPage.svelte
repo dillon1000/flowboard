@@ -421,6 +421,7 @@
 
   function runOnboardingStep(): void {
     switch (overview.onboarding.nextStepKey) {
+      case 'courses': createBoardOpen = true; break;
       case 'timezone': void confirmTimeZone(); break;
       case 'availability': void goto('/app/settings/availability'); break;
       case 'estimates': estimatesOpen = true; break;

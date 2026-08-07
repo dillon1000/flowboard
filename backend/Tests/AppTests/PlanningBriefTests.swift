@@ -27,11 +27,26 @@ struct PlanningBriefTests {
                 creatorID: session.userID
             )
             try await task.create(on: app.db)
+            let skippedTask = Task(
+                boardID: session.boardID,
+                title: "Review skipped notes",
+                position: 2_000,
+                estimatedMinutes: 30,
+                creatorID: session.userID
+            )
+            try await skippedTask.create(on: app.db)
             try await StudySession(
                 taskID: task.requireID(),
                 userID: session.userID,
                 scheduledDate: "2026-08-03",
                 plannedMinutes: 30
+            ).create(on: app.db)
+            try await StudySession(
+                taskID: skippedTask.requireID(),
+                userID: session.userID,
+                scheduledDate: "2026-08-03",
+                plannedMinutes: 30,
+                state: .skipped
             ).create(on: app.db)
 
             await PlanningBriefService.enqueueDueBriefs(
@@ -66,8 +81,8 @@ struct PlanningBriefTests {
             #expect(daily.payload["plannedTime"] == "30 min")
             #expect(daily.payload["deadlineCount"] == "1")
             let weekly = try #require(events.first { $0.eventType == "weekly_planning_prompt" })
-            #expect(weekly.payload["unplannedTaskCount"] == "1")
-            #expect(weekly.payload["remainingTime"] == "1h")
+            #expect(weekly.payload["unplannedTaskCount"] == "2")
+            #expect(weekly.payload["remainingTime"] == "1h 30m")
         }
     }
 

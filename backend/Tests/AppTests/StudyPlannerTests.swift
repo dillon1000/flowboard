@@ -81,6 +81,9 @@ struct StudyPlannerTests {
         #expect(planner.planCandidates.first?.remainingMinutes == 120)
         #expect(planner.unscheduledAssignmentCount == 1)
         #expect(planner.studyStreakDays == 0)
+        #expect(planner.onboarding.steps.first?.key == "courses")
+        #expect(planner.onboarding.steps.first?.isComplete == true)
+        #expect(planner.onboarding.nextStepKey == "timezone")
     }
 
     @Test("Local dates do not advance at the UTC boundary")

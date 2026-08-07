@@ -30,6 +30,15 @@ struct CalendarFeedTests {
                 scheduledDate: "2026-08-02",
                 plannedMinutes: 45
             ).create(on: app.db)
+            let skippedSession = StudySession(
+                id: UUID(),
+                taskID: try task.requireID(),
+                userID: session.userID,
+                scheduledDate: "2026-08-03",
+                plannedMinutes: 30,
+                state: .skipped
+            )
+            try await skippedSession.create(on: app.db)
 
             let createdResponse = try await app.testing().sendRequest(
                 .POST,
@@ -63,6 +72,11 @@ struct CalendarFeedTests {
             #expect(calendar.contains("DTEND:20260802T234500Z"))
             #expect(!calendar.contains("DTSTART;VALUE=DATE:20260802"))
             #expect(calendar.contains("SUMMARY:Study: Review notes\\, chapters 1\\;2 \\\\ practice"))
+            #expect(
+                !calendar.contains(
+                    "UID:study-session-\(try skippedSession.requireID().uuidString.lowercased())@focalpoint"
+                )
+            )
 
             let rotatedResponse = try await app.testing().sendRequest(
                 .POST,

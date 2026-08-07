@@ -43,9 +43,6 @@ struct AppPageController: RouteCollection {
         let settings = try await StudySettings.query(on: req.db)
             .filter(\.$user.$id == userID)
             .first()
-        let hasCanvasConnection = try await CanvasConnection.query(on: req.db)
-            .filter(\.$user.$id == userID)
-            .first() != nil
 
         return try respond(
             common: common,
@@ -57,7 +54,6 @@ struct AppPageController: RouteCollection {
                 selectedCourseID: selectedCourseID,
                 studySessions: studySessions,
                 settings: settings,
-                hasCanvasConnection: hasCanvasConnection,
                 timeZoneIdentifier: common.userTimeZone
             ),
         )

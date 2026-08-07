@@ -61,6 +61,14 @@ struct StudySettingsController: RouteCollection {
         guard tasks.count == taskIDs.count else {
             throw Abort(.notFound, reason: "One or more assignments do not exist.")
         }
+        for boardID in Set(tasks.map(\.$board.id)) {
+            _ = try await BoardAccessService.require(
+                boardID: boardID,
+                userID: userID,
+                permission: .edit,
+                on: req.db
+            )
+        }
         let minutesByTaskID = Dictionary(
             uniqueKeysWithValues: input.estimates.map { ($0.taskID, $0.estimatedMinutes) }
         )
