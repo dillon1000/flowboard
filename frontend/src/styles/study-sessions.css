@@ -22,12 +22,25 @@
 
 .study-session-panel.course {
   flex: 0 0 auto;
-  gap: 10px;
-  padding: 14px 28px 14px 40px;
+  gap: 8px;
+  padding: 8px 24px 9px;
   border-width: 1px 0;
   border-radius: 0;
   background: var(--surface-sunken);
   box-shadow: none;
+}
+
+/* On the course page the plan reads as one slim strip: the kicker and the
+   heading share a line, and the blocks sit right below. */
+.study-session-panel.course .study-session-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.study-session-panel.course .study-session-heading h2 {
+  margin: 0;
+  font-size: 12.5px;
 }
 
 .study-session-panel.course::before {
@@ -78,8 +91,8 @@
 }
 
 .study-session-panel.course .study-session-list {
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  max-height: 164px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  max-height: 108px;
   overflow-y: auto;
 }
 
@@ -87,9 +100,9 @@
   display: grid;
   grid-template-columns: minmax(145px, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 7px 10px;
   background: var(--surface);
 }
 
@@ -207,6 +220,12 @@
   border-radius: var(--radius-medium);
   color: var(--text-tertiary);
   font-size: 12px;
+}
+
+.study-session-panel.course .study-session-empty {
+  padding: 4px 0 0;
+  border: 0;
+  font-size: 11px;
 }
 
 .study-session-error {

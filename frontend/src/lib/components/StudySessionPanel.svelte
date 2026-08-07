@@ -192,8 +192,8 @@
   <header class="study-session-heading">
     <div>
       <span class="study-session-kicker">Study plan</span>
-      <h2 id={`study-session-title-${variant}`}>{variant === 'course' ? 'Course study blocks' : 'When will you work on this?'}</h2>
-      <p>{variant === 'course' ? 'Your next planned blocks for this course.' : hasEstimate ? `${remainingMinutes} minutes remain available in the estimate.` : 'Add a time estimate before you plan a study block.'}</p>
+      <h2 id={`study-session-title-${variant}`}>{variant === 'course' ? 'Study blocks' : 'When will you work on this?'}</h2>
+      {#if variant !== 'course'}<p>{hasEstimate ? `${remainingMinutes} minutes remain available in the estimate.` : 'Add a time estimate before you plan a study block.'}</p>{/if}
     </div>
     {#if variant === 'course'}
       <button class="button small" type="button" onclick={planCourse} disabled={Boolean(pendingAction)}><Strategy size={14} />{pendingAction === 'plan-course' ? 'Planning…' : 'Plan this course'}</button>
@@ -231,7 +231,7 @@
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="add-study-session-title" tabindex="-1" use:dialogLayer={{ close: () => (addOpen = false) }}>
     <form class="dialog compact" onsubmit={addSession}>
       <div class="dialog-header"><div><h2 id="add-study-session-title">Add study block</h2><p>Choose when you will work and how long you expect to study.</p></div><button class="icon-button" type="button" onclick={() => (addOpen = false)} aria-label="Close"><X size={16} /></button></div>
-      <div class="dialog-body"><div class="form-grid"><div class="field"><label for="study-session-date">Study date</label><DatePicker id="study-session-date" name="scheduledDate" value={selectedDate} label="Study date" minDate={defaultDate} maxDate={maxStudyDate} required initialFocus /></div><div class="field"><label for="study-session-minutes">Minutes</label><input class="input" id="study-session-minutes" type="number" min="5" max={remainingMinutes} step="5" bind:value={plannedMinutes} required /></div></div>{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}</div>
+      <div class="dialog-body"><div class="form-grid"><div class="field wide"><label for="study-session-date">Study date</label><DatePicker id="study-session-date" name="scheduledDate" value={selectedDate} label="Study date" minDate={defaultDate} maxDate={maxStudyDate} required initialFocus /></div><div class="field wide"><label for="study-session-minutes">How long?</label><div class="duration-chips">{#each [25, 45, 60, 90] as quick (quick)}{#if quick <= remainingMinutes}<button type="button" aria-pressed={plannedMinutes === quick} onclick={() => (plannedMinutes = quick)}>{quick} min</button>{/if}{/each}</div><input class="input" id="study-session-minutes" type="number" min="5" max={remainingMinutes} step="5" bind:value={plannedMinutes} required /><span class="field-help">{remainingMinutes} minutes remain in the estimate.</span></div></div>{#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}</div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (addOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={Boolean(pendingAction)}><CalendarPlus size={14} />{pendingAction ? 'Adding…' : 'Add block'}</button></div>
     </form>
   </div>

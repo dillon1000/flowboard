@@ -12,6 +12,8 @@
 @import './styles/settings-auth.css';
 @import './styles/not-found-preview.css';
 @import './styles/client-components.css';
+@import './styles/reveal.css';
+@import './styles/product-tour.css';
 @import './styles/responsive.css';
 @import './styles/study-planner.css';
 @import './styles/study-sessions.css';

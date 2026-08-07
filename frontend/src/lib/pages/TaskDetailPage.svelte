@@ -687,17 +687,6 @@
 
   <div class="split-layout">
     <div class="task-main">
-      <StudySessionPanel
-        sessions={detail.studySessions}
-        variant="task"
-        taskID={detail.task.id}
-        remainingMinutes={detail.remainingStudyMinutes}
-        canPlan={detail.canPlanStudy}
-        hasEstimate={detail.task.hasEstimate}
-        defaultDate={detail.defaultStudyDate}
-        dueDate={detail.task.dueInput}
-      />
-
       <section class="task-section" aria-labelledby="steps-title">
         <div class="task-section-head">
           <h2 id="steps-title">Steps</h2>
@@ -823,7 +812,18 @@
       </section>
     </div>
 
-    <aside class="task-sidebar" aria-labelledby="details-title">
+    <aside class="task-sidebar" aria-label="Study plan and details">
+      <StudySessionPanel
+        sessions={detail.studySessions}
+        variant="task"
+        taskID={detail.task.id}
+        remainingMinutes={detail.remainingStudyMinutes}
+        canPlan={detail.canPlanStudy}
+        hasEstimate={detail.task.hasEstimate}
+        defaultDate={detail.defaultStudyDate}
+        dueDate={detail.task.dueInput}
+      />
+
       <div class="task-section-head">
         <h2 id="details-title">Details</h2>
       </div>
@@ -919,17 +919,37 @@
   <div class="dialog-layer" role="dialog" aria-modal="true" aria-labelledby="edit-task-title" tabindex="-1" use:dialogLayer={{ close: () => (editOpen = false) }}>
     <form class="dialog wide" onsubmit={saveTask}>
       <div class="dialog-header"><div><h2 id="edit-task-title">{detail.task.isCanvasLinked ? 'Edit planning' : 'Edit assignment'}</h2><p>{detail.task.isCanvasLinked ? 'Canvas manages the academic fields for this assignment.' : 'Update the assignment and its schedule.'}</p></div><button class="icon-button" type="button" onclick={() => (editOpen = false)} aria-label="Close"><X size={16} /></button></div>
-      <div class="dialog-body"><div class="form-grid">
-        {#if !detail.task.isCanvasLinked}<div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><MarkdownEditor id="edit-description" name="description" label="Assignment description" value={detail.task.description} /></div>{/if}
-        <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={currentStatus} options={statusMenuOptions} ariaLabel="Status" /></div>
-        <div class="field"><label for="edit-priority">Priority</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Priority" /></div>
-        <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
-        <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>
-        {#if !detail.task.isCanvasLinked}<div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div><div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>{/if}
-        <div class="field"><label for="edit-estimate">Time estimate</label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="Minutes, e.g. 45" /></div>
-        {#if !detail.task.isCanvasLinked}<fieldset class="field wide grade-fields"><legend>Grade</legend><div class="grade-input-grid"><label for="edit-grade-earned"><span>Points earned</span><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></label><label for="edit-grade-possible"><span>Points possible</span><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasPointsPossible ? detail.task.gradePossible : ''} placeholder="e.g. 100" /></label></div><span class="field-help">A points value can exist before the assignment receives a score.</span></fieldset>{/if}
-        <LabelsField id="edit-labels" label="Labels" value={detail.task.labelsJoined} placeholder="Exam, Reading, Lab" />
-      </div></div>
+      <div class="dialog-body">
+        {#if !detail.task.isCanvasLinked}
+          <section class="dialog-section" aria-label="Assignment basics">
+            <h3>Assignment</h3>
+            <div class="form-grid"><div class="field wide"><label for="edit-title">Title</label><input class="input" id="edit-title" name="title" value={detail.task.title} maxlength="120" required data-dialog-focus /></div><div class="field wide"><label for="edit-description">Description</label><MarkdownEditor id="edit-description" name="description" label="Assignment description" value={detail.task.description} /></div></div>
+          </section>
+        {/if}
+        <section class="dialog-section" aria-label="Schedule">
+          <h3>Schedule</h3>
+          <div class="form-grid">
+            <div class="field"><label for="edit-start">Start date</label><DatePicker id="edit-start" name="startAt" value={detail.task.startInput} label="Start date" /></div>
+            <div class="field"><label for="edit-estimate">Time estimate <small class="field-optional">Minutes</small></label><input class="input" id="edit-estimate" name="estimatedMinutes" type="number" min="5" max="1440" step="5" inputmode="numeric" value={detail.task.hasEstimate ? detail.task.estimatedMinutes : ''} placeholder="45" /></div>
+            {#if !detail.task.isCanvasLinked}<div class="field"><label for="edit-due">Due date</label><DatePicker id="edit-due" name="dueAt" value={detail.task.dueInput} label="Due date" /></div><div class="field"><label for="edit-time">Due time</label><TimePicker id="edit-time" name="dueTime" value={detail.task.dueTimeInput} label="Due time" /></div>{/if}
+          </div>
+        </section>
+        <section class="dialog-section" aria-label="Workflow">
+          <h3>Workflow</h3>
+          <div class="form-grid">
+            <div class="field"><label for="edit-status">Status</label><SelectMenu id="edit-status" name="status" value={currentStatus} options={statusMenuOptions} ariaLabel="Status" /></div>
+            <div class="field"><label for="edit-priority">Priority</label><SelectMenu id="edit-priority" name="priority" value={detail.task.priorityValue} options={severityMenuOptions} ariaLabel="Priority" /></div>
+            <div class="field wide"><label for="edit-assignee">Assignee</label><SelectMenu id="edit-assignee" name="assigneeID" value={detail.task.assigneeID} options={assigneeMenuOptions} ariaLabel="Assignee" /></div>
+          </div>
+        </section>
+        <section class="dialog-section" aria-label="Grade and labels">
+          <h3>{detail.task.isCanvasLinked ? 'Labels' : 'Grade & labels'}</h3>
+          <div class="form-grid">
+            {#if !detail.task.isCanvasLinked}<fieldset class="field wide grade-fields"><legend class="sr-only">Grade</legend><div class="grade-input-grid"><label for="edit-grade-earned"><span>Points earned</span><input class="input" id="edit-grade-earned" name="gradeEarned" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasGrade ? detail.task.gradeEarned : ''} placeholder="e.g. 87" /></label><label for="edit-grade-possible"><span>Points possible</span><input class="input" id="edit-grade-possible" name="gradePossible" type="number" min="0" max="100000" step="0.1" inputmode="decimal" value={detail.task.hasPointsPossible ? detail.task.gradePossible : ''} placeholder="e.g. 100" /></label></div><span class="field-help">A points value can exist before the assignment receives a score.</span></fieldset>{/if}
+            <LabelsField id="edit-labels" label="Labels" value={detail.task.labelsJoined} placeholder="Exam, Reading, Lab" />
+          </div>
+        </section>
+      </div>
       <div class="dialog-footer"><button class="button" type="button" onclick={() => (editOpen = false)}>Cancel</button><button class="button primary" type="submit" disabled={pending}>Save changes</button></div>
     </form>
   </div>

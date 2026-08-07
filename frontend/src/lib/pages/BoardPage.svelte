@@ -3,6 +3,7 @@
   import type { BoardPageContext, CalendarDayContext, TaskCardContext, TaskColumnContext, TaskOptionContext } from '$lib/types';
   import confetti from 'canvas-confetti';
   import { ArrowRightIcon as ArrowRight, ArrowSquareOutIcon as ArrowSquareOut, ArrowsDownUpIcon as ArrowsDownUp, CalendarDotsIcon as CalendarDays, CaretDownIcon as CaretDown, CaretLeftIcon as ChevronLeft, CaretRightIcon as ChevronRight, ChartBarHorizontalIcon as GanttChart, CheckCircleIcon as CheckCircle, ClockIcon as Clock, ColumnsIcon as Columns3, FunnelSimpleIcon as Funnel, ImagesSquareIcon as GalleryHorizontalEnd, MagnifyingGlassIcon as Search, PlusIcon as Plus, GearIcon as Settings, SlidersHorizontalIcon as Sliders, TableIcon as Table2, XIcon as X } from 'phosphor-svelte';
+  import ContextPanelToggle from '$lib/components/ContextPanelToggle.svelte';
   import NewTaskDialog from '$lib/components/NewTaskDialog.svelte';
   import PopoverMenu from '$lib/components/PopoverMenu.svelte';
   import TaskCard from '$lib/components/TaskCard.svelte';
@@ -437,20 +438,19 @@
           {/each}
         </div>
       </section>
-
-      <p class="course-ladder-key">Bars compare how many assignments sit in each stage.</p>
     </aside>
 
     <section class="course-main" aria-labelledby="course-title">
       <header class="course-header">
+        <ContextPanelToggle label="course panel" />
         <div class="course-title">
           <h1 id="course-title">{board.name}</h1>
           {#if board.isCanvasLinked}<a class="canvas-source-link" href={board.canvasURL} target="_blank" rel="noopener"><span class="badge subtle">Synced from Canvas</span>{#if board.canvasCourseCode}<span>{board.canvasCourseCode}</span>{/if}{#if board.canvasTermName}<span>· {board.canvasTermName}</span>{/if}<ArrowSquareOut size={13} /></a>{/if}
           <p>{board.description || (board.canAdmin ? 'Add a course description in Course settings.' : 'Keep assignments, notes, and course material together.')}</p>
         </div>
         <div class="course-actions">
-          {#if board.canEdit}<button class="button primary large" type="button" onclick={() => (createTaskOpen = true)}><Plus size={16} />Add assignment</button>{/if}
-          {#if board.canAdmin}<a class="button large" href={`/app/boards/${board.id}/settings`}><Settings size={16} />Course settings</a>{/if}
+          {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />Add assignment</button>{/if}
+          {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Course settings</a>{/if}
         </div>
       </header>
 

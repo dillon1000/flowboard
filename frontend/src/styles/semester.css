@@ -17,7 +17,7 @@
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: 288px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
 }
 
 /* ==========================================================================
@@ -29,7 +29,7 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  padding: 22px 14px 0;
+  padding: 16px 12px 0;
   border-right: 1px solid var(--border);
   background: var(--surface-sunken);
 }
@@ -57,8 +57,8 @@
 .semester-term-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 12px 4px;
-  margin: 0 0 16px;
+  padding: 10px 2px;
+  margin: 0 0 14px;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-border);
@@ -85,7 +85,7 @@
 .semester-term-stats dd {
   margin: 0;
   font-family: 'Geist Mono Variable', ui-monospace, monospace;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -201,43 +201,39 @@
 
 .semester-term-header {
   display: flex;
-  min-height: 196px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
-  padding: 26px 28px 26px 40px;
+  gap: 20px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--border);
+}
+
+.semester-term-title {
+  min-width: 0;
 }
 
 .semester-term-title h1 {
   margin: 0;
-  font-size: 42px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .semester-term-title > p {
-  margin: 10px 0 0;
-  color: var(--text-secondary);
-  font-size: 18px;
-  font-weight: 500;
+  margin: 2px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .semester-term-actions {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 24px;
-}
-
-.semester-term-actions .button {
-  height: 44px;
-  gap: 9px;
-  padding-inline: 19px;
-  font-size: 15px;
+  gap: 8px;
 }
 
 .semester-term-actions .button.primary {
@@ -249,120 +245,39 @@
   background: var(--ds-blue-800);
 }
 
-.semester-term-actions .button svg {
-  width: 17px;
-  height: 17px;
-}
-
-.semester-insights {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: stretch;
-  gap: 12px;
-}
-
-.semester-next,
+/* The soonest deadlines sit in the panel with the other rollups: the week list
+   is the page, and the panel answers "what is next" without a hero card. */
 .semester-upcoming {
-  min-height: 152px;
-  padding: 18px;
+  display: grid;
+  flex: 0 0 auto;
+  align-content: start;
+  gap: 2px;
+  padding: 10px 12px 12px;
+  margin-bottom: 12px;
   border-radius: var(--radius-large);
+  background: var(--surface);
   box-shadow: var(--shadow-border);
 }
 
-.semester-next {
-  --semester-course-glow: var(--ds-gray-500);
-  display: grid;
-  width: 254px;
-  flex: 0 0 auto;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  gap: 7px;
-  color: var(--text);
-  background: radial-gradient(
-      circle at 0 0,
-      color-mix(in srgb, var(--semester-course-glow) 18%, transparent),
-      transparent 130px
-    ),
-    var(--surface);
-  text-decoration: none;
-  transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
-}
-
-.semester-next h2,
 .semester-upcoming h2 {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 14px;
+  margin: 0 0 2px;
+  color: var(--text-tertiary);
+  font-size: 10px;
   font-weight: 500;
-}
-
-.semester-next-course {
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 11px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.semester-next > strong {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-  text-wrap: pretty;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.semester-next-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--text-tertiary);
-  font-size: 11px;
-}
-
-.semester-next-meta > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-}
-
-.semester-next-meta > span.muted {
-  opacity: 0.7;
-}
-
-.semester-next-open {
-  margin-left: auto;
-  color: var(--text-tertiary);
-  opacity: 0.55;
-  transition: color var(--duration) var(--ease), opacity var(--duration) var(--ease),
-    transform 150ms var(--ease-out);
-}
-
-.semester-upcoming {
-  display: grid;
-  width: 292px;
-  flex: 0 0 auto;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 4px;
-  background: var(--surface);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .semester-upcoming-list {
   display: grid;
-  align-content: center;
 }
 
 .semester-upcoming-list a {
   display: grid;
-  min-height: 34px;
+  min-height: 30px;
   grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 0 2px;
   color: var(--text);
   text-decoration: none;
@@ -374,7 +289,7 @@
 
 .semester-upcoming-list strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -393,8 +308,8 @@
 }
 
 .semester-course-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--ds-gray-500);
 }
@@ -432,14 +347,14 @@
 .semester-week {
   position: relative;
   display: grid;
-  min-height: 104px;
-  grid-template-columns: 156px minmax(0, 1fr);
+  min-height: 56px;
+  grid-template-columns: 168px minmax(0, 1fr);
   align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
 
 .semester-week.empty {
-  min-height: 58px;
+  min-height: 40px;
 }
 
 .semester-week.current::before {
@@ -455,8 +370,9 @@
 .semester-week-date {
   display: grid;
   align-content: center;
-  gap: 3px;
-  padding: 14px 20px 14px 38px;
+  justify-items: start;
+  gap: 2px;
+  padding: 8px 16px 8px 24px;
   border-right: 1px solid var(--border);
   color: var(--text-secondary);
 }
@@ -470,8 +386,8 @@
 }
 
 .semester-week-date strong {
-  font-size: 15px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 450;
 }
 
 .semester-week-date small {
@@ -493,206 +409,85 @@
   min-width: 0;
 }
 
-.semester-assignment-scroller {
-  min-width: 0;
-  padding: 10px 176px 10px 12px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-.semester-assignment-scroller::-webkit-scrollbar {
-  display: none;
-}
-
-.semester-assignment-scroller[data-scroll-left='true'] {
-  mask-image: linear-gradient(to right, transparent, #000 28px, #000 100%);
-}
-
-.semester-assignment-scroller[data-scroll-right='true'] {
-  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent);
-}
-
-.semester-assignment-scroller[data-scroll-left='true'][data-scroll-right='true'] {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 28px,
-    #000 calc(100% - 28px),
-    transparent
-  );
-}
-
-.semester-assignment-track {
-  display: grid;
-  width: max-content;
-  min-width: 0;
-  grid-auto-columns: minmax(232px, 288px);
-  grid-auto-flow: column;
-  gap: 8px;
+/* Assignments read as one wrapping line of chips: every deadline in the week
+   is visible at once, with no horizontal scrolling to discover the rest. */
+.semester-assignment-list {
+  display: flex;
+  min-height: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: 5px;
+  padding: 8px 24px 8px 14px;
 }
 
 .semester-assignment {
-  --semester-course-glow: var(--ds-gray-500);
-  display: grid;
-  min-height: 84px;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 340px;
+  min-height: 26px;
+  align-items: center;
   gap: 7px;
-  padding: 12px 14px;
-  border-radius: var(--radius-large);
+  padding: 0 10px;
+  border-radius: var(--radius-full);
   color: var(--text);
-  background: radial-gradient(
-      circle at 0 0,
-      color-mix(in srgb, var(--semester-course-glow) 18%, transparent),
-      transparent 74px
-    ),
-    var(--surface);
+  background: var(--surface);
   box-shadow: var(--shadow-border);
+  font-size: 12px;
   text-decoration: none;
-  transition: background-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+  transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
 }
 
-.semester-next.course-blue,
-.semester-assignment.course-blue {
-  --semester-course-glow: var(--ds-blue-700);
+.semester-assignment:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
 }
 
-.semester-next.course-green,
-.semester-assignment.course-green {
-  --semester-course-glow: var(--ds-green-700);
-}
-
-.semester-next.course-purple,
-.semester-assignment.course-purple {
-  --semester-course-glow: var(--ds-purple-700);
-}
-
-.semester-next.course-amber,
-.semester-assignment.course-amber {
-  --semester-course-glow: var(--ds-amber-700);
-}
-
-.semester-next.course-red,
-.semester-assignment.course-red {
-  --semester-course-glow: var(--ds-red-700);
-}
-
-.semester-assignment-course {
+.semester-assignment strong {
   overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: 11px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.semester-assignment > strong {
-  display: -webkit-box;
-  overflow: hidden;
-  align-self: center;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-  text-wrap: pretty;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.semester-assignment-meta {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  color: var(--text-tertiary);
-  font-size: 11px;
-}
-
-.semester-assignment-meta > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-}
-
-.semester-assignment-meta > span.muted {
-  opacity: 0.7;
-}
-
-.semester-assignment-meta svg,
-.semester-next-meta svg {
+.semester-assignment small {
   flex: 0 0 auto;
   color: var(--text-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.semester-assignment-open {
-  margin-left: auto;
-  color: var(--text-tertiary);
-  opacity: 0.55;
-  transition: color var(--duration) var(--ease), opacity var(--duration) var(--ease),
-    transform 150ms var(--ease-out);
-}
-
-@media (--can-hover) {
-  .semester-assignment:hover {
-    background: radial-gradient(
-        circle at 0 0,
-        color-mix(in srgb, var(--semester-course-glow) 22%, transparent),
-        transparent 82px
-      ),
-      var(--surface-hover);
-    box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
-  }
-
-  .semester-next:hover {
-    background: radial-gradient(
-        circle at 0 0,
-        color-mix(in srgb, var(--semester-course-glow) 22%, transparent),
-        transparent 140px
-      ),
-      var(--surface-hover);
-    box-shadow: 0 0 0 1px var(--border-strong), var(--shadow-small);
-  }
-
-  .semester-assignment:hover .semester-assignment-open,
-  .semester-next:hover .semester-next-open {
-    color: var(--text);
-    opacity: 1;
-    transform: translate(2px, -2px);
-  }
+.semester-assignment small.muted {
+  opacity: 0.7;
 }
 
 .semester-no-assignments {
   display: flex;
-  min-height: 57px;
+  min-height: 40px;
+  height: 100%;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 14px;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
+/* The workload verdict lives with the week it describes. */
 .semester-week-load {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  right: 16px;
   display: inline-flex;
-  min-height: 30px;
   align-items: center;
-  gap: 8px;
-  padding: 0 11px;
-  border-radius: var(--radius-medium);
-  color: var(--text-secondary);
-  background: var(--surface);
-  box-shadow: var(--shadow-border);
-  font-size: 12px;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--text-tertiary);
+  font-size: 11px;
   white-space: nowrap;
-  transform: translateY(-50%);
   font-variant-numeric: tabular-nums;
 }
 
 .semester-week-load::before {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   flex: 0 0 auto;
   border-radius: 50%;
   background: var(--ds-green-700);
@@ -711,25 +506,19 @@
   background: var(--ds-gray-600);
 }
 
-.semester-week.empty .semester-week-load {
-  color: var(--text-tertiary);
-  background: transparent;
-  box-shadow: none;
-}
-
 .semester-week.empty .semester-week-load::before {
   background: var(--ds-gray-500);
 }
 
 .semester-term-footer {
   display: flex;
-  min-height: 46px;
+  min-height: 34px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--border);
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .semester-term-footer a,
@@ -757,42 +546,17 @@
 
 @media (--viewport-wide) {
   .semester-planner {
-    grid-template-columns: 244px minmax(0, 1fr);
-  }
-
-  .semester-term-header {
-    gap: 24px;
-    padding-inline: 24px;
-  }
-
-  .semester-next {
-    width: 218px;
-  }
-
-  .semester-upcoming {
-    width: 250px;
-  }
-
-  .semester-assignment-track {
-    grid-auto-columns: minmax(220px, 268px);
+    grid-template-columns: 228px minmax(0, 1fr);
   }
 }
 
 @media (--viewport-content) {
-  .semester-insights {
-    display: none;
-  }
-
-  .semester-term-header {
-    min-height: 168px;
-  }
-
   .semester-week {
-    grid-template-columns: 130px minmax(0, 1fr);
+    grid-template-columns: 148px minmax(0, 1fr);
   }
 
   .semester-week-date {
-    padding-left: 24px;
+    padding-left: 20px;
   }
 }
 
@@ -809,6 +573,7 @@
   }
 
   .semester-term-heading,
+  .semester-upcoming,
   .semester-ladder,
   .semester-ladder-key {
     display: none;
@@ -821,16 +586,14 @@
 
 @media (--viewport-compact) {
   .semester-term-header {
-    min-height: 0;
-    padding: 20px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
   }
 
-  .semester-term-title h1 {
-    font-size: 32px;
-  }
-
-  .semester-term-title > p {
-    font-size: 15px;
+  .semester-term-actions > .button {
+    flex: 1;
   }
 
   .semester-week,
@@ -841,24 +604,24 @@
   }
 
   .semester-week-date {
-    padding: 12px 16px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 10px;
+    padding: 10px 16px 0;
     border-right: 0;
   }
 
-  .semester-assignment-scroller {
-    padding: 10px 0 10px 16px;
+  .semester-week-load {
+    margin: 0 0 0 auto;
+  }
+
+  .semester-assignment-list {
+    padding: 8px 16px;
   }
 
   .semester-no-assignments {
-    min-height: 34px;
+    min-height: 30px;
     padding: 0 16px;
-  }
-
-  .semester-week-load {
-    position: static;
-    align-self: start;
-    justify-self: start;
-    margin: 0 0 0 16px;
-    transform: none;
   }
 }

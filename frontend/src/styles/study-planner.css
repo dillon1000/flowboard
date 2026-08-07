@@ -2,70 +2,38 @@
    Weekly study planner
    ========================================================================== */
 
-/* The planner matches the selected two-stage navigation: a compact product
-   rail stays fixed while the course filter owns the first content column. */
-.study-overview-page {
-  --sidebar-width: 72px;
-  --topbar-height: 70px;
-}
-
-.study-overview-page .sidebar {
-  width: 72px;
-}
-
-.study-overview-page .sidebar .brand-row,
-.study-overview-page .sidebar .nav-link,
-.study-overview-page .sidebar .user-row {
-  justify-content: center;
-}
-
-.study-overview-page .sidebar .brand-row,
-.study-overview-page .sidebar .user-row {
-  padding-inline: 12px;
-}
-
-.study-overview-page .sidebar .brand-logo {
-  width: 26px;
-}
-
-.study-overview-page .sidebar .nav-link {
-  min-height: 52px;
-  gap: 0;
-  padding: 0;
-}
-
-.study-overview-page .sidebar .nav-link span,
-.study-overview-page .sidebar .nav-link small,
-.study-overview-page .sidebar .user-row > span:last-child,
-.study-overview-page .sidebar > .build-signature {
+/* Both sidebars are independent: the app sidebar collapses from the topbar
+   button, and this course panel collapses from the toggle in the week header.
+   The panel's state lives on the root so every planner page shares it. */
+:root[data-panel='collapsed'] :is(.study-course-panel, .semester-term-panel, .course-panel) {
   display: none;
 }
 
-.study-overview-page .sidebar .nav-link svg {
-  width: 18px;
-  height: 18px;
+:root[data-panel='collapsed'] :is(.study-planner, .semester-planner, .course-workspace) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.study-overview-page .sidebar-section {
-  padding: 8px;
-}
-
-.study-overview-page .settings-nav {
-  padding: 8px;
-}
-
-.study-overview-page .user-row {
-  width: 52px;
-  min-height: 52px;
+.context-panel-toggle {
+  flex: 0 0 auto;
   align-self: center;
-  padding: 0;
-  margin: 10px;
-  border-top: 0;
-  border-radius: var(--radius-small);
+  color: var(--text-tertiary);
 }
 
-.study-overview-page .topbar {
-  display: none;
+.context-panel-toggle:hover {
+  color: var(--text);
+}
+
+/* The toggle joins the header row, so the title takes the flexible middle. */
+.study-week-header .study-week-title,
+.semester-term-header .semester-term-title,
+.course-header .course-title {
+  flex: 1;
+}
+
+@media (--viewport-compact) {
+  .context-panel-toggle {
+    align-self: flex-start;
+  }
 }
 
 .study-page {
@@ -81,19 +49,11 @@
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 248px minmax(0, 1fr);
 }
 
-/* Desktop renders the planner at 80% scale to increase its information density.
-   The larger canvas offsets that scale, so the planner still fills the workspace. */
-@media (--above-viewport-shell) {
-  .study-planner {
-    width: 125%;
-    height: 125%;
-    transform: scale(0.8);
-    transform-origin: top left;
-  }
-}
+/* Density comes from the type and spacing scale itself, not from a transform:
+   the planner is drawn small rather than drawn large and scaled down. */
 
 /* ==========================================================================
    Week panel
@@ -104,7 +64,7 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  padding: 22px 14px 0;
+  padding: 16px 12px 0;
   border-right: 1px solid var(--border);
   background: var(--surface-sunken);
 }
@@ -132,8 +92,8 @@
 .study-week-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 12px 4px;
-  margin: 0 0 18px;
+  padding: 10px 2px;
+  margin: 0 0 14px;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-border);
@@ -160,7 +120,7 @@
 .study-week-stats dd {
   margin: 0;
   font-family: 'Geist Mono Variable', ui-monospace, monospace;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -201,13 +161,13 @@
 
 .study-course-link {
   display: flex;
-  min-height: 38px;
+  min-height: 32px;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   padding: 0 10px;
   border-radius: var(--radius-small);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12.5px;
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
 }
@@ -382,48 +342,40 @@
 
 .study-week-header {
   display: flex;
-  min-height: 196px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 40px;
-  padding: 26px 28px 26px 40px;
+  gap: 20px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--border);
 }
 
 .study-week-title {
-  max-width: 620px;
+  min-width: 0;
 }
 
 .study-week-title h1 {
   margin: 0;
-  font-size: 42px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 1;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .study-week-title > p {
-  margin: 12px 0 0;
-  color: var(--text-secondary);
-  font-size: 16px;
+  margin: 2px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
   line-height: 1.45;
   text-wrap: pretty;
 }
 
 .study-week-actions {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 24px;
-}
-
-.study-week-actions .button {
-  height: 44px;
-  gap: 9px;
-  padding-inline: 19px;
-  font-size: 15px;
+  gap: 8px;
 }
 
 .study-week-actions .button.primary {
@@ -435,31 +387,27 @@
   background: var(--ds-blue-800);
 }
 
-.study-week-actions .button svg {
-  width: 17px;
-  height: 17px;
-}
-
 /* Assignments with no work day are the only week facts the day rows cannot
-   show: they have no day yet. So the header carries them, and nothing else. */
+   show: they have no day yet. They sit in the panel with the other rollups. */
 .study-unplanned {
   display: grid;
-  width: 292px;
-  min-height: 152px;
   flex: 0 0 auto;
   align-content: start;
   gap: 4px;
-  padding: 18px;
+  padding: 10px 12px 12px;
+  margin-bottom: 12px;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-border);
 }
 
 .study-unplanned h2 {
-  margin: 0 0 4px;
-  color: var(--text-secondary);
-  font-size: 14px;
+  margin: 0 0 2px;
+  color: var(--text-tertiary);
+  font-size: 10px;
   font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .study-unplanned-list {
@@ -468,10 +416,10 @@
 
 .study-unplanned-list button {
   display: grid;
-  min-height: 38px;
+  min-height: 34px;
   align-content: center;
   gap: 2px;
-  padding: 6px 2px;
+  padding: 5px 2px;
   border: 0;
   color: var(--text);
   background: transparent;
@@ -486,7 +434,7 @@
 
 .study-unplanned-list strong {
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -525,14 +473,14 @@
 .study-day {
   position: relative;
   display: grid;
-  min-height: 104px;
-  grid-template-columns: 168px minmax(0, 1fr);
+  min-height: 80px;
+  grid-template-columns: 148px minmax(0, 1fr);
   align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
 
 .study-day.collapsed {
-  min-height: 66px;
+  min-height: 46px;
 }
 
 .study-day.today::before {
@@ -548,8 +496,8 @@
 .study-day-date {
   display: grid;
   align-content: center;
-  gap: 3px;
-  padding: 14px 20px 14px 38px;
+  gap: 2px;
+  padding: 10px 16px 10px 24px;
   border-right: 1px solid var(--border);
   color: var(--text-secondary);
 }
@@ -563,8 +511,8 @@
 }
 
 .study-day-date strong {
-  font-size: 15px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 450;
 }
 
 .study-day-date small {
@@ -589,7 +537,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .study-day-track {
@@ -643,11 +591,11 @@
 
 .study-day-summary {
   display: grid;
-  min-height: 65px;
+  min-height: 45px;
   grid-template-columns: auto minmax(160px, 1fr) auto;
   align-items: center;
-  gap: 8px 18px;
-  padding: 10px 60px 10px 24px;
+  gap: 6px 14px;
+  padding: 6px 96px 6px 20px;
 }
 
 .study-day-summary-count {
@@ -674,7 +622,7 @@
 
 .study-assignment-scroller {
   min-width: 0;
-  padding: 10px 62px 10px 12px;
+  padding: 8px 56px 8px 12px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -700,28 +648,28 @@
   display: grid;
   width: max-content;
   min-width: 0;
-  grid-auto-columns: minmax(240px, 300px);
+  grid-auto-columns: minmax(208px, 256px);
   grid-auto-flow: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .study-no-assignments {
   display: flex;
-  min-height: 103px;
+  min-height: 56px;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 20px;
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .study-assignment {
   --study-course-glow: var(--ds-gray-500);
   position: relative;
   display: grid;
-  min-height: 92px;
+  min-height: 72px;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 9px 11px;
   border-radius: var(--radius-large);
   color: var(--text);
   background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--study-course-glow) 18%, transparent), transparent 76px), var(--surface);
@@ -763,7 +711,7 @@
   display: -webkit-box;
   overflow: hidden;
   align-self: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.3;
@@ -832,8 +780,8 @@
 .study-focus-blocks {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 62px 12px 14px;
+  gap: 5px;
+  padding: 0 56px 9px 14px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -860,17 +808,17 @@
 
 .study-focus-chip {
   display: flex;
-  min-height: 28px;
+  min-height: 24px;
   flex: 0 0 auto;
-  max-width: 260px;
+  max-width: 240px;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px;
+  gap: 7px;
+  padding: 0 9px;
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   background: var(--surface);
   box-shadow: var(--shadow-border);
-  font-size: 12px;
+  font-size: 11px;
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
 }
@@ -1012,13 +960,13 @@
 
 .study-week-footer {
   display: flex;
-  min-height: 46px;
+  min-height: 34px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--border);
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .study-week-footer svg {
@@ -1103,12 +1051,12 @@
 .study-workflow-band {
   position: relative;
   display: grid;
-  min-height: 70px;
+  min-height: 52px;
   grid-template-columns: auto minmax(0, 1fr) auto;
   flex: 0 0 auto;
   align-items: center;
-  gap: 16px;
-  padding: 12px 28px 12px 38px;
+  gap: 14px;
+  padding: 8px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface-sunken);
 }
@@ -1136,8 +1084,8 @@
 
 .study-workflow-mark {
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   place-items: center;
   border-radius: 50%;
   color: var(--ds-amber-900);
@@ -1206,7 +1154,7 @@
 
 .study-focus-actions {
   display: flex;
-  min-height: 28px;
+  min-height: 24px;
   align-items: stretch;
   overflow: hidden;
   border-radius: 0 var(--radius-full) var(--radius-full) 0;
@@ -1482,7 +1430,18 @@
 }
 
 .study-commitment-builder {
-  grid-template-columns: minmax(150px, 1fr) 100px 110px 110px auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.study-commitment-builder > .input,
+.study-conflict-builder > .input {
+  grid-column: 1 / -1;
+}
+
+.study-commitment-builder > .button,
+.study-conflict-builder > .button {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
 .study-commitment-builder fieldset {
@@ -1529,34 +1488,71 @@
 }
 
 .study-conflict-builder {
-  grid-template-columns: minmax(150px, 1fr) 150px 110px 110px auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .availability-settings-form {
   display: grid;
-  gap: 28px;
-  padding: 22px;
+  gap: 20px;
+  padding: 16px;
 }
 
+/* The verdict and the save action stay together at the top: the total is what
+   the whole form exists to change, and saving should never require scrolling. */
 .availability-settings-summary {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding-bottom: 18px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.availability-settings-summary > div {
+  display: grid;
+  gap: 2px;
 }
 
 .availability-settings-summary strong {
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
+  font-family: 'Geist Mono Variable', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
-.availability-settings-actions {
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
+/* Availability sections use the same ledger shape as the settings pages. */
+.availability-settings-form .study-availability-section {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  column-gap: 24px;
+  row-gap: 8px;
+  align-items: start;
+}
+
+.availability-settings-form .study-section-heading {
+  display: block;
+  grid-column: 1;
+}
+
+.availability-settings-form .study-section-heading span {
+  display: block;
+  margin-top: 2px;
+}
+
+.availability-settings-form .study-availability-section > :not(.study-section-heading) {
+  grid-column: 2;
+}
+
+@media (--viewport-navigation) {
+  .availability-settings-form .study-availability-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .availability-settings-form .study-availability-section > :not(.study-section-heading) {
+    grid-column: 1;
+  }
 }
 
 @media (--viewport-shell) {
@@ -1593,89 +1589,25 @@
 
 @media (--viewport-wide) {
   .study-planner {
-    grid-template-columns: 232px minmax(0, 1fr);
-  }
-
-  .study-week-header {
-    gap: 24px;
-    padding-inline: 24px;
-  }
-
-  .study-unplanned {
-    width: 250px;
+    grid-template-columns: 228px minmax(0, 1fr);
   }
 
   .study-assignment-track {
-    grid-auto-columns: minmax(228px, 280px);
+    grid-auto-columns: minmax(200px, 244px);
   }
 }
 
 @media (--viewport-content) {
-  .study-unplanned {
-    display: none;
-  }
-
-  .study-week-header {
-    min-height: 172px;
-  }
-
   .study-day {
-    grid-template-columns: 140px minmax(0, 1fr);
+    grid-template-columns: 128px minmax(0, 1fr);
   }
 
   .study-day-date {
-    padding-left: 24px;
+    padding-left: 20px;
   }
 }
 
 @media (--viewport-shell) {
-  .study-overview-page {
-    --sidebar-width: 248px;
-    --topbar-height: 56px;
-  }
-
-  .study-overview-page .sidebar {
-    width: 248px;
-  }
-
-  .study-overview-page .sidebar .brand-row,
-  .study-overview-page .sidebar .nav-link,
-  .study-overview-page .sidebar .user-row {
-    justify-content: flex-start;
-  }
-
-  .study-overview-page .sidebar .brand-row,
-  .study-overview-page .sidebar .user-row {
-    padding-inline: 16px;
-  }
-
-  .study-overview-page .sidebar .user-row {
-    width: auto;
-    min-height: 60px;
-    align-self: stretch;
-    margin: 0;
-    border-top: 1px solid var(--border);
-    border-radius: 0;
-  }
-
-  .study-overview-page .sidebar .nav-link {
-    min-height: 40px;
-    gap: 10px;
-    padding: 0 10px;
-  }
-
-  .study-overview-page .sidebar .nav-link span,
-  .study-overview-page .sidebar .user-row > span:last-child,
-  .study-overview-page .sidebar > .build-signature {
-    display: revert;
-  }
-
-  .study-overview-page .topbar {
-    display: flex;
-    min-height: var(--topbar-height);
-    padding-inline: 16px;
-  }
-
   .study-page {
     overflow: visible;
   }
@@ -1692,6 +1624,7 @@
   }
 
   .study-panel-heading,
+  .study-unplanned,
   .study-limits {
     display: none;
   }
@@ -1725,22 +1658,15 @@
 
 @media (--viewport-compact) {
   .study-week-header {
-    min-height: auto;
-    padding: 24px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
   }
 
-  .study-week-title h1 {
-    font-size: 32px;
-  }
-
-  .study-week-title > p {
-    font-size: 15px;
-  }
-
-  .study-week-actions,
   .study-week-actions > *,
   .study-week-actions .button {
-    width: 100%;
+    flex: 1;
   }
 
   .study-day,

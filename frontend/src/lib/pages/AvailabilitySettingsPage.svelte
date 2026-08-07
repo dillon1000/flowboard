@@ -136,7 +136,10 @@
     <SettingsNavigation active="availability" />
     <div class="settings-content">
       <form class="panel availability-settings-form" onsubmit={saveAvailability}>
-        <div class="availability-settings-summary"><span>Weekly study capacity</span><strong>{durationLabel(weeklyCapacity)}</strong></div>
+        <div class="availability-settings-summary">
+          <div><span>Weekly study capacity</span><strong>{durationLabel(weeklyCapacity)}</strong></div>
+          <button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save availability'}</button>
+        </div>
         {#if requestError}<p class="error-message" role="alert">{requestError}</p>{/if}
 
         <section class="study-availability-section" aria-labelledby="weekday-capacity-title">
@@ -175,8 +178,6 @@
             <button class="button" type="button" onclick={addConflict}>Add conflict</button>
           </div>
         </section>
-
-        <div class="form-actions availability-settings-actions"><button class="button primary" type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save availability'}</button></div>
       </form>
     </div>
   </div>
