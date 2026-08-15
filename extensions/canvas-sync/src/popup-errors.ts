@@ -16,5 +16,5 @@ const messages: Record<SyncErrorCode, string> = {
 };
 
 export function popupErrorMessage(code: SyncErrorCode, detail?: string): string {
-  return messages[code] ?? detail ?? 'The sync failed.';
+  return detail ?? messages[code] ?? 'The sync failed.';
 }
