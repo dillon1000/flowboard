@@ -27,6 +27,13 @@ describe('Canvas normalization', () => {
     });
   });
 
+  it('derives the standard course route when Canvas omits html_url', () => {
+    expect(normalizeCanvasCourse({
+      id: 42,
+      name: 'Biology'
+    }, origin).htmlURL).toBe(`${origin}/courses/42`);
+  });
+
   it('normalizes effective assignment and submission fields', () => {
     expect(normalizeCanvasAssignment({
       id: '9',
