@@ -54,4 +54,9 @@ describe('popup error mapping', () => {
   ] as const)('maps %s to a useful message', (code, phrase) => {
     expect(popupErrorMessage(code)).toContain(phrase);
   });
+
+  it('shows the Canvas validation detail when it is available', () => {
+    expect(popupErrorMessage('RESPONSE_INVALID', 'Canvas returned an invalid course URL.'))
+      .toBe('Canvas returned an invalid course URL.');
+  });
 });
