@@ -53,15 +53,25 @@ function optionalBoolean(value: unknown, name: string): boolean {
 }
 
 function sameOriginURL(value: unknown, canvasOrigin: string, name: string): string {
-  const text = requiredString(value, name);
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new SyncError('RESPONSE_INVALID', `Canvas returned a ${name} that is missing or blank.`);
+  }
+
+  const text = value.trim();
   let url: URL;
   try {
     url = new URL(text, canvasOrigin);
   } catch {
-    throw new SyncError('RESPONSE_INVALID', `Canvas returned an invalid ${name}.`);
+    throw new SyncError('RESPONSE_INVALID', `Canvas returned a malformed ${name}.`);
   }
-  if (url.protocol !== 'https:' || url.origin !== canvasOrigin) {
-    throw new SyncError('RESPONSE_INVALID', `Canvas returned an invalid ${name}.`);
+  if (url.protocol !== 'https:') {
+    throw new SyncError('RESPONSE_INVALID', `Canvas returned a ${name} that does not use HTTPS.`);
+  }
+  if (url.origin !== canvasOrigin) {
+    throw new SyncError(
+      'RESPONSE_INVALID',
+      `Canvas returned a ${name} from ${url.origin}, but the configured Canvas origin is ${canvasOrigin}. Update the Canvas origin if ${url.origin} is your Canvas site.`
+    );
   }
   return url.href;
 }
