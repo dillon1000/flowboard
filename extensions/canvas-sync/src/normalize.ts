@@ -76,8 +76,20 @@ function sameOriginURL(value: unknown, canvasOrigin: string, name: string): stri
   return url.href;
 }
 
+/**
+ * Returns Canvas's supplied course URL, or its documented course route when
+ * Canvas omits html_url from an otherwise valid course record.
+ */
+function courseURL(value: unknown, canvasOrigin: string, courseID: string): string {
+  if (value === null || value === undefined || value === '') {
+    return new URL(`/courses/${encodeURIComponent(courseID)}`, canvasOrigin).href;
+  }
+  return sameOriginURL(value, canvasOrigin, 'course URL');
+}
+
 export function normalizeCanvasCourse(value: unknown, canvasOrigin: string): CanvasCourseSnapshot {
   const course = record(value, 'course');
+  const id = requiredID(course.id, 'course');
   const enrollments = course.enrollments;
   if (enrollments !== undefined && !Array.isArray(enrollments)) {
     throw new SyncError('RESPONSE_INVALID', 'Canvas returned invalid course enrollments.');
@@ -87,11 +99,11 @@ export function normalizeCanvasCourse(value: unknown, canvasOrigin: string): Can
     : {};
   const term = course.term === null || course.term === undefined ? null : record(course.term, 'course term');
   return {
-    id: requiredID(course.id, 'course'),
+    id,
     name: requiredString(course.name, 'course name'),
     courseCode: optionalString(course.course_code, 'course code'),
     termName: term ? optionalString(term.name, 'term name') : null,
-    htmlURL: sameOriginURL(course.html_url, canvasOrigin, 'course URL'),
+    htmlURL: courseURL(course.html_url, canvasOrigin, id),
     currentScore: optionalNumber(enrollment.computed_current_score ?? enrollment.current_score, 'course score'),
     currentGrade: optionalString(enrollment.computed_current_grade ?? enrollment.current_grade, 'course grade'),
     assignments: []
