@@ -53,6 +53,16 @@ describe('Canvas normalization', () => {
     });
   });
 
+  it('explains how to correct a course URL from a different Canvas origin', () => {
+    expect(() => normalizeCanvasCourse({
+      id: 42,
+      name: 'Biology',
+      html_url: 'https://canvas.example.edu/courses/42'
+    }, origin)).toThrow(
+      'Canvas returned a course URL from https://canvas.example.edu, but the configured Canvas origin is https://school.instructure.com. Update the Canvas origin if https://canvas.example.edu is your Canvas site.'
+    );
+  });
+
   it('maps complete and reopened submission states', () => {
     const submitted = normalizeCanvasSubmission({ workflow_state: 'submitted' });
     const excused = normalizeCanvasSubmission({ workflow_state: 'unsubmitted', excused: true });
