@@ -310,6 +310,7 @@
 .semester-course-dot {
   width: 7px;
   height: 7px;
+  flex: 0 0 auto;
   border-radius: 50%;
   background: var(--ds-gray-500);
 }
@@ -437,6 +438,15 @@
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease),
     box-shadow var(--duration) var(--ease);
+}
+
+/* A squircle needs a larger radius than an ordinary rounded corner to preserve
+   the compact chip silhouette. Unsupported browsers keep the pill fallback. */
+@supports (corner-shape: squircle) {
+  .semester-assignment {
+    border-radius: calc(var(--radius-full) * 2);
+    corner-shape: squircle;
+  }
 }
 
 .semester-assignment:hover {
