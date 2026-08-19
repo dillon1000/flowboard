@@ -781,7 +781,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 0 56px 9px 14px;
+  padding: 1px 56px 10px 14px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -821,6 +821,13 @@
   font-size: 11px;
   text-decoration: none;
   transition: color var(--duration) var(--ease), background-color var(--duration) var(--ease);
+}
+
+@supports (corner-shape: squircle) {
+  .study-focus-chip,
+  .study-focus-actions {
+    corner-shape: squircle;
+  }
 }
 
 .study-focus-item:has(.study-focus-remove) .study-focus-chip {
@@ -1719,7 +1726,7 @@
   }
 
   .study-focus-blocks {
-    padding: 0 16px 12px;
+    padding: 1px 16px 13px;
   }
 
   .study-day-toggle {

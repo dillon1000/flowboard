@@ -34,6 +34,7 @@
   z-index: 1;
   padding: 1px;
   border-radius: inherit;
+  corner-shape: inherit;
   background: radial-gradient(
     var(--reveal-size) circle at var(--reveal-x) var(--reveal-y),
     var(--reveal-rim),
