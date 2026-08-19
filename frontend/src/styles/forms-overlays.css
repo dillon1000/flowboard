@@ -562,6 +562,11 @@
   line-height: 1.45;
 }
 
+/* Confirmation dialogs have no body to separate header copy from the footer. */
+.confirm-dialog .dialog-header {
+  padding-bottom: 20px;
+}
+
 .dialog-header .icon-button {
   margin: -4px -4px 0 0;
 }
