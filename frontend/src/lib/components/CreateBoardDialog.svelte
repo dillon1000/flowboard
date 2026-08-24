@@ -28,7 +28,7 @@
       open = false;
       await refreshAll();
       showToast('Course added');
-      await goto(`/app/boards/${board.id}`);
+      await goto(`/app/boards/${board.slug}`);
     } catch (cause) {
       error = messageFor(cause);
     } finally {

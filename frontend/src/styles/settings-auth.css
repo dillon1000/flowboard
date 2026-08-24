@@ -159,6 +159,44 @@
   line-height: 1.55;
 }
 
+.connected-app-row {
+  align-items: center;
+}
+
+.connected-app-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: var(--radius-medium);
+  color: var(--text-secondary);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.connected-app-server code {
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: var(--radius-medium);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-family: 'Geist Mono Variable', monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.connected-app-server .button {
+  justify-self: start;
+}
+
+.connected-app-server p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .canvas-use-warning {
   margin: 0;
   padding: 10px 12px;

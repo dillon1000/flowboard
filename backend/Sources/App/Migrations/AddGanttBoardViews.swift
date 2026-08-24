@@ -15,7 +15,7 @@ struct AddGanttBoardViews: AsyncMigration {
         let boards = try await Board.query(on: database).all()
         for board in boards {
             let boardID = try board.requireID()
-            let views = try await BoardView.query(on: database)
+            let views = try await LegacyBoardView.query(on: database)
                 .filter(\.$board.$id == boardID)
                 .sort(\.$position, .ascending)
                 .all()
@@ -29,7 +29,7 @@ struct AddGanttBoardViews: AsyncMigration {
                 view.position += 1
                 try await view.update(on: database)
             }
-            try await BoardView(
+            try await LegacyBoardView(
                 boardID: boardID,
                 name: "Gantt",
                 type: .gantt,
@@ -39,7 +39,7 @@ struct AddGanttBoardViews: AsyncMigration {
     }
 
     func revert(on database: any Database) async throws {
-        try await BoardView.query(on: database)
+        try await LegacyBoardView.query(on: database)
             .filter(\.$type == .gantt)
             .delete()
         let viewType = try await database.enum("board_view_type")

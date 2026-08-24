@@ -11,6 +11,7 @@ struct AppPageController: RouteCollection {
         routes.get("settings", use: settings)
         routes.get("settings", "availability", use: availabilitySettings)
         routes.get("settings", "api-keys", use: apiKeys)
+        routes.get("settings", "connected-apps", use: connectedApps)
         routes.get("settings", "integrations", use: integrations)
         routes.get("boards", ":boardID", use: boardDefault)
         routes.get("boards", ":boardID", "views", ":viewID", use: boardView)
@@ -159,6 +160,25 @@ struct AppPageController: RouteCollection {
         try await renderAPIKeysPage(for: req)
     }
 
+    func connectedApps(req: Request) async throws -> Response {
+        let common = try await commonContext(for: req)
+        let userID = try req.auth.require(User.self).requireID()
+        let tokens = try await MCPOAuthToken.query(on: req.db)
+            .filter(\.$user.$id == userID)
+            .with(\.$client)
+            .sort(\.$updatedAt, .descending)
+            .all()
+        return try respond(
+            common: common,
+            pageTitle: "Connected apps",
+            pageKind: .connectedApps,
+            connectedApps: try ConnectedAppsPageContext(
+                tokens: tokens,
+                mcpServerURL: "\(String(apiBaseURL(for: req).dropLast("/api/v1".count)))/mcp"
+            )
+        )
+    }
+
     func integrations(req: Request) async throws -> Response {
         let common = try await commonContext(for: req)
         let connections = try await CanvasConnection.query(on: req.db)
@@ -233,7 +253,7 @@ struct AppPageController: RouteCollection {
         }
         return try jsonResponse(
             BoardDefaultViewContext(
-                href: "/app/boards/\(boardID)/views/\(try view.requireID())"
+                href: "/app/boards/\(access.board.slug)/views/\(view.slug)"
             )
         )
     }
@@ -242,16 +262,23 @@ struct AppPageController: RouteCollection {
         let common = try await commonContext(for: req)
         let access = try await boardAccess(for: req, permission: .view)
         let boardID = try access.board.requireID()
-        guard
-            let viewID = req.parameters.get("viewID", as: UUID.self),
-            let activeView = try await BoardView.query(on: req.db)
+        guard let viewRouteID = req.parameters.get("viewID") else {
+            throw Abort(.notFound, reason: "The view does not exist.")
+        }
+        let activeView: BoardView? = if let viewID = UUID(uuidString: viewRouteID) {
+            try await BoardView.query(on: req.db)
                 .filter(\.$id == viewID)
                 .filter(\.$board.$id == boardID)
                 .first()
-        else {
+        } else {
+            try await BoardView.query(on: req.db)
+                .filter(\.$slug == viewRouteID.lowercased())
+                .filter(\.$board.$id == boardID)
+                .first()
+        }
+        guard let activeView else {
             throw Abort(.notFound, reason: "The view does not exist.")
         }
-
         let views = try await BoardView.query(on: req.db)
             .filter(\.$board.$id == boardID)
             .sort(\.$position, .ascending)
@@ -280,7 +307,7 @@ struct AppPageController: RouteCollection {
             .filter(\.$task.$id ~~ taskIDs)
             .all()
         let calendarMonth = requestedCalendarMonth(from: req)
-        let viewPath = "/app/boards/\(boardID)/views/\(viewID)"
+        let viewPath = "/app/boards/\(access.board.slug)/views/\(activeView.slug)"
         let boardContext = try BoardPageContext(
             board: access.board,
             access: access,
@@ -367,7 +394,7 @@ struct AppPageController: RouteCollection {
         } else {
             try req.auth.require(User.self)
         }
-        let firstViewID = try views.first?.requireID()
+        let firstViewSlug = views.first?.slug
         let canvasLink = try await CanvasCourseLink.query(on: req.db)
             .filter(\.$board.$id == boardID)
             .first()
@@ -382,7 +409,7 @@ struct AppPageController: RouteCollection {
                 members: members,
                 templates: templates,
                 owner: owner,
-                firstViewID: firstViewID,
+                firstViewSlug: firstViewSlug,
                 isOwner: access.isOwner,
                 tapTasks: tapTasks,
                 tapActions: tapActions,

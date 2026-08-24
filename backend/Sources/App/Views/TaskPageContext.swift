@@ -337,7 +337,7 @@ struct TaskDetailPageContext: Encodable {
         )
         self.task = taskContext
         self.boardName = board.name
-        self.boardHref = "/app/boards/\(try board.requireID())"
+        self.boardHref = "/app/boards/\(board.slug)"
         self.creatorName = creator?.name ?? "Unknown"
         self.canEdit = access.isOwner || access.role.canEdit
         self.canComment = access.isOwner || access.role.canComment

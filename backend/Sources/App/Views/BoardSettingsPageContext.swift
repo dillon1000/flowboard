@@ -2,6 +2,7 @@ import Foundation
 
 struct BoardSettingsPageContext: Encodable {
     let id: UUID
+    let slug: String
     let name: String
     let description: String
     let firstViewHref: String
@@ -40,7 +41,7 @@ struct BoardSettingsPageContext: Encodable {
         members: [BoardMember],
         templates: [TaskTemplate],
         owner: User,
-        firstViewID: UUID?,
+        firstViewSlug: String?,
         isOwner: Bool,
         tapTasks: [Task],
         tapActions: [TapAction],
@@ -51,12 +52,13 @@ struct BoardSettingsPageContext: Encodable {
     ) throws {
         let boardID = try board.requireID()
         self.id = boardID
+        self.slug = board.slug
         self.name = board.name
         self.description = board.description ?? ""
-        self.firstViewHref = if let firstViewID {
-            "/app/boards/\(boardID)/views/\(firstViewID)"
+        self.firstViewHref = if let firstViewSlug {
+            "/app/boards/\(board.slug)/views/\(firstViewSlug)"
         } else {
-            "/app/boards/\(boardID)"
+            "/app/boards/\(board.slug)"
         }
         self.isOwner = isOwner
         self.isArchived = board.isArchived

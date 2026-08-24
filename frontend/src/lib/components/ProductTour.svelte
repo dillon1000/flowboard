@@ -117,7 +117,7 @@
       body: 'Each card carries the essentials; hover to preview, click to open the full page — deadline pace meter, checklist steps, notes, files, comments, email reminders, and its study plan in the rail. That page is where “what do I do next?” gets answered.'
     },
     {
-      path: () => (firstCourse ? `/app/boards/${firstCourse.id}/settings` : null),
+      path: () => (firstCourse ? `/app/boards/${firstCourse.slug}/settings` : null),
       selector: '.settings-content',
       title: 'Everything a course owns',
       body: 'Course settings is a ledger of the course itself: saved views, workflow stages and priorities with custom colors, typed custom fields, members and roles, assignment templates, NFC Tap actions that update an assignment from a physical tag, and JSON export/import.'

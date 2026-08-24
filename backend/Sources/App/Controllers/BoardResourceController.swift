@@ -134,9 +134,11 @@ struct BoardResourceController: RouteCollection {
         let count = try await BoardView.query(on: req.db)
             .filter(\.$board.$id == boardID)
             .count()
+        let name = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let view = BoardView(
             boardID: boardID,
-            name: input.name.trimmingCharacters(in: .whitespacesAndNewlines),
+            name: name,
+            slug: try await BoardView.uniqueSlug(for: name, boardID: boardID, on: req.db),
             type: input.type,
             position: count,
             configuration: input.configuration

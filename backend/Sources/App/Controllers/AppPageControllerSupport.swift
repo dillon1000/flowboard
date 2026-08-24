@@ -40,7 +40,7 @@ extension AppPageController {
             boardContexts.append(
                 try BoardNavigationContext(
                     board: board,
-                    firstViewID: firstView?.requireID(),
+                    firstViewSlug: firstView?.slug,
                     courseColorClass: courseColorClasses[index % courseColorClasses.count],
                     canvasLink: canvasLinksByBoardID[boardID]
                 )
@@ -79,6 +79,7 @@ extension AppPageController {
         settings: SettingsPageContext? = nil,
         availabilitySettings: StudySettingsResponse? = nil,
         apiKeys: APIKeysPageContext? = nil,
+        connectedApps: ConnectedAppsPageContext? = nil,
         integrations: CanvasIntegrationsPageContext? = nil,
         boardSettings: BoardSettingsPageContext? = nil
     ) throws -> Response {
@@ -95,6 +96,7 @@ extension AppPageController {
                 settings: settings,
                 availabilitySettings: availabilitySettings,
                 apiKeys: apiKeys,
+                connectedApps: connectedApps,
                 integrations: integrations,
                 boardSettings: boardSettings
             )
@@ -105,7 +107,18 @@ extension AppPageController {
         for req: Request,
         permission: BoardPermission
     ) async throws -> BoardAccess {
-        guard let boardID = req.parameters.get("boardID", as: UUID.self) else {
+        guard let routeID = req.parameters.get("boardID") else {
+            throw Abort(.notFound, reason: "The board does not exist.")
+        }
+        let boardID: UUID? = if let id = UUID(uuidString: routeID) {
+            id
+        } else {
+            try await Board.query(on: req.db)
+                .filter(\.$slug == routeID.lowercased())
+                .first()?
+                .requireID()
+        }
+        guard let boardID else {
             throw Abort(.notFound, reason: "The board does not exist.")
         }
         return try await BoardAccessService.require(
