@@ -6,6 +6,7 @@ export interface AvatarContext {
 
 export interface BoardNavigationContext {
   id: string;
+  slug: string;
   name: string;
   description: string;
   href: string;
@@ -380,6 +381,7 @@ export interface BoardViewTabContext {
 
 export interface BoardPageContext {
   id: string;
+  slug: string;
   name: string;
   description: string;
   role: string;
@@ -563,6 +565,19 @@ export interface APIKeysPageContext {
   hasError: boolean;
 }
 
+export interface ConnectedAppPageItemContext {
+  id: string;
+  name: string;
+  scope: string;
+  connectedAt: string;
+}
+
+export interface ConnectedAppsPageContext {
+  connections: ConnectedAppPageItemContext[];
+  hasConnections: boolean;
+  mcpServerURL: string;
+}
+
 export interface CanvasIntegrationConnectionContext {
   id: string;
   canvasOrigin: string;
@@ -683,6 +698,7 @@ export interface TapExecutionContext {
 
 export interface BoardSettingsPageContext {
   id: string;
+  slug: string;
   name: string;
   description: string;
   firstViewHref: string;
@@ -731,6 +747,7 @@ export interface AppPageContext {
   isProfileSettings: boolean;
   isAvailabilitySettings: boolean;
   isAPIKeys: boolean;
+  isConnectedApps: boolean;
   isIntegrations: boolean;
   isBoardSettings: boolean;
   overview: OverviewPageContext | null;
@@ -741,6 +758,7 @@ export interface AppPageContext {
   settings: SettingsPageContext | null;
   availabilitySettings: StudySettingsContext | null;
   apiKeys: APIKeysPageContext | null;
+  connectedApps: ConnectedAppsPageContext | null;
   integrations: CanvasIntegrationsPageContext | null;
   boardSettings: BoardSettingsPageContext | null;
 }
@@ -758,6 +776,7 @@ export interface TaskResponse {
 
 export interface BoardResponse {
   id: string;
+  slug: string;
   name: string;
 }
 

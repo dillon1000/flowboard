@@ -55,7 +55,6 @@ struct NotificationEvent: Codable, Sendable {
         appURL: String
     ) throws -> Self {
         let memberID = try member.requireID()
-        let boardID = try board.requireID()
         return Self(
             deduplicationKey: "board-member:\(memberID.uuidString)",
             type: .boardMemberAdded,
@@ -65,7 +64,7 @@ struct NotificationEvent: Codable, Sendable {
                 "actorName": actor.name,
                 "boardName": board.name,
                 "role": member.role.rawValue,
-                "appURL": appURL + "/app/boards/\(boardID.uuidString)",
+                "appURL": appURL + "/app/boards/\(board.slug)",
             ]
         )
     }

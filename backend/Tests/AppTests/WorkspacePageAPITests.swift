@@ -44,7 +44,23 @@ struct WorkspacePageAPITests {
                 headers: ["Cookie": session.cookie]
             )
             #expect(boardResponse.status == .ok)
-            expectContains(boardResponse.body.string, #""href":"/app/boards/"#)
+            let board = try #require(try await Board.find(session.boardID, on: app.db))
+            let firstView = try #require(
+                try await BoardView.query(on: app.db)
+                    .filter(\.$board.$id == session.boardID)
+                    .sort(\.$position, .ascending)
+                    .first()
+            )
+            expectContains(
+                boardResponse.body.string,
+                #""href":"/app/boards/\#(board.slug)/views/\#(firstView.slug)""#
+            )
+            let prettyRouteResponse = try await app.testing().sendRequest(
+                .GET,
+                "api/v1/workspace/boards/\(board.slug)/views/\(firstView.slug)",
+                headers: ["Cookie": session.cookie]
+            )
+            #expect(prettyRouteResponse.status == .ok)
 
             let task = Task(
                 publicID: "a1b2c3",

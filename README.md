@@ -106,6 +106,7 @@ dependencies, and generated output.
 - Board templates, duplication, archive, JSON import and export, and task search
 - Board sharing with Viewer, Commenter, Editor, and Admin roles
 - Private Canvas course and assignment import through a restricted Chrome extension
+- Read-only MCP server for Claude and other AI clients with OAuth 2.1, PKCE, board/task descriptions, planning fields, grades, and linked Canvas data
 - NFC Tap actions with scoped bearer links, use limits, cooldowns, expiration,
   rotation, and idempotent execution
 - Light and dark themes, keyboard access, reduced motion, and responsive layouts
@@ -211,3 +212,26 @@ examples.
 - `GET /health`
 
 Private routes require a valid session or API key and enforce each board role.
+
+## Connect an AI client with MCP
+
+Deploy Flowboard on an HTTPS origin, then give Claude or another remote MCP client
+this server URL:
+
+```text
+https://your-flowboard-domain.example/mcp
+```
+
+The client discovers OAuth through `/.well-known/oauth-protected-resource/mcp`
+and `/.well-known/oauth-authorization-server`. Flowboard dynamically registers
+public clients, requires authorization-code PKCE with `S256`, displays a browser
+consent screen, and issues one-hour access tokens plus rotating 30-day refresh
+tokens. Tokens and authorization codes are stored only as SHA-256 hashes.
+
+The `flowboard:read` scope exposes read-only tools for listing boards, loading a
+complete board, searching tasks, loading one task, and reading linked Canvas
+courses and assignments. Results include descriptions, custom fields, planning
+dates and estimates, grades, submission state, and Canvas links. Passwords, API
+keys, Canvas sync keys, and attachment contents are never exposed. Run the normal
+production migration command before using MCP so the OAuth client, code, and
+token tables exist.

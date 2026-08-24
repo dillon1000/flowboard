@@ -10,6 +10,7 @@ enum AppPageKind {
     case settings
     case availabilitySettings
     case apiKeys
+    case connectedApps
     case integrations
     case boardSettings
 }
@@ -29,6 +30,7 @@ struct AppPageContext: Encodable {
     let isProfileSettings: Bool
     let isAvailabilitySettings: Bool
     let isAPIKeys: Bool
+    let isConnectedApps: Bool
     let isIntegrations: Bool
     let isBoardSettings: Bool
     let overview: OverviewPageContext?
@@ -39,6 +41,7 @@ struct AppPageContext: Encodable {
     let settings: SettingsPageContext?
     let availabilitySettings: StudySettingsResponse?
     let apiKeys: APIKeysPageContext?
+    let connectedApps: ConnectedAppsPageContext?
     let integrations: CanvasIntegrationsPageContext?
     let boardSettings: BoardSettingsPageContext?
 
@@ -54,6 +57,7 @@ struct AppPageContext: Encodable {
         settings: SettingsPageContext?,
         availabilitySettings: StudySettingsResponse?,
         apiKeys: APIKeysPageContext?,
+        connectedApps: ConnectedAppsPageContext?,
         integrations: CanvasIntegrationsPageContext?,
         boardSettings: BoardSettingsPageContext?
     ) {
@@ -67,10 +71,11 @@ struct AppPageContext: Encodable {
         self.isActiveTasks = pageKind == .tasks
         self.isArchivedTasks = pageKind == .archivedTasks
         self.isTaskDetail = pageKind == .taskDetail
-        self.isSettings = pageKind == .settings || pageKind == .availabilitySettings || pageKind == .apiKeys || pageKind == .integrations
+        self.isSettings = pageKind == .settings || pageKind == .availabilitySettings || pageKind == .apiKeys || pageKind == .connectedApps || pageKind == .integrations
         self.isProfileSettings = pageKind == .settings
         self.isAvailabilitySettings = pageKind == .availabilitySettings
         self.isAPIKeys = pageKind == .apiKeys
+        self.isConnectedApps = pageKind == .connectedApps
         self.isIntegrations = pageKind == .integrations
         self.isBoardSettings = pageKind == .boardSettings
         self.overview = overview
@@ -81,6 +86,7 @@ struct AppPageContext: Encodable {
         self.settings = settings
         self.availabilitySettings = availabilitySettings
         self.apiKeys = apiKeys
+        self.connectedApps = connectedApps
         self.integrations = integrations
         self.boardSettings = boardSettings
     }
@@ -132,6 +138,7 @@ struct AvatarContext: Encodable {
 
 struct BoardNavigationContext: Encodable {
     let id: UUID
+    let slug: String
     let name: String
     let description: String
     let href: String
@@ -145,18 +152,19 @@ struct BoardNavigationContext: Encodable {
 
     init(
         board: Board,
-        firstViewID: UUID?,
+        firstViewSlug: String?,
         courseColorClass: String,
         canvasLink: CanvasCourseLink? = nil
     ) throws {
         let id = try board.requireID()
         self.id = id
+        self.slug = board.slug
         self.name = board.name
         self.description = board.description ?? "No description"
-        self.href = if let firstViewID {
-            "/app/boards/\(id)/views/\(firstViewID)"
+        self.href = if let firstViewSlug {
+            "/app/boards/\(board.slug)/views/\(firstViewSlug)"
         } else {
-            "/app/boards/\(id)"
+            "/app/boards/\(board.slug)"
         }
         self.courseColorClass = courseColorClass
         self.taskCount = board.tasks.filter { !$0.isArchived }.count
@@ -774,6 +782,7 @@ private func studyAssignmentType(title: String, labels: [String]) -> (name: Stri
 
 struct BoardPageContext: Encodable {
     let id: UUID
+    let slug: String
     let name: String
     let description: String
     let role: String
@@ -840,6 +849,7 @@ struct BoardPageContext: Encodable {
         canvasConnection: CanvasConnection? = nil
     ) throws {
         self.id = try board.requireID()
+        self.slug = board.slug
         self.name = board.name
         self.description = board.description ?? ""
         self.role = access.isOwner ? "Owner" : access.role.rawValue.capitalized
@@ -847,11 +857,11 @@ struct BoardPageContext: Encodable {
         self.canAdmin = access.isOwner || access.role == .admin
         self.isOwner = access.isOwner
         self.views = try views.map {
-            try BoardViewTabContext(view: $0, boardID: board.requireID(), activeID: activeView.requireID())
+            try BoardViewTabContext(view: $0, boardSlug: board.slug, activeID: activeView.requireID())
         }
         self.activeView = try BoardViewTabContext(
             view: activeView,
-            boardID: board.requireID(),
+            boardSlug: board.slug,
             activeID: activeView.requireID()
         )
         self.tasks = tasks
@@ -963,12 +973,12 @@ struct BoardViewTabContext: Encodable {
     let isGallery: Bool
     let icon: String
 
-    init(view: BoardView, boardID: UUID, activeID: UUID) throws {
+    init(view: BoardView, boardSlug: String, activeID: UUID) throws {
         let id = try view.requireID()
         self.id = id
         self.name = view.name
         self.type = view.type.rawValue
-        self.href = "/app/boards/\(boardID)/views/\(id)"
+        self.href = "/app/boards/\(boardSlug)/views/\(view.slug)"
         self.isActive = id == activeID
         self.isBoard = view.type == .board
         self.isTable = view.type == .table

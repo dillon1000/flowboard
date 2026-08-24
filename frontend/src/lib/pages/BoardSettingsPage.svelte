@@ -435,7 +435,7 @@
     try {
       const copy = await api<BoardResponse>(`/api/v1/boards/${board.id}/duplicate`, { method: 'POST' });
       showToast('Course duplicated');
-      await goto(`/app/boards/${copy.id}`, { invalidateAll: true });
+      await goto(`/app/boards/${copy.slug}`, { invalidateAll: true });
       return true;
     } catch (cause) {
       requestError = messageFor(cause);

@@ -13,6 +13,10 @@ func routes(_ app: Application) throws {
     // middleware so API keys never become sessions.
     let sessionRoutes = app.grouped(User.sessionAuthenticator())
     try sessionRoutes.register(collection: OAuthController())
+    try app.register(collection: MCPOAuthController())
+
+    let mcp = app.grouped(MCPAuthenticationMiddleware(), User.guardMiddleware())
+    try mcp.register(collection: MCPController())
 
     let api = app.grouped("api", "v1")
     api.get { _ in
@@ -27,6 +31,10 @@ func routes(_ app: Application) throws {
         )
     }
     try api.grouped(User.sessionAuthenticator()).register(collection: AuthController())
+    let connectedApps = api
+        .grouped(User.sessionAuthenticator(), User.guardMiddleware())
+        .grouped("oauth-connections")
+    try connectedApps.register(collection: ConnectedAppsController())
     try api.register(collection: TapExecutionController())
     try api.register(collection: CalendarFeedController())
 

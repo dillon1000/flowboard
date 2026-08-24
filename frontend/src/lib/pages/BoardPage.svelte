@@ -450,7 +450,7 @@
         </div>
         <div class="course-actions">
           {#if board.canEdit}<button class="button primary" type="button" onclick={() => (createTaskOpen = true)}><Plus size={15} />Add assignment</button>{/if}
-          {#if board.canAdmin}<a class="button" href={`/app/boards/${board.id}/settings`}><Settings size={15} />Course settings</a>{/if}
+          {#if board.canAdmin}<a class="button" href={`/app/boards/${board.slug}/settings`}><Settings size={15} />Course settings</a>{/if}
         </div>
       </header>
 
@@ -866,7 +866,7 @@
       <footer class="course-footer">
         <span class="course-view-summary">
           {viewSummary}
-          {#if board.canAdmin}<a href={`/app/boards/${board.id}/settings`}><Sliders size={14} />Configure view</a>{/if}
+          {#if board.canAdmin}<a href={`/app/boards/${board.slug}/settings`}><Sliders size={14} />Configure view</a>{/if}
         </span>
         {#if board.undatedAssignmentCount > 0}
           <a class="course-gap" href="/app/tasks">

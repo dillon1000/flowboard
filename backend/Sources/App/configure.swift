@@ -78,6 +78,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateWorkspaceFeatures())
     app.migrations.add(BackfillBoardViews())
     app.migrations.add(AddGanttBoardViews())
+    app.migrations.add(AddBoardViewSlug())
     app.migrations.add(CreateTaskFollowers())
     app.migrations.add(AddTaskCreator())
     app.migrations.add(CreateAPIKeyCredential())
@@ -94,6 +95,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(AddPlanningNotificationPreferences())
     app.migrations.add(CreateCalendarFeedCredentials())
     app.migrations.add(CreateCanvasSyncModels())
+    app.migrations.add(CreateMCPOAuthModels())
     app.migrations.add(SessionRecord.migration)
 
     if app.environment == .development || app.environment == .testing {

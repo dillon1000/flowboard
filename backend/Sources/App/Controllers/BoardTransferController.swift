@@ -48,6 +48,7 @@ struct BoardTransferController: RouteCollection {
                 try await BoardView(
                     boardID: boardID,
                     name: view.name,
+                    slug: view.slug,
                     type: view.type,
                     position: view.position,
                     configuration: view.configuration

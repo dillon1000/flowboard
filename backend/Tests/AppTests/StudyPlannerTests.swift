@@ -13,7 +13,7 @@ struct StudyPlannerTests {
         course.$tasks.value = []
         let navigation = try BoardNavigationContext(
             board: course,
-            firstViewID: nil,
+            firstViewSlug: nil,
             courseColorClass: "course-blue"
         )
         let monday = try #require(studyDate("2026-08-03"))
@@ -154,7 +154,7 @@ struct StudyPlannerTests {
         course.$tasks.value = []
         let navigation = try BoardNavigationContext(
             board: course,
-            firstViewID: nil,
+            firstViewSlug: nil,
             courseColorClass: "course-green"
         )
         let firstWeek = try #require(studyDate("2026-08-03"))

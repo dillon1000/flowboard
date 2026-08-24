@@ -4,7 +4,11 @@ import adapter from '@sveltejs/adapter-node';
 const config = {
   kit: {
     // The Node adapter produces the SSR server that owns Railway's public port.
-    adapter: adapter({ precompress: true })
+    adapter: adapter({ precompress: true }),
+    // OAuth token exchange is intentionally a cross-origin form POST from public
+    // MCP clients. Browser sessions remain SameSite=Lax and Vapor authorizes every
+    // state-changing application request.
+    csrf: { checkOrigin: false }
   }
 };
 

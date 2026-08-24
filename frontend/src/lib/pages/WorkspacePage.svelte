@@ -5,6 +5,7 @@
   import AvailabilitySettingsPage from './AvailabilitySettingsPage.svelte';
   import BoardPage from './BoardPage.svelte';
   import BoardSettingsPage from './BoardSettingsPage.svelte';
+  import ConnectedAppsPage from './ConnectedAppsPage.svelte';
   import IntegrationsPage from './IntegrationsPage.svelte';
   import OverviewPage from './OverviewPage.svelte';
   import SemesterPage from './SemesterPage.svelte';
@@ -37,6 +38,8 @@
     <AvailabilitySettingsPage settings={context.availabilitySettings} />
   {:else if context.isAPIKeys && context.apiKeys}
     <APIKeysPage keys={context.apiKeys} />
+  {:else if context.isConnectedApps && context.connectedApps}
+    <ConnectedAppsPage apps={context.connectedApps} />
   {:else if context.isIntegrations && context.integrations}
     <IntegrationsPage integrations={context.integrations} />
   {:else if context.isBoardSettings && context.boardSettings}

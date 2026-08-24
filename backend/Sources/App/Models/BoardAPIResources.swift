@@ -24,6 +24,7 @@ struct BoardViewResponse: Content {
     let id: UUID
     let boardID: UUID
     let name: String
+    let slug: String
     let type: BoardViewType
     let position: Int
     let configuration: BoardViewConfiguration?
@@ -34,6 +35,7 @@ struct BoardViewResponse: Content {
         self.id = try view.requireID()
         self.boardID = view.$board.id
         self.name = view.name
+        self.slug = view.slug
         self.type = view.type
         self.position = view.position
         self.configuration = view.configuration
